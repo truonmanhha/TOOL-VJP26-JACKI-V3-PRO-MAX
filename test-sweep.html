@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+@property --sweep-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.ring {
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: conic-gradient(red, yellow, green, blue, red);
+  -webkit-mask-image: conic-gradient(from 0deg at 50% 50%, black var(--sweep-angle), transparent var(--sweep-angle));
+  animation: sweep 1s linear forwards;
+}
+@keyframes sweep {
+  0% { --sweep-angle: 0deg; }
+  100% { --sweep-angle: 360deg; }
+}
+</style>
+</head>
+<body>
+<div class="ring"></div>
+</body>
+</html>

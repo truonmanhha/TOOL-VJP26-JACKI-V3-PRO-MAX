@@ -1,0 +1,161 @@
+================================================================================
+COMMON LINE OPTIMIZATION - STEP 5 IMPLEMENTATION
+================================================================================
+
+FILE: backend/nesting_api.py
+CLASS: ProfessionalNester
+METHOD: _common_line_optimization()
+
+================================================================================
+METHOD SIGNATURES
+================================================================================
+
+1. _is_rectangular(bounds: dict, tolerance: float = 0.1) -> bool
+   └─ Validates if bounds represent rectangular shape (width > 0, height > 0)
+
+2. _matches_dimension(dim1: float, dim2: float) -> bool
+   └─ Checks if dimensions match within EDGE_TOLERANCE (0.5 units)
+
+3. _find_edge_neighbors(placements: List[Placement], 
+                        placement_bounds: Dict[str, dict]) -> Dict[str, List[str]]
+   └─ Builds neighbor graph: placement_id -> [neighboring_placement_ids]
+   └─ Links parts with matching height or width
+
+4. _calculate_placement_bounds(placements: List[Placement]) -> Dict[str, dict]
+   └─ Creates lookup: {placement_id: {x, y, width, height, rotation}}
+
+5. _align_horizontal_neighbors(p1: Placement, p2: Placement,
+                               bounds1: dict, bounds2: dict) -> Optional[Placement]
+   └─ Aligns p2 horizontally if same height
+   └─ Position: (bounds1.x + bounds1.width + spacing, p1.y)
+
+6. _align_vertical_neighbors(p1: Placement, p2: Placement,
+                             bounds1: dict, bounds2: dict) -> Optional[Placement]
+   └─ Aligns p2 vertically if same width
+   └─ Position: (p1.x, bounds1.y + bounds1.height + spacing)
+
+7. _common_line_optimization(placements: List[Placement], 
+                             sheet: Sheet) -> List[Placement]
+   └─ Main orchestrator: identifies, aligns, and returns optimized placements
+
+================================================================================
+ALGORITHM FLOW
+================================================================================
+
+Input: [Placement, Placement, ...]
+         ↓
+    Calculate bounds for each placement
+         ↓
+    Find neighbors with matching dimensions
+         ↓
+    For each placement:
+      For each neighbor:
+        If not already aligned:
+          If heights match → align horizontally
+          Else if widths match → align vertically
+          If alignment successful:
+            Update placement in list
+            Update bounds cache
+            Mark pair as processed
+         ↓
+    Return optimized placements with aligned edges
+
+================================================================================
+CONSTANT & CONFIG
+================================================================================
+
+EDGE_TOLERANCE = 0.5 units
+  → Tolerance for dimension matching
+  → Parts with dimensions differing by ≤ 0.5 are considered matching
+
+SPACING (from NestingSettings)
+  → Default: 5.0 units
+  → Gap between aligned parts (accounts for kerf/tool width)
+
+================================================================================
+DATA STRUCTURES
+================================================================================
+
+neighbors: Dict[str, List[str]]
+  placement_id → [neighbor_id_1, neighbor_id_2, ...]
+
+placement_bounds: Dict[str, dict]
+  placement_id → {
+    'x': float,           # Position X
+    'y': float,           # Position Y
+    'width': float,       # Part width (HARDCODED: 10.0)
+    'height': float,      # Part height (HARDCODED: 10.0)
+    'rotation': float     # Rotation angle
+  }
+
+aligned_pairs: Set[Tuple[str, str]]
+  Sorted tuples: (min_id, max_id) → prevents duplicate alignments
+
+optimized: List[Placement]
+  Updated placements with new positions
+
+================================================================================
+EXAMPLE EXECUTION
+================================================================================
+
+Input Placements:
+  [A] part_id='A', position=(10, 10), rotation=0
+  [B] part_id='B', position=(120, 20), rotation=0
+
+Step 1: Calculate Bounds
+  A_bounds = {x: 10, y: 10, width: 10.0, height: 10.0, rotation: 0}
+  B_bounds = {x: 120, y: 20, width: 10.0, height: 10.0, rotation: 0}
+
+Step 2: Find Neighbors
+  A_bounds['height'] == B_bounds['height']  (10.0 == 10.0) → Match!
+  neighbors['A'] = ['B']
+  neighbors['B'] = ['A']
+
+Step 3: Align Parts
+  Process A:
+    Neighbor B found
+    Pair ('A', 'B') not yet aligned
+    Heights match: 10.0 == 10.0
+    → Horizontal alignment triggered
+    new_x = 10 + 10.0 + 5.0 = 25.0
+    new_y = 10 (same as A)
+    → Placement B updated to (25, 10)
+    → Marked pair as aligned
+    → Count += 1
+
+Step 4: Return Optimized
+  [A] part_id='A', position=(10, 10), rotation=0
+  [B] part_id='B', position=(25, 10), rotation=0  ← ALIGNED
+
+Output: "Aligned 1 part pairs for common line cutting"
+
+================================================================================
+INTEGRATION INTO 7-STEP PIPELINE
+================================================================================
+
+Step 1: Analyze      → Calculate total area, efficiency targets
+Step 2: Sort         → Order parts by priority and size
+Step 3: Rotations    → Generate rotation variants (0°, 90°, 180°, 270°)
+Step 4: Nester       → Execute pynest2d algorithm
+Step 5: Common Line  ← [NEWLY IMPLEMENTED]
+Step 6: Remnants     → Calculate waste and final efficiency
+Step 7: Package      → Format results for API response
+
+================================================================================
+LIMITATIONS & FUTURE WORK
+================================================================================
+
+Current:
+  ✓ Identifies matching dimensions
+  ✓ Aligns neighboring parts horizontally/vertically
+  ✓ Tracks aligned pairs to prevent duplicates
+  ✓ Logs alignment statistics
+
+Next:
+  ✗ Uses hardcoded bounds (10.0 × 10.0) - should extract from polygon
+  ✗ Ignores part rotation when calculating actual bounds
+  ✗ Greedy algorithm - no global optimization
+  ✗ No collision detection post-alignment
+  ✗ Single-pair alignment only - no multi-part clusters
+
+================================================================================

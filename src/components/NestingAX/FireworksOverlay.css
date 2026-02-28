@@ -1,0 +1,147 @@
+/* ============================================================
+   Fireworks Overlay - Canvas-based Professional Fireworks
+   ============================================================ */
+
+.fireworks-overlay {
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  overflow: hidden;
+}
+
+.fireworks-overlay .container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.fireworks-overlay .stage-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.fireworks-overlay .canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: filter 300ms ease-in-out;
+}
+
+/* Canvas elements */
+.fireworks-overlay canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  mix-blend-mode: lighten;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#trails-canvas {
+  z-index: 1;
+}
+
+#main-canvas {
+  z-index: 2;
+}
+
+/* Counter display */
+.fireworks-overlay .absolute.top-4.right-4 {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 1.25rem;
+  color: white;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  z-index: 50;
+}
+
+.fireworks-overlay button {
+  background-color: rgb(220, 38, 38);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 200ms ease-in-out;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.fireworks-overlay button:hover {
+  background-color: rgb(185, 28, 28);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.fireworks-overlay button:active {
+  transform: translateY(0);
+}
+
+/* SVG Spritesheet (hidden) */
+.fireworks-overlay svg {
+  display: none;
+  position: absolute;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  overflow: hidden;
+}
+
+/* GPU acceleration */
+@supports (transform: translate3d(0, 0, 0)) {
+  .fireworks-overlay canvas {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .fireworks-overlay .absolute.top-4.right-4 {
+    font-size: 1rem;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .fireworks-overlay button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Animation support */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fireworks-overlay {
+  animation: fadeIn 300ms ease-in-out;
+}
+
+.fireworks-overlay.closing {
+  animation: fadeOut 300ms ease-in-out;
+}

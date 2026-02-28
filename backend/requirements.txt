@@ -1,0 +1,17 @@
+# ============================================================
+# PYTHON DEPENDENCIES FOR NESTING API
+# ============================================================
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+numpy==1.26.2
+python-multipart==0.0.6
+
+# Optional: For advanced nesting algorithms
+# shapely==2.0.2  # Geometry operations
+# scipy==1.11.4   # Optimization
+
+# pynest2d: C++ nesting engine (optional, improves performance)
+# Installation: sudo apt install python3-pynest2d
+# Note: Requires Linux system. Provides true-shape nesting with NFP (No-Fit Polygon)
