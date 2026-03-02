@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-  Minus, Square, Circle, Pen, Spline, RotateCcw, X, MousePointer
+  Minus, Square, Circle, Pen, Spline, RotateCcw, X, MousePointer, Zap
 } from 'lucide-react';
 
 // Type definitions
@@ -48,7 +48,8 @@ const DrawingTools: React.FC<DrawingToolsProps> = ({
     { id: 'rect', label: 'Rectangle', icon: Square, shortcut: 'R' },
     { id: 'circle', label: 'Circle', icon: Circle, shortcut: 'C' },
     { id: 'polyline', label: 'Polyline', icon: Pen, shortcut: 'P' },
-    { id: 'spline', label: 'Spline', icon: Spline, shortcut: 'S' }
+    { id: 'spline', label: 'Spline', icon: Spline, shortcut: 'S' },
+    { id: 'lag_reduce', label: 'Giảm Lag', icon: Zap, shortcut: 'G' }
   ];
 
   // Handle keyboard shortcuts

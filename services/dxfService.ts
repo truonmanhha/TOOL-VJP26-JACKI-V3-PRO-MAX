@@ -1,12 +1,19 @@
 ﻿import DxfParser from "dxf-parser";
 import { DXFEntityResult } from "../types";
+import { WorkerManager } from "./WorkerManager";
+
+// Singleton WorkerManager instance
+let workerManager: WorkerManager | null = null;
+
+function getWorkerManager(): WorkerManager {
+  if (!workerManager) {
+    workerManager = new WorkerManager({ dxfPoolSize: 2, debug: false });
+  }
+  return workerManager;
+}
 
 export class DxfService {
-  private parser: any;
-
-  constructor() {
-    this.parser = new DxfParser();
-  }
+  private parser: DxfParser;
 
   private snap(p: { x: number; y: number }): { x: number; y: number } {
     return {
@@ -17,12 +24,48 @@ export class DxfService {
 
   public async parseFile(file: File, tolerance: number = 0.5): Promise<DXFEntityResult[]> {
     const text = await file.text();
-    const dxf = this.parser.parseSync(text);
+    const results: DXFEntityResult[] = [];
+
+    console.log(`📄 File: ${file.name} - Parsing with Worker...`);
+
+    try {
+      const manager = getWorkerManager();
+      const workerResult = await manager.parseDxf(text, file.name);
+      
+      if (!workerResult || !workerResult.entities) {
+        console.warn(`⚠️ Worker returned no entities`);
+        return [];
+      }
+
+      // Convert worker result to DXFEntityResult format
+      workerResult.entities.forEach((entity: any) => {
+        results.push({
+          id: entity.id || `ENT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          type: entity.type,
+          area: entity.area || 0,
+          verticesCount: entity.verticesCount || entity.geometry?.length || 0,
+          isClosed: entity.isClosed || false,
+          geometry: entity.geometry || []
+        });
+      });
+
+      console.log(`✨ Total entities returned: ${results.length}`);
+      return results;
+    } catch (error) {
+      console.error('[DxfService] Worker parsing failed, falling back to sync:', error);
+      // Fallback to synchronous parsing for small files
+      return this._parseSyncFallback(text, file.name, tolerance);
+    }
+  }
+
+  private async _parseSyncFallback(text: string, fileName: string, tolerance: number): Promise<DXFEntityResult[]> {
+    const parser = new DxfParser();
+    const dxf = parser.parseSync(text);
     const results: DXFEntityResult[] = [];
 
     if (!dxf || !dxf.entities) return [];
     
-    console.log(`📄 File: ${file.name} - Tổng entities: ${dxf.entities.length}`);
+    console.log(`📄 File: ${fileName} - Tổng entities: ${dxf.entities.length}`);
 
     let rawPaths: { points: { x: number, y: number }[], originalType: string }[] = [];
 

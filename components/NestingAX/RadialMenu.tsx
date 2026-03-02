@@ -41,7 +41,8 @@ const MENU_DATA = [
     { name: "Bán kính", icon: "icon-radius", action: "measure_radius", color: "#FFD740" },
     { name: "Góc", icon: "icon-angle", action: "measure_angle", color: "#FFE57F" },
     { name: "Diện tích", icon: "icon-area", action: "measure_area", color: "#FFF8E1" },
-    { name: "Ghi chú", icon: "icon-note", action: "note", color: "#FFC400" }
+    { name: "Ghi chú", icon: "icon-note", action: "note", color: "#FFC400" },
+    { name: "Giảm Lag", icon: "icon-zap", action: "lag_reduce", color: "#FFD700" }
   ]},
   { name: "Zoom Fit", icon: "icon-zoom", action: "zoom_fit", color: "#40C4FF", sub: null },
   { name: "Redo", icon: "icon-redo", action: "redo", color: "#B0BEC5", sub: null },

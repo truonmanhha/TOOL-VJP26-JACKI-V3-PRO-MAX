@@ -14,12 +14,15 @@ import { layerManager } from './NestingAX/services/layerManager';
 import { undoManager } from './NestingAX/services/undoManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import FireworksHighTech from './FireworksHighTech';
+import WorkerManager from '@/services/WorkerManager';
 
 
 function NestingAXApp() {
   const workspaceRef = React.useRef<HTMLDivElement>(null);
   const dxfImportHandlerRef = React.useRef<(() => void) | null>(null);
   const exportHandlerRef = React.useRef<((format: 'dxf' | 'svg' | 'pdf') => void) | null>(null);
+  const workerManagerRef = React.useRef<WorkerManager | null>(null);
+  const currentNestingTaskRef = React.useRef<Promise<any> | null>(null);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [mouseWorldPos, setMouseWorldPos] = useState({ x: 0, y: 0 });
 
@@ -84,6 +87,7 @@ function NestingAXApp() {
   const [isManualNesting, setIsManualNesting] = useState(false);
   const [showNestingInfo, setShowNestingInfo] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   // Snap & Ortho State
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -164,10 +168,20 @@ function NestingAXApp() {
     if (loaded.length > 0) {
       setActiveListId(loaded[loaded.length - 1].id);
     }
+    // Initialize WorkerManager
+    if (!workerManagerRef.current) {
+      workerManagerRef.current = new WorkerManager({
+        dxfPoolSize: 2,
+        nestingPoolSize: 2,
+        defaultTimeout: 30000,
+        debug: true
+      });
+      console.log('✓ WorkerManager initialized');
+    }
   }, []);
 
   // --- Reactive Data Loading ---
-  const reloadData = () => {
+  const reloadData = useCallback(() => {
     if (activeListId) {
       setCurrentParts(db.getParts(activeListId));
       setCurrentSheets(db.getSheets(activeListId));
@@ -175,11 +189,10 @@ function NestingAXApp() {
       setCurrentParts([]);
       setCurrentSheets([]);
     }
-  };
-
+  }, [activeListId]);
   useEffect(() => {
     reloadData();
-  }, [activeListId]);
+  }, [reloadData]);
 
   const [activePartId, setActivePartId] = useState<string | null>(null);
   const [partContextMenu, setPartContextMenu] = useState<{ x: number; y: number; partId: string } | null>(null);
@@ -259,7 +272,11 @@ function NestingAXApp() {
   };
 
   // --- 1.1.1 -> 1.1.5 NESTING WORKFLOW ---
+  // --- 1.1.1 -> 1.1.5 NESTING WORKFLOW ---
   const handleStartNestingProcess = async () => {
+    console.log('🔴 DEBUG: handleStartNestingProcess called');
+    console.log('  currentParts:', currentParts.length, currentParts);
+    console.log('  currentSheets:', currentSheets.length, currentSheets);
     if (!currentParts.length || !currentSheets.length) {
       alert("Please add at least one part and one sheet before nesting.");
       return;
@@ -269,7 +286,7 @@ function NestingAXApp() {
     setIsNesting(true);
     setIsNestingHidden(false);
     setNestingProgress(0);
-    setNestingStatus("Initializing Vero Algorithm...");
+    setNestingStatus("Initializing Nesting Algorithm...");
     setNestingPartsPlaced(0);
     setNestingTotalParts(0);
     setNestingSheetsUsed(1);
@@ -283,27 +300,40 @@ function NestingAXApp() {
       const appSettings: AppSettings = db.getSettings();
       const config = configFromSettings(appSettings);
 
-      const results = await nestingService.start(
-        currentParts, 
-        currentSheets, 
-        config, 
-        (data) => {
-          setNestingProgress(data.percent);
-          if (data.status) setNestingStatus(data.status);
-          setNestingPartsPlaced(data.partsPlaced);
-          setNestingTotalParts(data.totalParts);
-          setNestingSheetsUsed(data.sheetsUsed);
-          setNestingUtilization(data.utilization);
-          setNestingSheetW(data.currentSheetW);
-          setNestingSheetH(data.currentSheetH);
-          if (data.lastPlacement) {
-            setNestingPlacements(prev => [...prev, data.lastPlacement!]);
-          }
+      // Execute nesting using WorkerManager with progress callback
+      console.log('🔴 DEBUG: About to call executeNesting');
+      if (!workerManagerRef.current) {
+        throw new Error('WorkerManager not initialized');
+      }
+
+      const onProgressCallback = (progressData: any) => {
+        setNestingProgress(progressData.percent || 0);
+        if (progressData.status) setNestingStatus(progressData.status);
+        setNestingPartsPlaced(progressData.partsPlaced || 0);
+        setNestingTotalParts(progressData.totalParts || 0);
+        setNestingSheetsUsed(progressData.sheetsUsed || 1);
+        setNestingUtilization(progressData.utilization || 0);
+        setNestingSheetW(progressData.currentSheetW || 0);
+        setNestingSheetH(progressData.currentSheetH || 0);
+        if (progressData.lastPlacement) {
+          setNestingPlacements(prev => [...prev, progressData.lastPlacement]);
         }
+      };
+      console.log('🔴 DEBUG: Calling workerManager.executeNesting');
+      const nestingTask = workerManagerRef.current.executeNesting(
+        { parts: currentParts, sheets: currentSheets, config } as any,
+        onProgressCallback
       );
       
+      if (!nestingTask) {
+        throw new Error('Failed to execute nesting - WorkerManager not available');
+      }
+
+      currentNestingTaskRef.current = nestingTask;
+      const results = await nestingTask;
+      
       const updates: Part[] = [];
-      results.forEach(res => {
+      results.forEach((res: any) => {
          const p = currentParts.find(p => p.id === res.partId);
          if (p) {
            updates.push({
@@ -318,28 +348,131 @@ function NestingAXApp() {
       });
       db.updatePartsBatch(updates);
       reloadData();
+      console.log('✓ Nesting completed successfully');
 
     } catch (e) {
       console.error("Nesting failed", e);
-      alert("Nesting Failed");
+      alert("Nesting Failed: " + (e instanceof Error ? e.message : 'Unknown error'));
     } finally {
       setTimeout(() => {
         setIsNesting(false);
       }, 500);
+      currentNestingTaskRef.current = null;
     }
   };
 
   const handleStopNesting = () => {
-    nestingService.stop();
+    // Stop via WorkerManager - cancel the pending task
+    if (workerManagerRef.current) {
+      currentNestingTaskRef.current = null;
+      console.log('⚠ Nesting stopped by user');
+    }
     setIsNesting(false);
   };
 
   const handleAbortNesting = useCallback(() => {
     if (isNesting) {
-      nestingService.stop();
+      handleStopNesting();
     }
-    setIsNesting(false);
   }, [isNesting]);
+
+  // --- Geometry Optimization Handler ---
+  const handleOptimizeEntities = useCallback(async (selectedEntityIds: Set<string>) => {
+    if (selectedEntityIds.size === 0) {
+      showToast('⚠ No entities selected');
+      return;
+    }
+
+    if (!workerManagerRef.current) {
+      showToast('❌ WorkerManager not initialized');
+      return;
+    }
+
+    if (!activeListId) {
+      showToast('❌ No active nest list selected');
+      return;
+    }
+
+    setIsOptimizing(true);
+
+
+    try {
+      // Get selected entities from state
+      const selectedEntities = allCadEntities.filter(e => selectedEntityIds.has(e.id));
+
+      if (selectedEntities.length === 0) {
+        showToast('⚠ No valid entities to optimize');
+        return;
+      }
+
+      console.log(`🔧 Optimizing ${selectedEntities.length} entities...`);
+      showToast(`⏳ Optimizing ${selectedEntities.length} entities...`);
+
+      // Format entities for worker: { id, geometry: points }
+      const entitiesToOptimize = selectedEntities.map(e => ({
+        id: e.id,
+        geometry: e.points || [],
+        type: e.type
+      }));
+
+      // Call worker
+      const optimizedEntities = await workerManagerRef.current.simplifyGeometries(entitiesToOptimize);
+
+      if (!optimizedEntities || optimizedEntities.length === 0) {
+        showToast('❌ Optimization failed');
+        return;
+      }
+
+      // Create a map of optimized entities by id
+      const optimizedMap = new Map(optimizedEntities.map((e: any) => [e.id, e]));
+
+      // Update allCadEntities with optimized versions
+      const updatedEntities = allCadEntities.map(entity => {
+        const optimized = optimizedMap.get(entity.id);
+        if (optimized) {
+          return {
+            ...entity,
+            points: optimized.geometry
+          };
+        }
+        return entity;
+      });
+
+      setAllCadEntities(updatedEntities);
+
+      // Update database: save changes to active nest list's parts
+      if (activeListId) {
+        const parts = db.getParts(activeListId);
+        const updatedParts = parts.map(part => {
+          if (part.cadEntities && part.cadEntities.some(e => optimizedMap.has(e.id))) {
+            const updatedCadEntities = part.cadEntities.map(e => {
+              const optimized = optimizedMap.get(e.id);
+              if (optimized) {
+                return {
+                  ...e,
+                  points: optimized.geometry
+                };
+              }
+              return e;
+            });
+            return { ...part, cadEntities: updatedCadEntities };
+          }
+          return part;
+        });
+        db.updatePartsBatch(updatedParts);
+      }
+
+      showToast(`✅ Đã tối ưu ${selectedEntities.length} đối tượng thành công!`);
+      console.log(`✓ Optimization complete: ${selectedEntities.length} entities simplified`);
+    } catch (err) {
+      console.error('[NestingAXApp] Optimization failed:', err);
+      showToast(`❌ Optimization error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsOptimizing(false);
+    }
+  }, [activeListId, allCadEntities, workerManagerRef]);
+
+
 
   // --- Manual Nesting Handler ---
   const handleManualNestToggle = () => {
@@ -630,6 +763,7 @@ function NestingAXApp() {
         onToggleLayerPanel={handleToggleLayerPanel}
         onExportDXF={() => exportHandlerRef.current?.('dxf')}
         onExportPDF={() => exportHandlerRef.current?.('pdf')}
+        onOptimizeEntities={() => setActiveDrawTool('lag_reduce')}
       />
       <div className="flex flex-1 overflow-hidden relative gap-0 min-h-0" ref={workspaceRef}>
         <Sidebar 
@@ -642,8 +776,8 @@ function NestingAXApp() {
           onSelectPart={handleSelectPart}
           activePartId={activePartId}
           nestingMethod={nestingMethod}
-          selectedGeometry={selectedGeometry}
         />
+
         {showLayerPanel && (
           <div className="absolute left-16 top-16 z-50">
             <LayerPanel 
@@ -707,6 +841,7 @@ function NestingAXApp() {
           onToggleSnap={handleToggleSnap}
           onToggleOrtho={handleToggleOrtho}
           onSelectionChange={handleSelectionChange}
+          onOptimizeEntities={handleOptimizeEntities}
 
           // Layer System
           layers={layers}
@@ -780,6 +915,72 @@ function NestingAXApp() {
       </div>
 
       {showFireworks && <FireworksHighTech onComplete={() => setShowFireworks(false)} />}
+      
+      {/* --- OPTIMIZATION PROGRESS OVERLAY --- */}
+      <AnimatePresence>
+        {isOptimizing && (
+          <motion.div
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
+            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            className="absolute inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 pointer-events-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 20 }}
+              className="glass-panel border border-cyan-500/30 rounded-2xl p-8 flex flex-col items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.15)] relative overflow-hidden min-w-[320px]"
+            >
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 to-emerald-500/10 pointer-events-none" />
+              
+              {/* Spinning Zap Icon */}
+              <div className="relative mb-6 w-20 h-20 flex items-center justify-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-t-2 border-cyan-400 opacity-50"
+                />
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-[-8px] rounded-full border-b-2 border-emerald-400 opacity-30"
+                />
+                <div className="w-16 h-16 rounded-full bg-slate-800 border border-cyan-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] z-10">
+                  <motion.span 
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    className="material-icons-outlined text-3xl text-cyan-400"
+                  >
+                    bolt
+                  </motion.span>
+                </div>
+              </div>
+
+              {/* Text */}
+              <h3 className="text-lg font-bold text-white mb-2 tracking-wide z-10">
+                Đang tối ưu hóa hình học...
+              </h3>
+              
+              {/* Scanning Bar */}
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden relative mt-2 z-10">
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
+                />
+              </div>
+              
+              <p className="text-xs text-cyan-400/70 mt-4 font-mono uppercase tracking-widest z-10">
+                Processing Vectors
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* ════════════════════════════════════════════════════════════════
       
       {/* ════════════════════════════════════════════════════════════════
           FOOTER 1 — Status Bar (AutoCAD 2022 Style)
@@ -875,6 +1076,12 @@ function NestingAXApp() {
       />
     </div>
   );
+}
+
+// Helper function for toast notifications
+function showToast(message: string) {
+  // Toast implementation - can be expanded to show UI toast
+  console.log(message);
 }
 
 export default NestingAXApp;

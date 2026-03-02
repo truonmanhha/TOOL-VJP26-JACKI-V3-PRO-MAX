@@ -83,6 +83,7 @@ interface WorkspaceProps {
   
   // Real-Time Selection Preview (for Preview 2)
   onSelectionChange?: (selectedIds: Set<string>, allEntities: CadEntity[]) => void;
+  onOptimizeEntities?: (entityIds: Set<string>) => void;
   activePartId?: string | null;
 }
 
@@ -149,6 +150,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   onToggleSnap,
   onToggleOrtho,
   onSelectionChange,
+  onOptimizeEntities,
   activePartId,
 
   // Layer System
@@ -174,7 +176,8 @@ const Workspace: React.FC<WorkspaceProps> = ({
     step: number;
     points: { x: number, y: number }[];
     currentPos: { x: number, y: number } | null;
-  }>({ step: 0, points: [], currentPos: null });
+    properties?: Record<string, any>;
+  }>({ step: 0, points: [], currentPos: null, properties: {} });
 
   // === MEASURE TOOL STATE ===
   const [measurePoints, setMeasurePoints] = useState<{ x: number; y: number }[]>([]);
@@ -1175,7 +1178,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         id: crypto.randomUUID(),
         type: type,
         points: [...drawState.points],
-        properties: { ...drawState.properties, sides: 6 }, // Preserve polygon sides
+        properties: { ...(drawState.properties || {}), sides: 6 }, // Preserve polygon sides
         layerId: activeLayerId
       };
       
@@ -1210,7 +1213,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           id: 'sketch_capture',
           type: activeDrawTool || 'polyline',
           points: [...drawState.points],
-          properties: { ...drawState.properties }
+          properties: { ...(drawState.properties || {}) }
         } as CadEntity];
       }
 
@@ -1237,8 +1240,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
               x: pt.x - minX,
               y: pt.y - minY
             })),
-            properties: { 
-              ...path.properties,
+            properties: {
               originalId: sourceEntity.id // THE LINK!
             }
           };
@@ -2634,7 +2636,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
             console.log('✅ Edit tool mode active, processing click');
             handleEditToolClick(snappedPos);
             return;
-        } else if (activeDrawTool) {
+        } else if (activeDrawTool && activeDrawTool !== 'lag_reduce') {
             // Drawing mode
             console.log('✅ Drawing mode active, processing click');
             handleDrawingClick(snappedPos);
@@ -4490,6 +4492,20 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                   return;
                 }
              }
+             // Lag reduce on right-click (lag_reduce tool)
+             if (activeDrawTool === 'lag_reduce') {
+                e.preventDefault();
+                if (selectedEntities.size > 0) {
+                  console.log('⚡ Lag reduce triggered:', selectedEntities.size, 'entities');
+                  console.log('Bắt đầu giảm lag cho', selectedEntities.size, 'đối tượng...');
+                  onOptimizeEntities?.(selectedEntities);
+                  setSelectedEntities(new Set()); // Clear selection after optimization
+                  showToast(`Bắt đầu giảm lag cho ${selectedEntities.size} đối tượng...`);
+                } else {
+                  showToast('Vui lòng chọn đối tượng cần giảm lag');
+                }
+                return;
+             }
              if (onCancelDraw) onCancelDraw();
              e.preventDefault();
         } else if (onContextMenu) {
@@ -5175,8 +5191,18 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
               {/* Footer Buttons */}
               <div className="flex justify-end pt-2 space-x-3">
                 <button 
-                  onClick={onStartNesting} 
+                  onClick={() => {
+                    console.log('🔴 Nest button clicked');
+                    console.log('onStartNesting function:', typeof onStartNesting, onStartNesting ? 'defined' : 'UNDEFINED');
+                    if (onStartNesting) {
+                      console.log('Calling onStartNesting...');
+                      onStartNesting();
+                    } else {
+                      console.error('ERROR: onStartNesting is undefined!');
+                    }
+                  }}
                   className="px-6 py-1 bg-white border border-gray-400 shadow-sm hover:bg-green-100 active:translate-y-px text-sm text-black font-bold"
+
                 >
                   Nest
                 </button>

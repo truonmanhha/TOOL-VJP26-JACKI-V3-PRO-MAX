@@ -1,0 +1,243 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e7]
+        - generic [ref=e9]: HỆ THỐNG VJP26
+      - heading "VJP26 JACKI V3 VJP26 JACKI V3 VJP26 JACKI V3" [level=1] [ref=e10]:
+        - generic [ref=e11]: VJP26 JACKI V3 VJP26 JACKI V3 VJP26 JACKI V3
+    - generic [ref=e13]:
+      - button "MÁY TÍNH CNC" [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+        - generic [ref=e17]: MÁY TÍNH CNC
+      - button "PHÂN TÍCH DXF" [ref=e18] [cursor=pointer]:
+        - img [ref=e19]
+        - generic [ref=e24]: PHÂN TÍCH DXF
+      - button "PREVIEW GCODE" [ref=e25] [cursor=pointer]:
+        - img [ref=e26]
+        - generic [ref=e31]: PREVIEW GCODE
+      - button "NESTING AX" [active] [ref=e32] [cursor=pointer]:
+        - img [ref=e34]
+        - generic [ref=e39]: NESTING AX
+    - main [ref=e40]:
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - button "New Nest List" [ref=e47] [cursor=pointer]:
+                  - img [ref=e49]
+                  - generic [ref=e54]: New Nest List
+                - button "Part Library" [ref=e55]:
+                  - img [ref=e57]
+                  - generic [ref=e62]: Part Library
+                - button "Nest Parts" [ref=e63] [cursor=pointer]:
+                  - img [ref=e65]
+                  - generic [ref=e70]: Nest Parts
+                - button "Manual Nest" [ref=e71] [cursor=pointer]:
+                  - img [ref=e73]
+                  - generic [ref=e77]: Manual Nest
+                - button "Nesting Info" [ref=e78] [cursor=pointer]:
+                  - img [ref=e80]
+                  - generic [ref=e86]: Nesting Info
+              - generic [ref=e87]: Nesting
+            - generic [ref=e88]:
+              - generic [ref=e89]:
+                - button "Save Off-Cut" [ref=e90]:
+                  - img [ref=e92]
+                  - generic [ref=e98]: Save Off-Cut
+                - button "Import Project" [ref=e99]:
+                  - img [ref=e101]
+                  - generic [ref=e105]: Import Project
+                - button "Export Project" [ref=e106]:
+                  - img [ref=e108]
+                  - generic [ref=e112]: Export Project
+                - button "Import DXF/DWG" [ref=e113] [cursor=pointer]:
+                  - img [ref=e115]
+                  - generic [ref=e120]: Import DXF/DWG
+                - button "Sheet Database" [ref=e121]:
+                  - img [ref=e123]
+                  - generic [ref=e128]: Sheet Database
+              - generic [ref=e129]: Database
+            - generic [ref=e130]:
+              - generic [ref=e131]:
+                - button "Layers" [ref=e132] [cursor=pointer]:
+                  - img [ref=e134]
+                  - generic [ref=e138]: Layers
+                - button "Undo" [ref=e139] [cursor=pointer]:
+                  - img [ref=e141]
+                  - generic [ref=e145]: Undo
+                - button "Redo" [ref=e146] [cursor=pointer]:
+                  - img [ref=e148]
+                  - generic [ref=e152]: Redo
+                - button "Full Screen" [ref=e153] [cursor=pointer]:
+                  - img [ref=e155]
+                  - generic [ref=e161]: Full Screen
+              - generic [ref=e162]: View
+            - generic [ref=e163]:
+              - generic [ref=e164]:
+                - button "Export DXF" [ref=e165] [cursor=pointer]:
+                  - img [ref=e167]
+                  - generic [ref=e172]: Export DXF
+                - button "Export PDF" [ref=e173] [cursor=pointer]:
+                  - img [ref=e175]:
+                    - generic [ref=e180]: PDF
+                  - generic [ref=e181]: Export PDF
+              - generic [ref=e182]: Export
+          - generic [ref=e184]:
+            - generic [ref=e185]:
+              - generic [ref=e186]: AX
+              - generic [ref=e187]: NESTING AX 2025
+            - generic [ref=e188]: v3.0.PRO-MAX
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - generic [ref=e191]:
+              - heading "list_alt Nest Lists" [level=2] [ref=e192]:
+                - generic [ref=e193]: list_alt
+                - text: Nest Lists
+              - generic [ref=e194]: "2"
+            - generic [ref=e195]:
+              - generic [ref=e197] [cursor=pointer]:
+                - generic [ref=e199]: folder
+                - generic [ref=e200]:
+                  - generic [ref=e201]: Nest List 1
+                  - generic [ref=e203]:
+                    - generic [ref=e204]: extension
+                    - text: 0 parts
+              - generic [ref=e206] [cursor=pointer]:
+                - generic [ref=e208]: folder_open
+                - generic [ref=e209]:
+                  - generic [ref=e210]: Nest List 2
+                  - generic [ref=e212]:
+                    - generic [ref=e213]: extension
+                    - text: 0 parts
+            - generic [ref=e214]:
+              - generic [ref=e216]: Nesting Engine
+              - generic [ref=e219]:
+                - generic [ref=e220]: "Algorithm:"
+                - generic [ref=e221]: VeroNester
+          - main [ref=e222]:
+            - img
+            - img
+            - generic: "Y"
+            - generic:
+              - generic:
+                - generic: "-6000"
+              - generic:
+                - generic: "-5000"
+              - generic:
+                - generic: "-4000"
+              - generic:
+                - generic: "-3000"
+              - generic:
+                - generic: "-2000"
+              - generic:
+                - generic: "-1000"
+              - generic:
+                - generic: "0"
+              - generic:
+                - generic: "1000"
+              - generic:
+                - generic: "2000"
+              - generic:
+                - generic: "3000"
+            - generic:
+              - generic:
+                - generic: "0"
+              - generic:
+                - generic: "1000"
+              - generic:
+                - generic: "2000"
+              - generic:
+                - generic: "3000"
+              - generic:
+                - generic: "4000"
+              - generic:
+                - generic: "5000"
+              - generic:
+                - generic: "6000"
+              - generic:
+                - generic: "7000"
+              - generic:
+                - generic: "8000"
+              - generic:
+                - generic: "9000"
+              - generic:
+                - generic: "10000"
+              - generic:
+                - generic: "11000"
+              - generic:
+                - generic: "12000"
+              - generic:
+                - generic: "13000"
+              - generic:
+                - generic: "14000"
+              - generic:
+                - generic: "15000"
+              - generic:
+                - generic: "16000"
+              - generic:
+                - generic: "17000"
+              - generic:
+                - generic: "18000"
+              - generic:
+                - generic: "19000"
+              - generic:
+                - generic: "20000"
+            - button "close" [ref=e223] [cursor=pointer]:
+              - generic [ref=e224]: close
+        - generic [ref=e225]:
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - generic [ref=e228]: "X:"
+              - generic [ref=e229]: "0.00"
+            - generic [ref=e230]:
+              - generic [ref=e231]: "Y:"
+              - generic [ref=e232]: "0.00"
+            - generic [ref=e234]:
+              - generic [ref=e235]: "Zoom:"
+              - generic [ref=e236]: 80%
+          - generic [ref=e237]:
+            - generic "Dynamic Input (F12)" [ref=e238]: DYN
+            - generic "Crosshair (F6)" [ref=e239]: +
+          - generic [ref=e240]:
+            - generic [ref=e241]:
+              - generic [ref=e242]: straighten
+              - 'slider "Crosshair size: 100%" [ref=e243] [cursor=pointer]': "100"
+              - generic [ref=e244]: 100%
+            - button "close" [ref=e245] [cursor=pointer]:
+              - generic [ref=e246]: close
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]: X 0.0
+              - generic [ref=e251]: Y 0.00
+            - generic [ref=e252]:
+              - generic [ref=e253]: Ready
+              - generic [ref=e254]: "Entities: 0"
+              - generic [ref=e255]: "Layer: Layer 0"
+            - generic [ref=e256]:
+              - button "↩" [disabled] [ref=e257]
+              - button "↪" [disabled] [ref=e258]
+          - generic [ref=e259]:
+            - generic [ref=e260]:
+              - generic [ref=e261] [cursor=pointer]: home
+              - generic [ref=e262] [cursor=pointer]: transform
+              - generic [ref=e263] [cursor=pointer]: straighten
+            - button "SNAP" [ref=e265] [cursor=pointer]
+            - button "download EXPORT" [ref=e267] [cursor=pointer]:
+              - generic [ref=e268]: download
+              - text: EXPORT
+            - button "ORTHO" [ref=e269] [cursor=pointer]
+            - button "AUTO" [ref=e270] [cursor=pointer]
+            - button "HIDE" [ref=e271] [cursor=pointer]
+    - generic [ref=e273]:
+      - button "🇻🇳 Tiếng Việt" [ref=e274] [cursor=pointer]
+      - button "🇨🇳 中文" [ref=e275] [cursor=pointer]
+      - button "🇰🇷 한국어" [ref=e276] [cursor=pointer]
+      - button "🇮🇳 हिन्दी" [ref=e277] [cursor=pointer]
+    - contentinfo [ref=e278]:
+      - generic [ref=e279]:
+        - generic [ref=e280]: "Trạng thái: Hoạt động"
+        - generic [ref=e282]: © 2025 VJP26 TRƯƠNG MẠNH HÀ
+  - button [ref=e285] [cursor=pointer]

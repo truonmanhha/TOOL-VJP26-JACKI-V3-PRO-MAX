@@ -332,6 +332,330 @@ function perpendicularDistance(point: Point2D, lineStart: Point2D, lineEnd: Poin
 
     return distance(point, closest);
 }
+// ============ GEOMETRY OPTIMIZATION ==============
+
+/**
+ * Calculate angle between three points (in radians)
+ * Used to detect sharp corners vs straight segments
+ */
+export function angleBetween(p1: Point2D, p2: Point2D, p3: Point2D): number {
+    const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+    const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+    
+    const dot = v1.x * v2.x + v1.y * v2.y;
+    const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+    const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+    
+    if (mag1 === 0 || mag2 === 0) return 0;
+    
+    const cos = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
+    return Math.acos(cos);
+}
+
+/**
+ * Enhanced geometry optimization with corner preservation
+ * Step 1: Micro-filter (remove segments < 0.01mm)
+ * Step 2: Collinear Merger (merge straight segments)
+ * Step 3: Douglas-Peucker with corner preservation (protect sharp angles)
+ * 
+ * @param points Input polygon vertices
+ * @param tolerance Simplification tolerance in mm (default: 0.05 = 50 microns)
+ * @param angleTolerance Angle threshold for corner preservation in degrees (default: 170)
+ */
+export function optimizeGeometryV2(
+    points: Point2D[],
+    tolerance: number = 0.05,
+    angleTolerance: number = 170
+): Point2D[] {
+    if (points.length < 3) return [...points];
+    
+    // Preserve closure: check if first and last points are the same
+    const isClosed = points.length > 0 &&
+        Math.abs(points[0].x - points[points.length - 1].x) < 0.001 &&
+        Math.abs(points[0].y - points[points.length - 1].y) < 0.001;
+    
+    // Step 1: Micro-filter - remove segments shorter than 0.01mm
+    let filtered = filterMicroSegments(points, 0.01);
+    if (filtered.length < 3) return [...points];
+    
+    // Step 2: Collinear Merger - merge consecutive segments forming straight lines
+    let merged = mergeCollinearSegments(filtered, 0.001);
+    if (merged.length < 3) return [...points];
+    
+    // Step 3: Douglas-Peucker with corner preservation
+    const angleThresholdRad = (angleTolerance * Math.PI) / 180;
+    let optimized = douglasPeuckerWithCornerPreservation(
+        merged,
+        tolerance,
+        angleThresholdRad
+    );
+    
+    if (optimized.length < 3) return [...points];
+    
+    // Restore closure if original was closed
+    if (isClosed && optimized.length > 0) {
+        if (distance(optimized[0], optimized[optimized.length - 1]) > 0.001) {
+            optimized.push({ x: optimized[0].x, y: optimized[0].y });
+        }
+    }
+    
+    return optimized;
+}
+
+/**
+ * Step 1: Remove segments shorter than minimum threshold
+ */
+function filterMicroSegments(points: Point2D[], minLength: number): Point2D[] {
+    if (points.length < 3) return [...points];
+    
+    const filtered: Point2D[] = [];
+    
+    for (let i = 0; i < points.length; i++) {
+        const current = points[i];
+        const next = points[(i + 1) % points.length];
+        
+        // Calculate segment length
+        const segLength = distance(current, next);
+        
+        // Keep point if next segment is long enough
+        if (segLength >= minLength) {
+            filtered.push(current);
+        }
+    }
+    
+    // Ensure we keep at least the first point if nothing was kept
+    return filtered.length >= 3 ? filtered : points;
+}
+
+/**
+ * Step 2: Merge consecutive collinear segments
+ */
+function mergeCollinearSegments(points: Point2D[], crossProductTolerance: number): Point2D[] {
+    if (points.length < 3) return [...points];
+    
+    const merged: Point2D[] = [];
+    const n = points.length;
+    
+    for (let i = 0; i < n; i++) {
+        const prev = points[(i - 1 + n) % n];
+        const curr = points[i];
+        const next = points[(i + 1) % n];
+        
+        // Calculate cross product to detect collinearity
+        const cross = (curr.x - prev.x) * (next.y - prev.y) - (curr.y - prev.y) * (next.x - prev.x);
+        
+        // If cross product is not near zero, point is not collinear - keep it
+        if (Math.abs(cross) > crossProductTolerance) {
+            merged.push(curr);
+        }
+    }
+    
+    return merged.length >= 3 ? merged : points;
+}
+
+/**
+ * Step 3: Douglas-Peucker algorithm with corner preservation
+ * Protects sharp angles (< angleTolerance) from being simplified
+ */
+function douglasPeuckerWithCornerPreservation(
+    points: Point2D[],
+    tolerance: number,
+    angleThreshold: number
+): Point2D[] {
+    if (points.length < 3) return points;
+    
+    // Mark corners that should be protected
+    const isCorner = new Array(points.length).fill(false);
+    
+    for (let i = 1; i < points.length - 1; i++) {
+        const angle = angleBetween(points[i - 1], points[i], points[i + 1]);
+        const angleDeg = (angle * 180) / Math.PI;
+        
+        // Mark as corner if angle is sharp (< threshold)
+        if (angleDeg < angleThreshold) {
+            isCorner[i] = true;
+        }
+    }
+    
+    // Apply Douglas-Peucker with corner preservation
+    return douglasPeuckerRecursive(points, tolerance, isCorner);
+}
+
+/**
+ * Recursive Douglas-Peucker implementation with corner preservation
+ */
+function douglasPeuckerRecursive(
+    points: Point2D[],
+    tolerance: number,
+    isCorner: boolean[]
+): Point2D[] {
+    if (points.length < 3) return points;
+    
+    let maxDist = 0;
+    let maxIdx = 0;
+    const first = points[0];
+    const last = points[points.length - 1];
+    
+    for (let i = 1; i < points.length - 1; i++) {
+        // Skip points marked as corners
+        if (isCorner[i]) continue;
+        
+        const dist = perpendicularDistance(points[i], first, last);
+        if (dist > maxDist) {
+            maxDist = dist;
+            maxIdx = i;
+        }
+    }
+    
+    if (maxDist > tolerance) {
+        const left = douglasPeuckerRecursive(points.slice(0, maxIdx + 1), tolerance, isCorner.slice(0, maxIdx + 1));
+        const right = douglasPeuckerRecursive(points.slice(maxIdx), tolerance, isCorner.slice(maxIdx));
+        return [...left.slice(0, -1), ...right];
+    }
+    
+    // If simplifying, keep endpoints and any corners
+    const result: Point2D[] = [first, last];
+    for (let i = 1; i < points.length - 1; i++) {
+        if (isCorner[i]) {
+            result.splice(-1, 0, points[i]);
+        }
+    }
+    return result;
+}
+
+/**
+ * OPTIMIZEGEOMETRYV3 - High Aggression Geometry Optimization
+ * 
+ * Aggressive multi-stage optimization for maximum point reduction:
+ * Step 1: Aggressive Point Filter - Remove points closer than 0.05mm (duplicates)
+ * Step 2: Collinear Merger - Merge points on nearly-straight lines (high tolerance)
+ * Step 3: Aggressive Douglas-Peucker - Use 0.2mm tolerance for maximum simplification
+ * Step 4: Corner Preservation - Protect only sharp angles < 160 degrees
+ * 
+ * This is the MAXIMUM optimization level - use for performance-critical nesting
+ * 
+ * @param points Input polygon vertices
+ * @param tolerance Simplification tolerance in mm (default: 0.2 = 200 microns)
+ * @param angleThreshold Angle threshold for corner preservation in degrees (default: 160)
+ */
+export function optimizeGeometryV3(
+    points: Point2D[],
+    tolerance: number = 0.2,
+    angleThreshold: number = 160
+): Point2D[] {
+    if (points.length < 3) return [...points];
+    
+    // Preserve closure: check if first and last points are the same
+    const isClosed = points.length > 0 &&
+        Math.abs(points[0].x - points[points.length - 1].x) < 0.001 &&
+        Math.abs(points[0].y - points[points.length - 1].y) < 0.001;
+    
+    // Step 1: Aggressive Point Filter - Remove points closer than 0.05mm
+    let filtered = aggressivePointFilter(points, 0.05);
+    if (filtered.length < 3) return [...points];
+    
+    // Step 2: Collinear Merger - Use high tolerance for aggressive merging
+    let merged = mergeCollinearSegments(filtered, 0.01);
+    if (merged.length < 3) return [...points];
+    
+    // Handle zero-length segments before Douglas-Peucker
+    merged = filterMicroSegments(merged, 0.001);
+    if (merged.length < 3) return [...points];
+    
+    // Step 3: Aggressive Douglas-Peucker with corner preservation
+    const angleThresholdRad = (angleThreshold * Math.PI) / 180;
+    let optimized = douglasPeuckerWithCornerPreservation(
+        merged,
+        tolerance,
+        angleThresholdRad
+    );
+    
+    if (optimized.length < 3) return [...points];
+    
+    // Restore closure if original was closed
+    if (isClosed && optimized.length > 0) {
+        if (distance(optimized[0], optimized[optimized.length - 1]) > 0.001) {
+            optimized.push({ x: optimized[0].x, y: optimized[0].y });
+        }
+    }
+    
+    return optimized;
+}
+
+/**
+ * Step 1: Aggressive filter - Remove points closer than minimum threshold
+ * This eliminates duplicates and micro-segments in a single pass
+ */
+function aggressivePointFilter(points: Point2D[], minDistance: number): Point2D[] {
+    if (points.length < 3) return [...points];
+    
+    const filtered: Point2D[] = [];
+    const n = points.length;
+    
+    for (let i = 0; i < n; i++) {
+        const current = points[i];
+        const next = points[(i + 1) % n];
+        
+        // Calculate distance to next point
+        const dist = distance(current, next);
+        
+        // Only keep point if next segment is longer than minDistance
+        if (dist >= minDistance) {
+            filtered.push(current);
+        }
+    }
+    
+    return filtered.length >= 3 ? filtered : points;
+}
+
+/**
+ * Optimize geometry - Default high-performance optimization
+ * Alias to optimizeGeometryV3 for consistency
+ * 
+ * @param points Input polygon vertices
+ * @param simplificationTolerance Simplification tolerance in mm (default: 0.1)
+ */
+export function optimizeGeometry(points: Point2D[], simplificationTolerance: number = 0.1): Point2D[] {
+    // Use V3 with the provided tolerance
+    return optimizeGeometryV3(points, simplificationTolerance, 160);
+}
+
+/**
+ * Remove collinear points from polygon using cross product
+ * High precision collinearity check
+ */
+export function removeCollinearPoints(points: Point2D[], tolerance: number = 0.001): Point2D[] {
+    if (points.length < 3) return [...points];
+
+    // Preserve closure: check if first and last points are the same
+    const isClosed = points.length > 0 &&
+        Math.abs(points[0].x - points[points.length - 1].x) < tolerance &&
+        Math.abs(points[0].y - points[points.length - 1].y) < tolerance;
+
+    const result: Point2D[] = [];
+    const n = isClosed ? points.length - 1 : points.length;
+
+    for (let i = 0; i < n; i++) {
+        const prev = points[(i - 1 + n) % n];
+        const curr = points[i];
+        const next = points[(i + 1) % n];
+
+        // Calculate cross product to detect collinearity
+        const cross = (curr.x - prev.x) * (next.y - prev.y) - (curr.y - prev.y) * (next.x - prev.x);
+
+        // If cross product is not near zero, point is not collinear
+        if (Math.abs(cross) > tolerance) {
+            result.push(curr);
+        }
+    }
+
+    // Restore closure if original was closed
+    if (isClosed && result.length > 0) {
+        result.push({ x: result[0].x, y: result[0].y });
+    }
+
+    return result.length >= 3 ? result : [...points];
+}
 
 // ============ CONVEX HULL ==============
 
@@ -448,6 +772,7 @@ export function isRectangular(polygon: Polygon, tolerance: number = 0.01): boole
 export default {
     distance,
     angle,
+    angleBetween,
     rotatePoint,
     translatePoint,
     getBounds,
@@ -465,5 +790,9 @@ export default {
     convexHull,
     offsetPolygon,
     createRectangle,
-    isRectangular
+    isRectangular,
+    removeCollinearPoints,
+    optimizeGeometry,
+    optimizeGeometryV2,
+    optimizeGeometryV3
 };

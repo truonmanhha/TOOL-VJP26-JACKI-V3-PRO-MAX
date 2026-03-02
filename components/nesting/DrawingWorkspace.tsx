@@ -186,22 +186,23 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
           const hitThreshold = 10 / zoom; // Adjust sensitivity based on zoom
           const hitEntity = [...cadEntities].reverse().find(entity => {
             if (entity.type === 'line') {
-              return GeometryUtils.isPointOnLine(worldPos, entity.points[0], entity.points[1], hitThreshold);
+              const p1 = entity.points[0];
+              const p2 = entity.points[1];
+              const dist = Math.abs((p2.y - p1.y) * worldPos.x - (p2.x - p1.x) * worldPos.y + p2.x * p1.y - p2.y * p1.x) / Math.sqrt((p2.y - p1.y) ** 2 + (p2.x - p1.x) ** 2);
+              return dist < hitThreshold;
             } else if (entity.type === 'circle' && entity.properties?.radius) {
               const dist = Math.sqrt((worldPos.x - entity.points[0].x)**2 + (worldPos.y - entity.points[0].y)**2);
               return Math.abs(dist - entity.properties.radius) < hitThreshold;
             } else if (entity.type === 'arc' && entity.points.length === 3) {
-              const centerData = GeometryUtils.getArcCenter(entity.points[0], entity.points[1], entity.points[2]);
-              if (!centerData) return false;
-              
-              const startAngle = Math.atan2(entity.points[0].y - centerData.y, entity.points[0].x - centerData.x);
-              const endAngle = Math.atan2(entity.points[2].y - centerData.y, entity.points[2].x - centerData.x);
-              
-              // Determine direction like in rendering
-              const crossProduct = (entity.points[1].x - entity.points[0].x) * (entity.points[2].y - entity.points[0].y) - (entity.points[1].y - entity.points[0].y) * (entity.points[2].x - entity.points[0].x);
-              const anticlockwise = crossProduct > 0;
-
-              return GeometryUtils.isPointOnArc(worldPos, centerData, centerData.radius, startAngle, endAngle, anticlockwise, hitThreshold);
+              // Simplified arc hit detection - check bounds
+              const bounds = {
+                minX: Math.min(entity.points[0].x, entity.points[2].x),
+                maxX: Math.max(entity.points[0].x, entity.points[2].x),
+                minY: Math.min(entity.points[0].y, entity.points[2].y),
+                maxY: Math.max(entity.points[0].y, entity.points[2].y)
+              };
+              return worldPos.x >= bounds.minX - hitThreshold && worldPos.x <= bounds.maxX + hitThreshold &&
+                     worldPos.y >= bounds.minY - hitThreshold && worldPos.y <= bounds.maxY + hitThreshold;
             }
             return false;
           });

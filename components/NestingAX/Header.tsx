@@ -4,6 +4,7 @@ import {
   SaveOffCutIcon, ImportProjectIcon, ExportProjectIcon, ImportDXFIcon, SheetDatabaseIcon,
   LayersIcon, UndoIcon, RedoIcon, FullscreenIcon, ExportDXFIcon, ExportPDFIcon
 } from './AnimatedToolbarIcons';
+import { Zap } from 'lucide-react';
 
 interface ToolbarButtonProps {
   icon?: React.ReactNode;
@@ -49,6 +50,7 @@ interface HeaderProps {
   canUndo?: boolean;
   canRedo?: boolean;
   isManualNesting?: boolean;
+  onOptimizeEntities?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -68,7 +70,8 @@ const Header: React.FC<HeaderProps> = ({
   onRedo,
   canUndo = false,
   canRedo = false,
-  isManualNesting 
+  isManualNesting,
+  onOptimizeEntities
 }) => {
   return (
     <header className="h-[67px] bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg">
@@ -191,6 +194,12 @@ const Header: React.FC<HeaderProps> = ({
               label={`Export\nPDF`} 
               color="text-red-400" 
               onClick={onExportPDF}
+            />
+            <ToolbarButton 
+              icon={<Zap className="w-full h-full text-yellow-400" />}
+              label={`Giảm\nLag`} 
+              color="text-yellow-400" 
+              onClick={onOptimizeEntities}
             />
           </div>
           <div className="text-center text-[8px] text-gray-500 -mt-1">Export</div>

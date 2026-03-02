@@ -43,6 +43,8 @@ const DxfTool: React.FC<DxfToolProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
   const [joinTolerance, setJoinTolerance] = useState(0.5); 
   const [showSuccess, setShowSuccess] = useState(false);
   const [manualLines, setManualLines] = useState<ManualLine[]>([]);
@@ -106,14 +108,44 @@ const DxfTool: React.FC<DxfToolProps> = ({
 
   const processFile = async () => {
     if (!file || isProcessing) return;
-    playBeepSequence(); setIsProcessing(true); setError(null); setResults([]); setProgress(0); setHistory([]); setFuture([]);
-    const steps = [{ text: t.dxfStatusLoading, progress: 15 }, { text: t.dxfStatusParsing, progress: 35 }, { text: t.dxfStatusAnalyzing, progress: 60 }, { text: t.dxfStatusJoining, progress: 85 }, { text: t.dxfStatusResult, progress: 100 }];
-    for (const step of steps) { setStatusText(step.text); await new Promise(r => setTimeout(r, 150)); setProgress(step.progress); }
+    playBeepSequence();
+    setIsProcessing(true);
+    setIsImporting(true);
+    setImportProgress(0);
+    setError(null);
+    setResults([]);
+    setProgress(0);
+    setHistory([]);
+    setFuture([]);
+    setStatusText('Parsing DXF with Worker...');
+    
     try {
+      // Simulate parsing progress
+      const progressInterval = setInterval(() => {
+        setImportProgress(prev => {
+          const next = prev + Math.random() * 30;
+          return next > 95 ? 95 : next;
+        });
+      }, 200);
+
       const data = await dxfService.parseFile(file, joinTolerance);
-      if (data.length === 0) setError(t.dxfError);
+      
+      clearInterval(progressInterval);
+      setImportProgress(100);
+      
+      if (data.length === 0) {
+        setError(t.dxfError);
+      }
       setResults(data);
-    } catch (err) { setError(t.dxfError); } finally { setIsProcessing(false); }
+      console.log(`✓ DXF import complete: ${data.length} entities, simplified to 0.1mm tolerance`);
+    } catch (err) {
+      console.error('Import error:', err);
+      setError(t.dxfError);
+    } finally {
+      setIsProcessing(false);
+      setIsImporting(false);
+      setImportProgress(0);
+    }
   };
 
   const handleSmartRepair = () => {
