@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, FileUp, Upload, Settings, Download, X, Play, ChevronUp, ChevronDown,
@@ -15,7 +15,12 @@ import {
     SheetInput,
     NestingStrategy,
     fileParser
+import { SpatialIndexService, SpatialItem } from '@/services/SpatialIndexService';
+import { getBounds } from '@/services/nesting/geometry';
+
 } from '@/services/nesting';
+import CADCrosshair from '@/components/CADCrosshair';
+
 import DrawingWorkspace from '@/components/nesting/DrawingWorkspace';
 import GPURenderer from '@/components/GPURenderer';
 import FireworksHighTech from '@/components/FireworksHighTech';
@@ -150,14 +155,123 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
     const [showFireworks, setShowFireworks] = useState(false);
 
     // Refs
+    const workspaceContainerRef = useRef<HTMLDivElement>(null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const engine = useRef(new AdvancedNestingEngine());
+
+    const [newPart, setNewPart] = useState({ width: 0, height: 0 });
+
+    const handleDeleteParts = useCallback(() => {
+        setParts(prev => prev.filter(p => !selectedPartIds.has(p.id)));
+        setSelectedPartIds(new Set());
+    }, [selectedPartIds]);
+
+    const handleAddPart = useCallback(() => {
+        const id = `manual-${Date.now()}`;
+        const p: Part = {
+            id,
+            name: `Rect ${newPart.width}x${newPart.height}`,
+            width: newPart.width,
+            height: newPart.height,
+            quantity: 1,
+            priority: 5,
+            allowRotation: true,
+            mirror: false,
+            rotation: 0,
+            smallPart: false,
+            kitNumber: 0,
+            ignore3D: false,
+            enabled: true,
+            color: PART_COLORS[parts.length % PART_COLORS.length],
+            polygon: [
+                { x: 0, y: 0 },
+                { x: newPart.width, y: 0 },
+                { x: newPart.width, y: newPart.height },
+                { x: 0, y: newPart.height }
+            ]
+        };
+        setParts(prev => [...prev, p]);
+        setShowAddPart(false);
+        setNewPart({ width: 0, height: 0 });
+    }, [newPart, parts.length]);
+
+    const spatialIndex = useRef(new SpatialIndexService());
+
+    // Update Spatial Index whenever parts change position or are added/removed
+    useEffect(() => {
+        const items: SpatialItem[] = parts.map(p => {
+            const bounds = getBounds(p.polygon || []);
+            return {
+                id: p.id,
+                minX: (p.x || 0) + bounds.minX,
+                minY: (p.y || 0) + bounds.minY,
+                maxX: (p.x || 0) + bounds.maxX,
+                maxY: (p.y || 0) + bounds.maxY
+            };
+        });
+        spatialIndex.current.clear();
+        spatialIndex.current.load(items);
+        console.log(`🚀 Spatial Index Updated: ${items.length} items`);
+    }, [parts]);
 
     // ============ HANDLERS ============
 
     const handleFileImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
+
+        setImportLoading(true);
+        const newParts: Part[] = [];
+        let completed = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const text = await file.text();
+
+            // 🚀 USE WEB WORKER FOR PARSING (OFF-MAIN-THREAD)
+            const worker = new Worker(new URL('@/workers/dxf.worker.ts', import.meta.url), { type: 'module' });
+            
+            worker.onmessage = (event) => {
+                const { entities, error } = event.data;
+                if (error) {
+                    console.error("Worker Error:", error);
+                } else {
+                    const partId = `import-${Date.now()}-${i}`;
+                    const p: Part = {
+                        id: partId,
+                        name: file.name,
+                        width: 0,
+                        height: 0,
+                        quantity: 1,
+                        priority: 5,
+                        allowRotation: true,
+                        mirror: false,
+                        rotation: 0,
+                        smallPart: false,
+                        kitNumber: 0,
+                        ignore3D: false,
+                        enabled: true,
+                        color: PART_COLORS[(parts.length + newParts.length) % PART_COLORS.length],
+                        mathematicalEntities: entities
+                    };
+                    newParts.push(p);
+                }
+
+                completed++;
+                if (completed === files.length) {
+                    setParts(prev => [...prev, ...newParts]);
+                    setImportLoading(false);
+                }
+                worker.terminate();
+            };
+
+            worker.postMessage({ fileText: text, fileName: file.name });
+        }
+        
+        e.target.value = '';
+    }, [parts.length]);
+
 
         setImportLoading(true);
         
@@ -250,9 +364,15 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
         });
     }, []);
 
-    return (
-        <div className="fixed inset-0 bg-slate-900 flex flex-col z-50">
-            {/* ... existing header ... */}
+    const handleObjectMove = useCallback((id: string, x: number, y: number) => {
+        setParts(prev => prev.map(p => p.id === id ? { ...p, x, y } : p));
+        if (nestingResult) {
+            setNestingResult(prev => {
+                if (!prev) return null;
+                return { ...prev };
+            });
+        }
+    }, [nestingResult]);
 
     const handleRunNesting = useCallback(async () => {
         if (parts.length === 0 || sheets.length === 0) return;
@@ -477,7 +597,12 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
                 </div>
 
                 {/* Right Panel - Canvas Area */}
-                <div className="flex-1 flex flex-col bg-black relative">
+                {/* Right Panel - Canvas Area */}
+                <div ref={workspaceContainerRef} className=\"flex-1 flex flex-col bg-black relative overflow-hidden\">
+                    <CADCrosshair containerRef={workspaceContainerRef} color=\"#00ffff\" />
+                    
+                    <div className=\"absolute top-4 left-4 z-20 flex gap-2\">
+
                     <div className="absolute top-4 left-4 z-20 flex gap-2">
                         <button 
                             onClick={() => setRenderMode('standard')}
@@ -495,6 +620,13 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
 
                     {renderMode === 'gpu' ? (
                         <GPURenderer 
+                            objects={gpuObjects}
+                            sheetWidth={sheets[0].width}
+                            sheetHeight={sheets[0].height}
+                            onObjectSelect={handleObjectSelect}
+                            onObjectMove={handleObjectMove}
+                        />
+
                             objects={gpuObjects}
                             sheetWidth={sheets[0].width}
                             sheetHeight={sheets[0].height}

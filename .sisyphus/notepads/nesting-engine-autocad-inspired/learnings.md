@@ -1,0 +1,3 @@
+- Created `PythonDxfService.ts` to bridge the frontend with the Python backend's `/api/dxf/parse-binary` endpoint.
+- Used `atob` and `Uint8Array` to decode Base64 strings into `Float32Array` for efficient geometry transfer.
+- Mapped the decoded Float32Array (where every 3 floats represent X, Y, Z) into 2D `Point2D` arrays for `polyline` entities.

@@ -32,8 +32,7 @@ const mockCircleEntity = {
 
 console.log('Testing cadEntitiesToGeometry...');
 
-console.log('
---- POLYGON TEST ---');
+console.log('\n--- POLYGON TEST ---');
 const polyResult = cadEntitiesToGeometry([mockPolygonEntity]);
 console.log(`Input: 2 points. Output Paths: ${polyResult.paths.length}`);
 if (polyResult.paths.length > 0) {
@@ -42,8 +41,7 @@ if (polyResult.paths.length > 0) {
   console.log('Points:', polyResult.paths[0].points);
 }
 
-console.log('
---- RECTANGLE TEST ---');
+console.log('\n--- RECTANGLE TEST ---');
 const rectResult = cadEntitiesToGeometry([mockRectangleEntity]);
 console.log(`Input: 2 points. Output Paths: ${rectResult.paths.length}`);
 if (rectResult.paths.length > 0) {
@@ -52,8 +50,7 @@ if (rectResult.paths.length > 0) {
   console.log('Points:', rectResult.paths[0].points);
 }
 
-console.log('
---- CIRCLE TEST ---');
+console.log('\n--- CIRCLE TEST ---');
 const circleResult = cadEntitiesToGeometry([mockCircleEntity]);
 console.log(`Input: 1 point + radius. Output Paths: ${circleResult.paths.length}`);
 if (circleResult.paths.length > 0) {
@@ -62,8 +59,7 @@ if (circleResult.paths.length > 0) {
 }
 
 // Mock what the workspace does on "Save Part"
-console.log('
---- WORKSPACE SNAPSHOT MOCK ---');
+console.log('\n--- WORKSPACE SNAPSHOT MOCK ---');
 let minX = Infinity, minY = Infinity;
 polyResult.paths.forEach(path => {
   path.points.forEach(pt => {
@@ -86,8 +82,7 @@ const snapshotEntities = polyResult.paths.map((path, idx) => ({
 console.log('Snapshot generated entity:', JSON.stringify(snapshotEntities, null, 2));
 
 // Mock what Sidebar does with the snapshot
-console.log('
---- SIDEBAR SVG MOCK ---');
+console.log('\n--- SIDEBAR SVG MOCK ---');
 let svgPathData = "";
 snapshotEntities.forEach(entity => {
   entity.points.forEach((pt, i) => {

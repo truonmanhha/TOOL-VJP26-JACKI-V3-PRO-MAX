@@ -1,109 +1,106 @@
-
-import DxfParser from "dxf-parser";
+// DXF WORKER - AutoCAD Performance Style
+import DxfParser from 'dxf-parser';
 
 const parser = new DxfParser();
 
-// Helper for high-precision snapping
-const snap = (p: { x: number; y: number }) => ({
-  x: Math.round(p.x * 10000) / 10000,
-  y: Math.round(p.y * 10000) / 10000
-});
-
-// Adaptive resolution for curves (AutoCAD style)
-const getArcPoints = (entity: any) => {
-  const { center, radius, startAngle, endAngle } = entity;
-  let s = startAngle;
-  let e = endAngle;
-  if (e < s) e += 2 * Math.PI;
-  const sweep = e - s;
-  const segments = Math.max(32, Math.min(512, Math.floor(radius * sweep * 5)));
-  
-  const points = [];
-  for (let i = 0; i <= segments; i++) {
-    const angle = s + sweep * (i / segments);
-    points.push(snap({
-      x: center.x + radius * Math.cos(angle),
-      y: center.y + radius * Math.sin(angle)
-    }));
-  }
-  return points;
-};
-
-const getCirclePoints = (entity: any) => {
-  const { center, radius } = entity;
-  const segments = Math.max(64, Math.min(1024, Math.floor(radius * 30)));
-  const points = [];
-  for (let i = 0; i <= segments; i++) {
-    const angle = (2 * Math.PI * i) / segments;
-    points.push(snap({
-      x: center.x + radius * Math.cos(angle),
-      y: center.y + radius * Math.sin(angle)
-    }));
-  }
-  return points;
-};
-
 self.onmessage = async (e) => {
-  const { content, fileName } = e.data;
+  const { fileText, fileName } = e.data;
   
   try {
-    const dxf = parser.parseSync(content);
-    const resultParts: any[] = [];
-    
+    const dxf = parser.parseSync(fileText);
     if (!dxf || !dxf.entities) {
-      self.postMessage({ success: false, error: "Invalid DXF" });
+      self.postMessage({ error: "No entities found" });
       return;
     }
 
-    dxf.entities.forEach((entity: any, idx: number) => {
-      let geometry: any[] = [];
+    const processedEntities = dxf.entities.map((entity, index) => {
+      let points = [];
       let isClosed = false;
 
-      switch (entity.type) {
-        case "LWPOLYLINE":
-        case "POLYLINE":
-          if (entity.vertices) {
-            geometry = entity.vertices.map((v: any) => snap({ x: v.x, y: v.y }));
-            isClosed = (entity.shape & 1) === 1 || entity.closed === true;
-          }
-          break;
-        case "LINE":
-          geometry = [snap(entity.start), snap(entity.end)];
-          break;
-        case "ARC":
-          geometry = getArcPoints(entity);
-          break;
-        case "CIRCLE":
-          geometry = getCirclePoints(entity);
-          isClosed = true;
-          break;
+      if (entity.type === "LWPOLYLINE" || entity.type === "POLYLINE") {
+        if (entity.vertices) {
+          points = entity.vertices.map(v => ({ x: v.x || 0, y: v.y || 0 }));
+          isClosed = (entity.flags & 1) === 1 || entity.closed === true;
+        }
+      } else if (entity.type === "LINE") {
+        points = [
+          { x: entity.start.x, y: entity.start.y },
+          { x: entity.end.x, y: entity.end.y }
+        ];
+      } else if (entity.type === "ARC" || entity.type === "CIRCLE") {
+        points = arcToPoints(entity);
+        isClosed = entity.type === "CIRCLE";
       }
 
-      if (geometry.length > 0) {
-        // Prepare data for GPU: Float32Array is much faster than JSON arrays
-        const flatPoints = new Float32Array(geometry.length * 2);
-        geometry.forEach((p, i) => {
-          flatPoints[i * 2] = p.x;
-          flatPoints[i * 2 + 1] = p.y;
-        });
+      if (points.length < 2) return null;
 
-        resultParts.push({
-          id: `worker-${Date.now()}-${idx}`,
-          name: `${entity.type}-${idx}`,
-          geometry: flatPoints, // Transferable object
-          isClosed,
-          type: entity.type
-        });
-      }
-    });
+      // Fast Binary Transfer via ArrayBuffer (Zero-copy)
+      const floatArray = new Float32Array(points.length * 3);
+      points.forEach((p, i) => {
+        floatArray[i * 3] = p.x;
+        floatArray[i * 3 + 1] = p.y;
+        floatArray[i * 3 + 2] = 0;
+      });
 
-    // Send back results as transferable to avoid cloning overhead
-    self.postMessage({ 
-      success: true, 
-      parts: resultParts,
-      fileName 
-    });
-  } catch (err: any) {
-    self.postMessage({ success: false, error: err.message });
+      return {
+        id: `ent-${index}-${Date.now()}`,
+        type: entity.type,
+        is_closed: isClosed,
+        color: entity.color ? `#${entity.color.toString(16).padStart(6, '0')}` : "#00ff00",
+        geometry_buffer: floatArray.buffer
+      };
+    }).filter(ent => ent !== null);
+
+    const buffers = processedEntities.map(e => e.geometry_buffer);
+    self.postMessage({ fileName, entities: processedEntities }, buffers);
+
+      const floatArray = new Float32Array(points.length * 3);
+      points.forEach((p, i) => {
+        floatArray[i * 3] = p.x;
+        floatArray[i * 3 + 1] = p.y;
+        floatArray[i * 3 + 2] = 0;
+      });
+
+      const binaryString = String.fromCharCode(...new Uint8Array(floatArray.buffer));
+      const base64 = btoa(binaryString);
+
+      return {
+        id: `ent-${index}-${Date.now()}`,
+        type: entity.type,
+        is_closed: isClosed,
+        color: entity.color ? `#${entity.color.toString(16).padStart(6, '0')}` : "#00ff00",
+        geometry_b64: base64
+      };
+    }).filter(ent => ent !== null);
+
+    self.postMessage({ fileName, entities: processedEntities });
+  } catch (err) {
+    self.postMessage({ error: err.message });
   }
 };
+
+function arcToPoints(entity) {
+  const points = [];
+  const radius = entity.radius;
+  const center = entity.center;
+  let startAngle = entity.startAngle || 0;
+  let endAngle = entity.endAngle || (Math.PI * 2);
+  
+  if (entity.type === 'ARC') {
+    startAngle = (entity.startAngle * Math.PI) / 180;
+    endAngle = (entity.endAngle * Math.PI) / 180;
+  }
+
+  if (endAngle < startAngle) endAngle += 2 * Math.PI;
+  const sweep = endAngle - startAngle;
+  const segments = Math.max(32, Math.min(256, Math.floor(radius * sweep * 2)));
+
+  for (let i = 0; i <= segments; i++) {
+    const angle = startAngle + sweep * (i / segments);
+    points.push({
+      x: center.x + radius * Math.cos(angle),
+      y: center.y + radius * Math.sin(angle)
+    });
+  }
+  return points;
+}
