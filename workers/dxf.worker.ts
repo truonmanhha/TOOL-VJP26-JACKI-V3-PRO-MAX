@@ -3,6 +3,8 @@
 // Uses Douglas-Peucker algorithm with 0.1mm default tolerance
 // ============================================================
 import DxfParser from 'dxf-parser';
+import { pointsToTypedArray, normalizeGeometry } from '../services/nesting/geometry';
+
 
 const parser = new DxfParser();
 const SIMPLIFICATION_TOLERANCE = 0.2; // 0.2mm (200 microns) - aggressive V3 optimization
@@ -381,7 +383,7 @@ interface DxfEntity {
   area: number;
   verticesCount: number;
   isClosed: boolean;
-  geometry: { x: number; y: number }[];
+  geometry: { x: number; y: number }[] | Float32Array;
 }
 
 self.onmessage = async (e: MessageEvent) => {
@@ -506,34 +508,61 @@ self.onmessage = async (e: MessageEvent) => {
       console.log(`[dxf.worker] ✓ Parsed ${parsedEntities.length} entities from ${fileName}`);
       self.postMessage({ type: 'success', payload: { entities: parsedEntities, fileName } });
     } else if (type === 'SIMPLIFY') {
-      // Handle SIMPLIFY command
+      // Handle SIMPLIFY command with Float32Array conversion + Transferable Objects
       if (!entities || !Array.isArray(entities)) {
         self.postMessage({ type: 'error', error: 'Invalid entities array for SIMPLIFY' });
         return;
       }
 
-      const optimizedEntities = entities.map((entity: any) => {
+      const optimizedEntities: any[] = [];
+      const transferables: Float32Array[] = [];
+
+      entities.forEach((entity: any) => {
         try {
           if (!entity.geometry || !Array.isArray(entity.geometry)) {
-            return entity;
+            optimizedEntities.push(entity);
+            return;
           }
 
           // Use optimizeGeometryV3 with 0.2mm tolerance and 160° corner protection
           const optimized = optimizeGeometryV3(entity.geometry, 0.2, 160);
 
-          return {
+          // Convert optimized geometry to Float32Array for memory efficiency
+          const typedGeometry = pointsToTypedArray(optimized);
+          transferables.push(typedGeometry); // Track for Transferable Objects
+
+          optimizedEntities.push({
             ...entity,
-            geometry: optimized,
-            verticesCount: optimized.length
-          };
+            geometry: typedGeometry,
+            verticesCount: optimized.length,
+            isTypedArray: true // Flag to indicate geometry is Float32Array
+          });
         } catch (err) {
           console.error(`[dxf.worker] Error optimizing entity ${entity.id}:`, err);
-          return entity; // Return original if optimization fails
+          optimizedEntities.push(entity); // Return original if optimization fails
         }
       });
 
-      console.log(`[dxf.worker] ✓ Optimized ${optimizedEntities.length} entities`);
-      self.postMessage({ type: 'success', payload: { optimizedEntities } });
+      // Use Transferable Objects: pass ArrayBuffer ownership to main thread
+      // This avoids copying the large Float32Array buffers - zero-copy transfer
+      const payload = { optimizedEntities };
+      if (transferables.length > 0) {
+        // Extract underlying ArrayBuffers from Float32Array objects
+        const buffers = transferables.map(ta => ta.buffer);
+        // Web Worker postMessage(message, transferables) - second param is transfer list
+        (self as any as DedicatedWorkerGlobalScope).postMessage({ type: 'success', payload }, buffers as any);
+      } else {
+        self.postMessage({ type: 'success', payload });
+      }
+      if (transferables.length > 0) {
+        // Extract underlying ArrayBuffers from Float32Array objects
+        const buffers = transferables.map(ta => ta.buffer);
+        // Web Worker postMessage(message, transferables) - second param is transfer list
+        self.postMessage({ type: 'success', payload }, buffers as any);
+      } else {
+        self.postMessage({ type: 'success', payload });
+      }
+
     } else {
       self.postMessage({ type: 'error', error: `Unknown message type: ${type}` });
     }

@@ -20,6 +20,61 @@ export interface BoundingBox {
 
 export type Polygon = Point2D[];
 
+// ============ TYPED ARRAY OPTIMIZATION (Memory Reduction) ==============
+
+/**
+ * Convert array of Point2D objects to a flat Float32Array [x1, y1, x2, y2, ...]
+ * Reduces memory usage by ~80% vs object array (32 bytes per object → 8 bytes per point)
+ * @param points Array of Point2D objects
+ * @returns Float32Array with interleaved x, y coordinates
+ */
+export function pointsToTypedArray(points: Point2D[]): Float32Array {
+    const buffer = new Float32Array(points.length * 2);
+    for (let i = 0; i < points.length; i++) {
+        buffer[i * 2] = points[i].x;
+        buffer[i * 2 + 1] = points[i].y;
+    }
+    return buffer;
+}
+
+/**
+ * Convert flat Float32Array [x1, y1, x2, y2, ...] back to Point2D[] objects
+ * Used for legacy UI compatibility when drawing or displaying coordinates
+ * @param array Float32Array with interleaved coordinates
+ * @returns Array of Point2D objects
+ */
+export function typedArrayToPoints(array: Float32Array): Point2D[] {
+    const points: Point2D[] = [];
+    for (let i = 0; i < array.length; i += 2) {
+        points.push({
+            x: array[i],
+            y: array[i + 1]
+        });
+    }
+    return points;
+}
+
+/**
+ * Check if a value is a Float32Array (typed geometry)
+ * @param value Value to check
+ * @returns true if value is Float32Array
+ */
+export function isTypedArray(value: unknown): value is Float32Array {
+    return value instanceof Float32Array;
+}
+
+/**
+ * Normalize geometry: accepts either Point2D[] or Float32Array
+ * @param geometry Point2D[] or Float32Array
+ * @returns Guaranteed Point2D[] for processing
+ */
+export function normalizeGeometry(geometry: Point2D[] | Float32Array): Point2D[] {
+    if (isTypedArray(geometry)) {
+        return typedArrayToPoints(geometry);
+    }
+    return geometry;
+}
+
 // ============ BASIC GEOMETRY ==============
 
 /**
@@ -794,5 +849,9 @@ export default {
     removeCollinearPoints,
     optimizeGeometry,
     optimizeGeometryV2,
-    optimizeGeometryV3
+    optimizeGeometryV3,
+    pointsToTypedArray,
+    typedArrayToPoints,
+    isTypedArray,
+    normalizeGeometry
 };

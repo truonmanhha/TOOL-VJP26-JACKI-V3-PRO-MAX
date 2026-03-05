@@ -12,8 +12,14 @@ export interface UndoAction {
   timestamp: number;
 }
 
-const MAX_STACK_SIZE = 100;
+const MAX_STACK_SIZE = 50;  // Limit to 50 states to prevent memory bloat
+const MAX_MEMORY_MB = 50;    // Maximum total memory for undo stacks (MB)
+const MB_TO_BYTES = 1024 * 1024;
 
+/**
+ * Undo/Redo Manager with memory capping.
+ * Automatically trims the oldest states when limits are exceeded.
+ */
 class UndoManager {
   private undoStack: UndoAction[] = [];
   private redoStack: UndoAction[] = [];
@@ -33,10 +39,20 @@ class UndoManager {
       timestamp: Date.now()
     };
     this.undoStack.push(fullAction);
-    // Enforce max stack size
+    
+    // Enforce max stack size (hard limit: 50 items)
     if (this.undoStack.length > MAX_STACK_SIZE) {
-      this.undoStack.splice(0, this.undoStack.length - MAX_STACK_SIZE);
+      this.undoStack.shift();
     }
+    
+    // Enforce max memory usage (soft limit: 50MB total)
+    if (this.getTotalMemoryUsageMB() > MAX_MEMORY_MB) {
+      // Remove oldest entry from undo stack
+      if (this.undoStack.length > 1) {
+        this.undoStack.shift();
+      }
+    }
+    
     // Clear redo stack on new action
     this.redoStack = [];
     this.notify();
@@ -90,6 +106,41 @@ class UndoManager {
 
   getRedoCount(): number {
     return this.redoStack.length;
+  }
+
+  /** Estimate memory usage of a single state in MB */
+  private estimateStateMemoryMB(state: any): number {
+    try {
+      const jsonString = JSON.stringify(state);
+      // Rough estimate: 1 character ≈ 2 bytes in JavaScript
+      return (jsonString.length * 2) / MB_TO_BYTES;
+    } catch {
+      return 0;
+    }
+  }
+
+  /** Get total memory usage of undo and redo stacks in MB */
+  getTotalMemoryUsageMB(): number {
+    const undoMemory = this.undoStack.reduce(
+      (sum, action) => sum + this.estimateStateMemoryMB(action.after),
+      0
+    );
+    const redoMemory = this.redoStack.reduce(
+      (sum, action) => sum + this.estimateStateMemoryMB(action.after),
+      0
+    );
+    return undoMemory + redoMemory;
+  }
+
+  /** Get detailed memory usage info for debugging */
+  getMemoryStats() {
+    return {
+      undoStackSize: this.undoStack.length,
+      redoStackSize: this.redoStack.length,
+      totalMemoryMB: this.getTotalMemoryUsageMB(),
+      memoryLimitMB: MAX_MEMORY_MB,
+      itemLimitSize: MAX_STACK_SIZE
+    };
   }
 
   /** Clear all undo/redo history */

@@ -3,6 +3,8 @@
 // Handles: DXF parsing, nesting computation, timeouts
 // ============================================================
 
+import { pointsToTypedArray, typedArrayToPoints } from './nesting/geometry';
+
 /**
  * Standardized Worker message response shape
  */
@@ -139,14 +141,20 @@ export class WorkerManager {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
-  /**
+/**
    * Execute a task on a worker with timeout and error handling
+   * @param pool Worker pool to use
+   * @param message Message to send to worker
+   * @param timeout Task timeout in milliseconds
+   * @param onProgress Optional progress callback
+   * @param transferList Optional Transferable objects for zero-copy (ArrayBuffer list)
    */
   private _executeWorkerTask<T>(
     pool: PoolEntry[],
     message: any,
     timeout: number = this.config.defaultTimeout ?? 30000,
-    onProgress?: (progress: any) => void
+    onProgress?: (progress: any) => void,
+    transferList: ArrayBuffer[] = []
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const entry = this._getAvailableWorker(pool);
@@ -214,10 +222,18 @@ export class WorkerManager {
       entry.worker.addEventListener('error', errorHandler);
 
       // Send message with request ID for tracking
-      entry.worker.postMessage({
-        ...message,
-        requestId
-      });
+      // Use Transferable list for zero-copy transfer if provided
+      if (transferList.length > 0) {
+        entry.worker.postMessage(
+          { ...message, requestId },
+          transferList
+        );
+      } else {
+        entry.worker.postMessage({
+          ...message,
+          requestId
+        });
+      }
     });
   }
 
@@ -258,18 +274,50 @@ export class WorkerManager {
   }
 
   /**
-   * Simplify geometries using worker pool
+   * Simplify geometries using worker pool (Zero-copy Transferables)
+   * Converts Point2D[] geometries to Float32Array buffers for efficient transfer
    */
   async simplifyGeometries(entities: any[]): Promise<any[]> {
     if (this.config.debug) {
-      console.log(`✂️ Simplifying ${entities.length} geometries`);
+      console.log(`✂️ Simplifying ${entities.length} geometries with zero-copy transfer`);
     }
 
+    // ============ CONVERT GEOMETRIES TO TRANSFERABLES ============
+    // Convert Point2D[] arrays to Float32Array buffers
+    const transferBuffers: ArrayBuffer[] = [];
+    const entitiesWithBuffers = entities.map(ent => {
+      const bufferEntity = { ...ent };
+      
+      // Convert points to Float32Array if they exist
+      if (ent.points && Array.isArray(ent.points) && ent.points.length > 0) {
+        const typedArray = pointsToTypedArray(ent.points);
+        bufferEntity.points = typedArray; // Store as Float32Array
+        transferBuffers.push(typedArray.buffer); // Add buffer to transfer list
+      }
+      
+      return bufferEntity;
+    });
+
+    // ============ EXECUTE WITH TRANSFER LIST ============
     return this._executeWorkerTask(
       this.dxfPool,
-      { type: 'SIMPLIFY', entities },
-      this.config.defaultTimeout
-    ).then((result: any) => result.optimizedEntities || []);
+      { type: 'SIMPLIFY', entities: entitiesWithBuffers },
+      this.config.defaultTimeout,
+      undefined,
+      transferBuffers // Pass transfer list for zero-copy
+    ).then((result: any) => {
+      // Convert buffers back to Point2D[] for UI compatibility
+      if (result.optimizedEntities && Array.isArray(result.optimizedEntities)) {
+        return result.optimizedEntities.map((ent: any) => {
+          if (ent.points instanceof Float32Array) {
+            // Convert Float32Array back to Point2D[] for rendering
+            ent.points = typedArrayToPoints(ent.points);
+          }
+          return ent;
+        });
+      }
+      return result.optimizedEntities || [];
+    });
   }
 
   /**

@@ -37,7 +37,10 @@ const MENU_DATA = [
   ]},
   { name: "Tiện ích", icon: "icon-tool", action: null, color: "#FF9100", sub: [
     { name: "Nối", icon: "icon-join", action: "join", color: "#76FF03" },
-    { name: "Đo đạc", icon: "icon-measure", action: "measure", color: "#FFAB00" },
+    { name: "Đo đạc", icon: "icon-measure", action: null, color: "#FFAB00", sub: [
+      { name: "Thủ công", icon: "icon-measure", action: "measure", color: "#FFAB00" },
+      { name: "Đo nhanh", icon: "icon-rect", action: "measure_quick", color: "#00E676" }
+    ]},
     { name: "Bán kính", icon: "icon-radius", action: "measure_radius", color: "#FFD740" },
     { name: "Góc", icon: "icon-angle", action: "measure_angle", color: "#FFE57F" },
     { name: "Diện tích", icon: "icon-area", action: "measure_area", color: "#FFF8E1" },
@@ -238,7 +241,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
   };
 
   // ---------------------------------------------------------
-  // 6. BUILD MENU (DOM imperative — giữ nguyên logic gốc)
+  // 6. BUILD MENU (DOM imperative — 3-ring support)
   // ---------------------------------------------------------
   const buildMenu = useCallback(() => {
     const svg = mainSvgRef.current;
@@ -266,7 +269,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
       const endAngle = startAngle + angleStep;
       const midRad = (startAngle + (angleStep / 2)) * (Math.PI / 180);
 
-      // ---- OUTER GROUP (sub-menu) ----
+      // ---- OUTER GROUP (level 2 sub-menu) ----
       const outerGroup = document.createElementNS(NS, 'g');
       outerGroup.setAttribute('class', 'outer-group');
 
@@ -275,10 +278,108 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
         const arcSpan = (item.sub.length - 1) * step;
         const subStartBase = startAngle + 15 - (arcSpan / 2);
 
-        item.sub.forEach((sub, sIdx) => {
+        item.sub.forEach((sub: any, sIdx: number) => {
           const sStart = subStartBase + (sIdx * step) - 13;
           const sEnd = sStart + 26;
           const sMidRad = (sStart + 13) * (Math.PI / 180);
+
+          // ---- OUTER-OUTER GROUP (level 3 sub-sub-menu) ----
+          let outerOuterGroup: SVGGElement | null = null;
+          if (sub.sub && Array.isArray(sub.sub)) {
+            outerOuterGroup = document.createElementNS(NS, 'g');
+            outerOuterGroup.setAttribute('class', 'outer-outer-group');
+
+            const ssStep = 26;
+            const ssArcSpan = (sub.sub.length - 1) * ssStep; // Cung trải dài từ tâm nút con đầu đến tâm nút con cuối
+            const sCenter = sStart + 13; // Trục giữa của nút cha (vòng 2)
+            const ssStartBase = sCenter - (ssArcSpan / 2); // Tọa độ Tâm của nút con đầu tiên
+
+            sub.sub.forEach((ssItem: any, ssIdx: number) => {
+              // Điểm bắt đầu vẽ Path = Tâm nút con hiện tại trừ đi nửa độ rộng (-13)
+              const ssStart = ssStartBase + (ssIdx * ssStep) - 13;
+              const ssEnd = ssStart + 26;
+              const ssMidRad = (ssStart + 13) * (Math.PI / 180);
+
+              const ssGroup = document.createElementNS(NS, 'g');
+              ssGroup.style.cursor = 'pointer';
+              ssGroup.style.setProperty('--dx', `${Math.cos(ssMidRad) * 45}px`);
+              ssGroup.style.setProperty('--dy', `${Math.sin(ssMidRad) * 45}px`);
+              ssGroup.style.setProperty('--hover-color', ssItem.color || '#ffffff');
+
+              const ssPathStr = createPath(350, 350, 230, 305, ssStart, ssEnd);
+
+              const ssClipId = `clip-subsub-${i}-${sIdx}-${ssIdx}`;
+              const ssClipPath = document.createElementNS(NS, 'clipPath');
+              ssClipPath.id = ssClipId;
+              const ssClipShape = document.createElementNS(NS, 'path');
+              ssClipShape.setAttribute('d', ssPathStr);
+              ssClipPath.appendChild(ssClipShape);
+              dynamicClips!.appendChild(ssClipPath);
+
+              const ssPath = document.createElementNS(NS, 'path');
+              ssPath.setAttribute('d', ssPathStr);
+              ssPath.setAttribute('class', 'sector outer-outer');
+              ssPath.setAttribute('pathLength', '100');
+
+              const ssIconX = 350 + 267 * Math.cos(ssMidRad);
+              const ssIconY = 350 + 267 * Math.sin(ssMidRad);
+
+              const ssIcon = document.createElementNS(NS, 'use');
+              ssIcon.setAttributeNS(XLINK, 'href', `#${ssItem.icon}`);
+              ssIcon.setAttribute('x', String(ssIconX));
+              ssIcon.setAttribute('y', String(ssIconY));
+              ssIcon.setAttribute('class', 'menu-icon outer-outer-icon');
+              ssIcon.style.transformOrigin = `${ssIconX}px ${ssIconY}px`;
+              ssIcon.style.transitionDelay = `${ssIdx * 0.03 + 0.15}s`;
+
+              const ssAmongUsWrapper = document.createElementNS(NS, 'g');
+              ssAmongUsWrapper.setAttribute('clip-path', `url(#${ssClipId})`);
+              ssAmongUsWrapper.setAttribute('class', 'among-us-clip-wrapper');
+
+              const ssAmongUs = document.createElementNS(NS, 'use');
+              ssAmongUs.setAttributeNS(XLINK, 'href', '#icon-among-us');
+              ssAmongUs.setAttribute('x', String(ssIconX));
+              ssAmongUs.setAttribute('y', String(ssIconY));
+              ssAmongUs.setAttribute('class', 'among-us-icon-sector');
+              ssAmongUs.style.transformOrigin = `${ssIconX}px ${ssIconY}px`;
+              ssAmongUsWrapper.appendChild(ssAmongUs);
+
+              ssGroup.onmouseenter = () => {
+                playSound('hover');
+                typeWriterEffect(ssItem.name.toUpperCase(), ssItem.color);
+                subPath.classList.add('highlight');
+                // KHÔNG add show ở đây — chỉ level 2 (subGroup) mới được quyền show level 3
+              };
+              ssGroup.onmouseleave = () => {
+                clearCenterText();
+                subPath.classList.remove('highlight');
+              };
+              ssGroup.onclick = (e: MouseEvent) => {
+                e.stopPropagation();
+                playSound('click');
+                spawnParticles(e.pageX, e.pageY, ssItem.color);
+                if (ssItem.action && onSelectTool) onSelectTool(ssItem.action);
+                setTimeout(() => onClose(), 200);
+              };
+
+              ssGroup.appendChild(ssPath);
+              ssGroup.appendChild(ssAmongUsWrapper);
+              ssGroup.appendChild(ssIcon);
+              outerOuterGroup!.appendChild(ssGroup);
+            });
+
+            // Append level 3 group to outerLayers (before outerGroup so z-order is correct)
+            outerLayers.appendChild(outerOuterGroup);
+
+            outerOuterGroup.onmouseleave = (e: MouseEvent) => {
+              const related = e.relatedTarget as Element | null;
+              const isMovingToParentSub = related && subGroup.contains(related);
+              if (!isMovingToParentSub) {
+                outerOuterGroup!.classList.remove('show');
+                subPath.classList.remove('highlight');
+              }
+            };
+          }
 
           const subGroup = document.createElementNS(NS, 'g');
           subGroup.style.cursor = 'pointer';
@@ -324,17 +425,42 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
           subAmongUs.style.transformOrigin = `${iconX}px ${iconY}px`;
           subAmongUsWrapper.appendChild(subAmongUs);
 
+          // Hover logic for level 2 items — show level 3 if sub.sub exists
           subGroup.onmouseenter = () => {
             playSound('hover');
             typeWriterEffect(sub.name.toUpperCase(), sub.color);
+
+            // Hide all level 3 groups
+            outerLayers.querySelectorAll('.outer-outer-group').forEach(oog => oog.classList.remove('show'));
+            // Remove highlight from all level 2 sectors
+            outerGroup.querySelectorAll('.sector.outer').forEach(s => s.classList.remove('highlight'));
+
+            // If this level 2 item has sub (level 3), show it
+            if (outerOuterGroup) {
+              outerOuterGroup.classList.add('show');
+              subPath.classList.add('highlight');
+            }
           };
-          subGroup.onmouseleave = clearCenterText;
-          subGroup.onclick = (e) => {
+          subGroup.onmouseleave = (e: MouseEvent) => {
+            clearCenterText();
+            if (outerOuterGroup) {
+              const related = e.relatedTarget as Element | null;
+              const isMovingToLevel3 = related && outerOuterGroup.contains(related);
+              if (!isMovingToLevel3) {
+                outerOuterGroup.classList.remove('show');
+                subPath.classList.remove('highlight');
+              }
+            }
+          };
+          subGroup.onclick = (e: MouseEvent) => {
             e.stopPropagation();
-            playSound('click');
-            spawnParticles(e.pageX, e.pageY, sub.color);
-            if (sub.action && onSelectTool) onSelectTool(sub.action);
-            setTimeout(() => onClose(), 200);
+            // Only fire action if this item has a direct action (no sub)
+            if (sub.action && !sub.sub) {
+              playSound('click');
+              spawnParticles(e.pageX, e.pageY, sub.color);
+              if (onSelectTool) onSelectTool(sub.action);
+              setTimeout(() => onClose(), 200);
+            }
           };
 
           subGroup.appendChild(subPath);
@@ -345,7 +471,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
       }
       outerLayers.appendChild(outerGroup);
 
-      // ---- INNER GROUP (main item) ----
+      // ---- INNER GROUP (level 1 main item) ----
       const g = document.createElementNS(NS, 'g');
       g.style.setProperty('--dx', `${Math.cos(midRad) * 45}px`);
       g.style.setProperty('--dy', `${Math.sin(midRad) * 45}px`);
@@ -394,7 +520,9 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
         playSound('hover');
         typeWriterEffect(item.name.toUpperCase(), item.color);
 
+        // Hide all level 2 and level 3 groups
         outerLayers.querySelectorAll('.outer-group').forEach(og => og.classList.remove('show'));
+        outerLayers.querySelectorAll('.outer-outer-group').forEach(oog => oog.classList.remove('show'));
         svg.querySelectorAll('.sector').forEach(s => s.classList.remove('highlight'));
 
         if (item.sub) {
@@ -540,6 +668,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
           <g id="icon-tool"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></g></g>
           <g id="icon-measure"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 19.5L19.5 2l2.5 2.5L4.5 22 2 19.5z"/><path d="M6.5 15l2-2"/><path d="M10.5 11l2-2"/><path d="M14.5 7l2-2"/></g></g>
           <g id="icon-note"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></g></g>
+          <g id="icon-zap"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></g></g>
           <g id="icon-front-view"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" fillOpacity="0.2"/><rect x="4" y="4" width="16" height="16" rx="2"/></g></g>
           <g id="icon-back-view"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" strokeDasharray="2 2"/></g></g>
           <g id="icon-firework"><g transform="translate(-12, -12)" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v8 m8-4h-8 m4-8v8 m4-4h-8" opacity="0.6"/><circle cx="6" cy="8" r="1.5" fill="currentColor" opacity="0.7"/><circle cx="18" cy="8" r="1.5" fill="currentColor" opacity="0.7"/><circle cx="8" cy="18" r="1.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="18" r="1.5" fill="currentColor" opacity="0.7"/></g></g>
@@ -551,6 +680,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
 
         {/* RADAR RINGS */}
         <g id="radar-layer">
+          <circle cx="350" cy="350" r="310" className="radar-ring radar-4" />
           <circle cx="350" cy="350" r="280" className="radar-ring radar-1" />
           <circle cx="350" cy="350" r="240" className="radar-ring radar-2" strokeWidth="2" />
           <circle cx="350" cy="350" r="160" className="radar-ring radar-3" />
@@ -642,6 +772,7 @@ const RADIAL_MENU_CSS = `
   #radial-menu-container .radar-1 { stroke-dasharray: 4 8; animation: rm-spin 20s linear infinite; }
   #radial-menu-container .radar-2 { stroke-dasharray: 40 10 5 10; animation: rm-spin-rev 25s linear infinite; opacity: 0.08 !important; }
   #radial-menu-container .radar-3 { stroke-dasharray: 2 15; animation: rm-spin 15s linear infinite; stroke: #00E5FF; }
+  #radial-menu-container .radar-4 { stroke-dasharray: 6 12; animation: rm-spin-rev 30s linear infinite; stroke: #FFAB00; opacity: 0.06 !important; }
   @keyframes rm-spin     { 100% { transform: rotate(360deg);  } }
   @keyframes rm-spin-rev { 100% { transform: rotate(-360deg); } }
 
@@ -676,6 +807,17 @@ const RADIAL_MENU_CSS = `
   #radial-menu-container .outer-group.show { opacity: 1; visibility: visible; pointer-events: auto; }
   #radial-menu-container .outer-group.show .sector.outer { opacity: 1; transform: scale(1); pointer-events: auto; }
 
+  #radial-menu-container .sector.outer-outer {
+    fill: #111820;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85);
+    transition: all 0.2s ease;
+  }
+  #radial-menu-container .outer-outer-group { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.2s, visibility 0.2s; }
+  #radial-menu-container .outer-outer-group.show { opacity: 1; visibility: visible; pointer-events: auto; }
+  #radial-menu-container .outer-outer-group.show .sector.outer-outer { opacity: 1; transform: scale(1); pointer-events: auto; }
+
   #radial-menu-container g:hover > .sector,
   #radial-menu-container .sector.highlight {
     fill: rgba(20,121,234,0.15) !important;
@@ -701,7 +843,8 @@ const RADIAL_MENU_CSS = `
 
   /* MENU ICONS */
   #radial-menu-container .menu-icon,
-  #radial-menu-container .outer-icon {
+  #radial-menu-container .outer-icon,
+  #radial-menu-container .outer-outer-icon {
     opacity: 0;
     transform: scale(0) rotate(180deg);
     pointer-events: none;
@@ -710,9 +853,11 @@ const RADIAL_MENU_CSS = `
   }
   #radial-menu-container.active .menu-icon { opacity: 1; transform: scale(1) rotate(0deg); }
   #radial-menu-container .outer-group.show .outer-icon { opacity: 1; transform: scale(1) rotate(0deg); }
+  #radial-menu-container .outer-outer-group.show .outer-outer-icon { opacity: 1; transform: scale(1) rotate(0deg); }
 
   #radial-menu-container g:hover > .menu-icon,
   #radial-menu-container g:hover > .outer-icon,
+  #radial-menu-container g:hover > .outer-outer-icon,
   #radial-menu-container .sector.highlight ~ .menu-icon {
     transform: scale(1.3) !important;
     color: var(--hover-color, #ffffff) !important;

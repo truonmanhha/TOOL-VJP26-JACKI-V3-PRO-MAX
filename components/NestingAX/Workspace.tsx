@@ -549,6 +549,9 @@ const Workspace: React.FC<WorkspaceProps> = ({
           setMeasurePoints([]);
           setMeasureResult(null);
           if (measureTimerRef.current) { clearTimeout(measureTimerRef.current); measureTimerRef.current = null; }
+        } else if (activeDrawTool === 'measure_quick') {
+          console.log('❌ Cancelling measure_quick tool');
+          if (onCancelDraw) onCancelDraw();
         } else if (activeDrawTool === 'join') {
           console.log('❌ Clearing join tool');
           setJoinFirstEntityId(null);
@@ -2315,6 +2318,58 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           measureTimerRef.current = setTimeout(() => setMeasureResult(null), 4000);
         }
         return prevDrawState; // Don't change drawState for measure tool
+      } else if (activeDrawTool === 'measure_quick') {
+        // Quick Measure: hit-test entity under cursor, show bounding box dimensions
+        const threshold = 10 / pixelsPerUnit;
+        let hitEntity: CadEntity | null = null;
+        for (const ent of cadEntities) {
+          if (isPointNearEntity(worldPos, ent, threshold)) {
+            hitEntity = ent;
+            break;
+          }
+        }
+        if (hitEntity) {
+          // Calculate bounding box for the hit entity
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          hitEntity.points?.forEach((p: { x: number; y: number }) => {
+            if (isFinite(p.x) && isFinite(p.y)) {
+              minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+              minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+            }
+          });
+          // Handle circle / arc radius
+          if (hitEntity.type === 'circle' || hitEntity.type === 'arc') {
+            const cx = hitEntity.properties?.centerX ?? hitEntity.points?.[0]?.x ?? 0;
+            const cy = hitEntity.properties?.centerY ?? hitEntity.points?.[0]?.y ?? 0;
+            const r = hitEntity.properties?.radius ?? 0;
+            if (isFinite(cx) && isFinite(cy) && isFinite(r) && r > 0) {
+              minX = Math.min(minX, cx - r); maxX = Math.max(maxX, cx + r);
+              minY = Math.min(minY, cy - r); maxY = Math.max(maxY, cy + r);
+            }
+          }
+          // Handle ellipse rx/ry
+          if (hitEntity.type === 'ellipse') {
+            const cx = hitEntity.points?.[0]?.x ?? 0;
+            const cy = hitEntity.points?.[0]?.y ?? 0;
+            const rx = hitEntity.properties?.rx ?? 0;
+            const ry = hitEntity.properties?.ry ?? 0;
+            if (isFinite(cx) && isFinite(cy)) {
+              minX = Math.min(minX, cx - rx); maxX = Math.max(maxX, cx + rx);
+              minY = Math.min(minY, cy - ry); maxY = Math.max(maxY, cy + ry);
+            }
+          }
+          if (isFinite(minX) && isFinite(maxX)) {
+            const w = Math.abs(maxX - minX);
+            const h = Math.abs(maxY - minY);
+            showToast(`📐 Kích thước: ${w.toFixed(2)} x ${h.toFixed(2)} mm`, 3000);
+          } else {
+            showToast('⚠️ Không tính được kích thước', 2000);
+          }
+        } else {
+          showToast('⚠️ Không tìm thấy đối tượng. Hãy click gần hơn.', 2000);
+        }
+        // Keep tool active for measuring next entity
+        return prevDrawState;
       } else if (activeDrawTool === 'measure_radius') {
         setMeasureRadiusPoints(prev => {
           const newPts = [...prev, worldPos];
@@ -3999,11 +4054,123 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
      if (!activeDrawTool || !drawState.currentPos) return null;
      
-     // Current mouse pos in screen coords for line end
-     const screenCurrent = worldToScreen(drawState.currentPos.x, drawState.currentPos.y);
+      // Current mouse pos in screen coords for line end
+      const screenCurrent = worldToScreen(drawState.currentPos.x, drawState.currentPos.y);
 
-     // If we have a start point
-     if (drawState.points.length > 0) {
+      // ── Measure tool (independent of drawState.points) ──
+      if (activeDrawTool === 'measure') {
+            if (measurePoints.length === 1) {
+              // First point placed — show rubber-band line to cursor
+              const p1 = measurePoints[0];
+              const sp1 = worldToScreen(p1.x, p1.y);
+              const dx = screenCurrent.x - sp1.x;
+              const dy = screenCurrent.y - sp1.y;
+              const distance = Math.sqrt(dx * dx + dy * dy) / pixelsPerUnit;
+              return (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                  <line x1={sp1.x} y1={sp1.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+                  <circle cx={sp1.x} cy={sp1.y} r="4" fill="cyan" opacity="0.6" />
+                  <circle cx={screenCurrent.x} cy={screenCurrent.y} r="4" fill="cyan" opacity="0.4" />
+                  <rect x={screenCurrent.x - 40} y={screenCurrent.y - 22} width="80" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
+                  <text x={screenCurrent.x} y={screenCurrent.y - 10} textAnchor="middle" fill="cyan" fontSize="11">{distance.toFixed(2)}</text>
+                </svg>
+              );
+            } else {
+              // No points placed yet — show cursor hint
+              return (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                  <circle cx={screenCurrent.x} cy={screenCurrent.y} r="5" fill="none" stroke="cyan" strokeWidth="1" opacity="0.6" />
+                  <text x={screenCurrent.x + 12} y={screenCurrent.y - 6} fill="cyan" fontSize="10" opacity="0.5">Click first point</text>
+                </svg>
+              );
+            }
+      }
+
+      // ── Quick Measure tool (independent of drawState.points) ──
+      if (activeDrawTool === 'measure_quick') {
+            const worldCurrent = drawState.currentPos;
+            if (worldCurrent) {
+              const threshold = 10 / pixelsPerUnit;
+              let hitEnt: CadEntity | null = null;
+              for (const ent of cadEntities) {
+                if (isPointNearEntity(worldCurrent, ent, threshold)) {
+                  hitEnt = ent;
+                  break;
+                }
+              }
+              if (hitEnt) {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                hitEnt.points?.forEach((p: { x: number; y: number }) => {
+                  if (isFinite(p.x) && isFinite(p.y)) {
+                    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+                  }
+                });
+                if (hitEnt.type === 'circle' || hitEnt.type === 'arc') {
+                  const cx = hitEnt.properties?.centerX ?? hitEnt.points?.[0]?.x ?? 0;
+                  const cy = hitEnt.properties?.centerY ?? hitEnt.points?.[0]?.y ?? 0;
+                  const r = hitEnt.properties?.radius ?? 0;
+                  if (isFinite(cx) && isFinite(cy) && r > 0) {
+                    minX = Math.min(minX, cx - r); maxX = Math.max(maxX, cx + r);
+                    minY = Math.min(minY, cy - r); maxY = Math.max(maxY, cy + r);
+                  }
+                }
+                if (hitEnt.type === 'ellipse') {
+                  const cx = hitEnt.points?.[0]?.x ?? 0;
+                  const cy = hitEnt.points?.[0]?.y ?? 0;
+                  const rx = hitEnt.properties?.rx ?? 0;
+                  const ry = hitEnt.properties?.ry ?? 0;
+                  minX = Math.min(minX, cx - rx); maxX = Math.max(maxX, cx + rx);
+                  minY = Math.min(minY, cy - ry); maxY = Math.max(maxY, cy + ry);
+                }
+                if (isFinite(minX) && isFinite(maxX)) {
+                  const tlScreen = worldToScreen(minX, maxY);
+                  const brScreen = worldToScreen(maxX, minY);
+                  const bx = tlScreen.x;
+                  const by = tlScreen.y;
+                  const bw = brScreen.x - tlScreen.x;
+                  const bh = brScreen.y - tlScreen.y;
+                  const wVal = Math.abs(maxX - minX);
+                  const hVal = Math.abs(maxY - minY);
+                  const labelX = bx + bw / 2;
+                  const labelY = by - 8;
+                  return (
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                      <rect x={bx} y={by} width={bw} height={bh} fill="rgba(0,230,118,0.06)" stroke="#00E676" strokeWidth="2" strokeDasharray="8 4" rx="2" />
+                      {/* Width dimension line (top) */}
+                      <line x1={bx} y1={by - 3} x2={bx + bw} y2={by - 3} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                      <line x1={bx} y1={by - 6} x2={bx} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                      <line x1={bx + bw} y1={by - 6} x2={bx + bw} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                      {/* Height dimension line (right) */}
+                      <line x1={bx + bw + 3} y1={by} x2={bx + bw + 3} y2={by + bh} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                      <line x1={bx + bw} y1={by} x2={bx + bw + 6} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                      <line x1={bx + bw} y1={by + bh} x2={bx + bw + 6} y2={by + bh} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                      {/* Size label */}
+                      <rect x={labelX - 55} y={labelY - 14} width="110" height="18" rx="3" fill="rgba(0,0,0,0.8)" stroke="#00E676" strokeWidth="1" />
+                      <text x={labelX} y={labelY - 2} textAnchor="middle" fill="#00E676" fontSize="11" fontFamily="monospace" fontWeight="bold">
+                        {wVal.toFixed(1)} × {hVal.toFixed(1)} mm
+                      </text>
+                      {/* Height label on right side */}
+                      <rect x={bx + bw + 8} y={by + bh / 2 - 9} width="50" height="16" rx="2" fill="rgba(0,0,0,0.7)" />
+                      <text x={bx + bw + 33} y={by + bh / 2 + 3} textAnchor="middle" fill="#00E676" fontSize="9" fontFamily="monospace">
+                        H:{hVal.toFixed(1)}
+                      </text>
+                    </svg>
+                  );
+                }
+              }
+              // No entity under cursor — show hint
+              return (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                  <circle cx={screenCurrent.x} cy={screenCurrent.y} r="6" fill="none" stroke="#00E676" strokeWidth="1.5" opacity="0.5" strokeDasharray="3 3" />
+                  <text x={screenCurrent.x + 14} y={screenCurrent.y - 6} fill="#00E676" fontSize="10" opacity="0.5">Click đối tượng để đo nhanh</text>
+                </svg>
+              );
+            }
+      }
+
+      // If we have a start point
+      if (drawState.points.length > 0) {
         const startWorld = drawState.points[0];
         const screenStart = worldToScreen(startWorld.x, startWorld.y);
 
@@ -4206,35 +4373,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     <circle cx={sp2.x} cy={sp2.y} r="4" fill="cyan" opacity="0.6" />
                   </svg>
                 );
-              }
-         } else if (activeDrawTool === 'measure') {
-              if (measurePoints.length === 1) {
-                // First point placed — show rubber-band line to cursor
-                const p1 = measurePoints[0];
-                const sp1 = worldToScreen(p1.x, p1.y);
-                const dx = screenCurrent.x - sp1.x;
-                const dy = screenCurrent.y - sp1.y;
-                const distance = Math.sqrt(dx * dx + dy * dy) / pixelsPerUnit; // Convert back to world units
-                return (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <line x1={sp1.x} y1={sp1.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                    <circle cx={sp1.x} cy={sp1.y} r="4" fill="cyan" opacity="0.6" />
-                    <circle cx={screenCurrent.x} cy={screenCurrent.y} r="4" fill="cyan" opacity="0.4" />
-                    <rect x={screenCurrent.x - 40} y={screenCurrent.y - 22} width="80" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
-                    <text x={screenCurrent.x} y={screenCurrent.y - 10} textAnchor="middle" fill="cyan" fontSize="11">{distance.toFixed(2)}</text>
-                  </svg>
-                );
-              } else {
-                // No points placed yet — show cursor hint
-                return (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <circle cx={screenCurrent.x} cy={screenCurrent.y} r="5" fill="none" stroke="cyan" strokeWidth="1" opacity="0.6" />
-                    <text x={screenCurrent.x + 12} y={screenCurrent.y - 6} fill="cyan" fontSize="10" opacity="0.5">Click first point</text>
-                  </svg>
-                );
-              }
-         
-         } else if (activeDrawTool === 'text') {
+               }
+          } else if (activeDrawTool === 'text') {
               if (drawState.step === 0) {
                 return (
                   <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
