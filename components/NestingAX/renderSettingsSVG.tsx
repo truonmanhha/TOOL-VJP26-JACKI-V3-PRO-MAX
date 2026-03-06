@@ -58,8 +58,8 @@ export const renderEngineSVG = (packTo: string, customAngle: number) => {
   let tx = "0%";
   let ty = "0%";
   
-  // If the inner div is 50% of parent, then max translate is 100% of its own size to reach the other side.
-  // Halfway is 50%.
+  // If the inner div is 50% of parent, max translate is 100% of its own size to reach the other side.
+  // To avoid ANY clipping with borders or gaps, let's use slightly less than 100%.
   
   if (packTo === "TL") { tx = "0%"; ty = "0%"; }
   else if (packTo === "T") { tx = "50%"; ty = "0%"; }
@@ -72,40 +72,42 @@ export const renderEngineSVG = (packTo: string, customAngle: number) => {
   else if (packTo === "BR") { tx = "100%"; ty = "100%"; }
 
   return (
-    <div className="relative w-full aspect-[4/3] max-w-[200px] bg-slate-800 rounded shadow-inner p-2 border border-slate-600 overflow-hidden">
-      {/* Sheet Boundary */}
-      <div className="absolute inset-2 border-2 border-yellow-400 opacity-80"></div>
-      
-      {/* Container that shifts the parts */}
-      <div className="absolute inset-3 p-1">
-         <div 
-           className="relative flex flex-wrap gap-1 transition-all duration-700 ease-in-out bg-white/5 border border-white/10 p-1 rounded-sm shadow-xl"
-           style={{
-             width: '50%', height: '50%',
-             transform: `translate(${tx}, ${ty}) ${packTo === 'Custom' ? `rotate(${customAngle}deg)` : 'rotate(0deg)'}`
-           }}
-         >
-            {/* Alphacam-style nested parts cluster */}
-            <div className="w-[45%] h-[40%] border-2 border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">1</div>
-            <div className="w-[30%] h-[40%] border-2 border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">2</div>
-            <div className="w-[20%] h-[40%] border-2 border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">3</div>
-            
-            <div className="w-[25%] h-[30%] border-2 border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">4</div>
-            <div className="w-[50%] h-[30%] border-2 border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">5</div>
-            
-            <div className="w-[60%] h-[20%] border-2 border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">6</div>
-         </div>
-      </div>
-      
-      {/* Custom Angle Indicator */}
-      {packTo === "Custom" && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-50">
-           <svg width="100" height="100" viewBox="-50 -50 100 100">
-             <circle cx="0" cy="0" r="40" fill="none" stroke="#fff" strokeWidth="1" strokeDasharray="2 2" />
-             <line x1="0" y1="0" x2="40" y2="0" stroke="#fff" strokeWidth="1" transform={`rotate(${customAngle})`} />
-           </svg>
+    <div className="relative w-full aspect-[4/3] max-w-[200px] bg-slate-800 rounded shadow-inner p-2 border border-slate-600">
+      {/* Sheet Boundary - we will make it contain everything tightly */}
+      <div className="absolute inset-2 border-2 border-yellow-400 opacity-80 overflow-hidden bg-slate-900">
+        
+        {/* Container that shifts the parts - exactly inside the yellow border */}
+        <div className="absolute inset-0">
+           <div 
+             className="relative flex flex-wrap gap-0.5 transition-all duration-700 ease-in-out bg-white/5 p-1 rounded-sm"
+             style={{
+               width: '50%', height: '50%',
+               transform: `translate(${tx}, ${ty}) ${packTo === 'Custom' ? `rotate(${customAngle}deg)` : 'rotate(0deg)'}`,
+               transformOrigin: 'center center'
+             }}
+           >
+              {/* Alphacam-style nested parts cluster */}
+              <div className="w-[45%] h-[40%] border border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">1</div>
+              <div className="w-[30%] h-[40%] border border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">2</div>
+              <div className="w-[20%] h-[40%] border border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">3</div>
+              
+              <div className="w-[25%] h-[30%] border border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">4</div>
+              <div className="w-[50%] h-[30%] border border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">5</div>
+              
+              <div className="w-[60%] h-[20%] border border-[#76ff03] bg-[#76ff03]/20 flex items-center justify-center text-[#76ff03] text-[10px] font-bold">6</div>
+           </div>
         </div>
-      )}
+        
+        {/* Custom Angle Indicator */}
+        {packTo === "Custom" && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-50">
+             <svg width="100" height="100" viewBox="-50 -50 100 100">
+               <circle cx="0" cy="0" r="40" fill="none" stroke="#fff" strokeWidth="1" strokeDasharray="2 2" />
+               <line x1="0" y1="0" x2="40" y2="0" stroke="#fff" strokeWidth="1" transform={`rotate(${customAngle})`} />
+             </svg>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
