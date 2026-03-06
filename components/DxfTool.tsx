@@ -254,7 +254,7 @@ const DxfTool: React.FC<DxfToolProps> = ({
               <div className="p-3 bg-orange-500/20 rounded-xl text-orange-400"><Wrench size={24} /></div>
               <div className="flex-1">
                 <h4 className="text-white font-black uppercase text-[10px] tracking-widest mb-2">TỐI ƯU HÓA BIÊN DẠNG</h4>
-                <div className="flex items-center gap-4"><span className="text-[10px] text-slate-500 font-black uppercase">Sai số vá</span><input type="range" min="0.01" max="10" step="0.01" value={joinTolerance} onChange={e => setJoinTolerance(parseFloat(e.target.value))} className="flex-1 accent-orange-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer" /><span className="text-sm font-mono text-orange-400 font-bold w-12">{joinTolerance}</span></div>
+                <div className="flex items-center gap-4"><span className="text-[10px] text-slate-500 font-black uppercase">Sai số vá</span><input type="number" min="0.01" max="10" step="0.01" value={joinTolerance} onChange={e => { let val = parseFloat(e.target.value); if(isNaN(val)) return; if(val<0.01) val=0.01; if(val>10) val=10; setJoinTolerance(val); }} className="w-16 bg-slate-800 border border-slate-600 rounded px-1 text-center text-white outline-none focus:border-orange-500 text-[10px]" /><span className="text-sm font-mono text-orange-400 font-bold w-12">{joinTolerance}</span></div>
               </div>
             </div>
             <button onClick={handleSmartRepair} className="bg-orange-500 hover:bg-orange-600 text-white font-black px-8 py-4 rounded-xl text-[11px] uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg active:scale-95"><Zap size={14} /> {t.dxfJoinBtn}</button>

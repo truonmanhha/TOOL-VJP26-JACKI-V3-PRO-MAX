@@ -116,7 +116,7 @@ const CrosshairDemo: React.FC = () => {
               Size: {size}px
             </label>
             <input
-              type="range"
+              type="number"
               min="5"
               max="50"
               value={size}
@@ -144,7 +144,7 @@ const CrosshairDemo: React.FC = () => {
                 Look Ahead: {predictionMs}ms
               </label>
               <input
-                type="range"
+                type="number"
                 min="0"
                 max="32"
                 value={predictionMs}
