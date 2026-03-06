@@ -5286,7 +5286,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                           <input 
                             type="text" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={part.name}
                             onChange={(e) => onUpdatePart && onUpdatePart(part.id, { name: e.target.value })}
                           />
@@ -5294,7 +5294,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                           <input 
                             type="text" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={part.dimensions}
                             onChange={(e) => onUpdatePart && onUpdatePart(part.id, { dimensions: e.target.value })}
                           />
@@ -5302,23 +5302,23 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                           <input 
                             type="number" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={part.required}
                             onChange={(e) => onUpdatePart && onUpdatePart(part.id, { required: parseInt(e.target.value) || 0 })}
                           />
                         </td>
                         <td className="p-0">
                           <select 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none cursor-pointer appearance-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none cursor-pointer appearance-none" 
                             style={{ backgroundImage: 'none' }}
                             value={part.priority}
                             onChange={(e) => onUpdatePart && onUpdatePart(part.id, { priority: parseInt(e.target.value) })}
                           >
-                            <option value={1} className="bg-white text-black">1</option>
-                            <option value={2} className="bg-white text-black">2</option>
-                            <option value={3} className="bg-white text-black">3</option>
-                            <option value={4} className="bg-white text-black">4</option>
-                            <option value={5} className="bg-white text-black">5</option>
+                            <option value={1} className="bg-slate-800 text-white">1</option>
+                            <option value={2} className="bg-slate-800 text-white">2</option>
+                            <option value={3} className="bg-slate-800 text-white">3</option>
+                            <option value={4} className="bg-slate-800 text-white">4</option>
+                            <option value={5} className="bg-slate-800 text-white">5</option>
                           </select>
                         </td>
                         <td className="p-0 text-center">
@@ -5331,15 +5331,15 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         </td>
                         <td className="p-0">
                           <select 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none cursor-pointer appearance-none"
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none cursor-pointer appearance-none"
                             style={{ backgroundImage: 'none' }}
                             value={part.rotation}
                             onChange={(e) => onUpdatePart && onUpdatePart(part.id, { rotation: e.target.value })}
                           >
-                            <option value="None" className="bg-white text-black">None</option>
-                            <option value="90" className="bg-white text-black">90°</option>
-                            <option value="180" className="bg-white text-black">180°</option>
-                            <option value="Any Angle" className="bg-white text-black">Any</option>
+                            <option value="None" className="bg-slate-800 text-white">None</option>
+                            <option value="90" className="bg-slate-800 text-white">90°</option>
+                            <option value="180" className="bg-slate-800 text-white">180°</option>
+                            <option value="Any Angle" className="bg-slate-800 text-white">Any</option>
                           </select>
                         </td>
                         <td className="p-0 text-center">
@@ -5353,7 +5353,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                            <input 
                             type="text" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={part.kitNumber || ''}
                             onChange={(e) => onUpdatePart && onUpdatePart(part.id, { kitNumber: e.target.value })}
                           />
@@ -5361,7 +5361,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                           <input 
                             type="number" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={part.isNested ? 1 : 0}
                             readOnly
                           />
@@ -5402,7 +5402,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                           <input 
                             type="text" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={sheet.material}
                             onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { material: e.target.value })}
                           />
@@ -5410,7 +5410,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                           <input 
                             type="text" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={sheet.dimensions}
                             onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { dimensions: e.target.value })}
                           />
@@ -5418,7 +5418,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                            <input 
                             type="number" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={sheet.thickness}
                             onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { thickness: parseFloat(e.target.value) || 0 })}
                           />
@@ -5426,7 +5426,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <td className="p-0">
                            <input 
                             type="number" 
-                            className="w-full bg-slate-200 text-black font-semibold px-1 py-1 focus:bg-white border border-slate-400 rounded-sm outline-none" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
                             value={sheet.quantity}
                             onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { quantity: parseInt(e.target.value) || 1 })}
                           />
