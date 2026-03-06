@@ -143,27 +143,47 @@ type PackDirection = AppSettings['packTo'];
 function packScore(
   x: number,
   y: number,
+  w: number,
+  h: number,
   binW: number,
   binH: number,
-  packTo: PackDirection,
-  customAngle: number
+  config: NestingConfig
 ): number {
-  switch (packTo) {
-    case 'TL': return y * binW + x;                          // top-left: row-first from top
-    case 'TR': return y * binW + (binW - x);                 // top-right: row-first, x inverted
-    case 'BL': return (binH - y) * binW + x;                 // bottom-left: row-first from bottom
-    case 'BR': return (binH - y) * binW + (binW - x);       // bottom-right
-    case 'T':  return y * binW + Math.abs(x - binW / 2);    // top-center: prefer center x
-    case 'B':  return (binH - y) * binW + Math.abs(x - binW / 2);
-    case 'L':  return x * binH + Math.abs(y - binH / 2);    // left-center: prefer center y
-    case 'R':  return (binW - x) * binH + Math.abs(y - binH / 2);
-    case 'Custom': {
-      // Project position onto custom angle vector; lower projection = preferred
-      const rad = (customAngle * Math.PI) / 180;
-      return x * Math.cos(rad) + y * Math.sin(rad);
-    }
-    default: return y * binW + x; // fallback TL
+  const { packTo, customAngle, rectEngine } = config;
+  let baseScore = 0;
+  
+  // If optimizing for Cuts (Guillotine), penalize positions that break alignment
+  // A position aligned to X=0 or Y=0 is good. A position that perfectly aligns with another part's edge is good.
+  // Since we don't have access to other parts here, we can reward positions that are aligned to 0 or far edges.
+  let alignmentPenalty = 0;
+  if (rectEngine && rectEngine.optimizeFor === 'Cuts') {
+     // Penalize if not aligned to major axes, encouraging parts to line up like shelves
+     if (rectEngine.cutDirection === 'X') {
+        alignmentPenalty += (y % Math.max(10, h)) * 10;
+     } else if (rectEngine.cutDirection === 'Y') {
+        alignmentPenalty += (x % Math.max(10, w)) * 10;
+     } else {
+        alignmentPenalty += ((x % Math.max(10, w)) + (y % Math.max(10, h))) * 5;
+     }
   }
+
+  switch (packTo) {
+    case 'TL': baseScore = y * binW + x; break;
+    case 'TR': baseScore = y * binW + (binW - x); break;
+    case 'BL': baseScore = (binH - y) * binW + x; break;
+    case 'BR': baseScore = (binH - y) * binW + (binW - x); break;
+    case 'T':  baseScore = y * binW + Math.abs(x - binW / 2); break;
+    case 'B':  baseScore = (binH - y) * binW + Math.abs(x - binW / 2); break;
+    case 'L':  baseScore = x * binH + Math.abs(y - binH / 2); break;
+    case 'R':  baseScore = (binW - x) * binH + Math.abs(y - binH / 2); break;
+    case 'Custom': {
+      const rad = (customAngle * Math.PI) / 180;
+      baseScore = x * Math.cos(rad) + y * Math.sin(rad);
+      break;
+    }
+    default: baseScore = y * binW + x;
+  }
+  return baseScore + alignmentPenalty;
 }
 
 /**
@@ -814,8 +834,11 @@ export class NestingEngine {
 
       if (availW < 0 || availH < 0) continue;
 
-      // Always include the corner of the free rect
-      candidates.push({ x: fr.x, y: fr.y });
+      // Add all 4 valid corners of this free rect to ensure pack direction can pull to any side
+      candidates.push({ x: fr.x, y: fr.y }); // TL
+      if (availW > 0) candidates.push({ x: fr.x + availW, y: fr.y }); // TR
+      if (availH > 0) candidates.push({ x: fr.x, y: fr.y + availH }); // BL
+      if (availW > 0 && availH > 0) candidates.push({ x: fr.x + availW, y: fr.y + availH }); // BR
 
       // Add intermediate positions based on search resolution
       if (searchResolution > 1) {
@@ -1168,7 +1191,7 @@ export class NestingEngine {
           );
 
           for (const cand of candidates) {
-            const score = packScore(cand.x, cand.y, bin.w, bin.h, packTo, customAngle);
+            const score = packScore(cand.x, cand.y, o.w, o.h, bin.w, bin.h, config);
             if (score < bestScore) {
               bestScore = score;
               bestBinIndex = b;
