@@ -12,6 +12,8 @@ export interface NestingPart {
   symmetry: 'none' | 'horizontal' | 'vertical' | 'both';
   rotation: 'none' | '90' | '180' | 'any';
   isSmallPart: boolean;
+  kitNumber?: string;
+  nestedQuantity?: number;
   geometry?: any; // Vector data from canvas
   thumbnail?: string; // Base64 image preview
 }
@@ -35,6 +37,7 @@ export interface PartParameters {
   symmetry: 'none' | 'horizontal' | 'vertical' | 'both';
   rotation: 'none' | '90' | '180' | 'any';
   isSmallPart: boolean;
+  kitNumber?: string;
 }
 
 export interface SheetParameters {

@@ -539,6 +539,16 @@ const Workspace: React.FC<WorkspaceProps> = ({
 
       // Escape: Clear selection or cancel transform edit
       if (e.key === 'Escape') {
+        if (showSettingsModal && onCloseSettings) {
+            onCloseSettings();
+            return;
+        }
+
+        if (showModal && onCloseModal) {
+            onCloseModal();
+            return;
+        }
+
         // Cancel transform edit tool first
         if (activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
           console.log('❌ Cancelling transform edit:', activeDrawTool);
@@ -572,7 +582,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMouseInWorkspace, activeDrawTool, showCommandInput, selectedEntities, cadEntities, onToggleSnap, onToggleOrtho, handleUndo, handleRedo, setCadEntitiesWithUndo]);
+  }, [isMouseInWorkspace, activeDrawTool, showCommandInput, selectedEntities, cadEntities, onToggleSnap, onToggleOrtho, handleUndo, handleRedo, setCadEntitiesWithUndo, showModal, onCloseModal, showSettingsModal, onCloseSettings]);
 
   // Reset drawing state when tool changes
   useEffect(() => {
@@ -3976,7 +3986,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                return (
                  <div 
                     key={`${p.id}-${i}`} 
-                    className={`absolute border border-black ${draggingPart?.id === p.id ? 'bg-blue-400 ring-2 ring-yellow-400' : 'bg-blue-600 hover:bg-blue-500'} cursor-move flex items-center justify-center group`}
+                    className={`absolute border border-black ${draggingPart?.id === p.id ? 'bg-blue-400 ring-2 ring-yellow-400' : 'bg-blue-600 hover:bg-blue-9000'} cursor-move flex items-center justify-center group`}
                     style={{
                         left: partLeft,
                         top: partTop,
@@ -4783,7 +4793,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           return (
             <div key={val} className="absolute right-0 flex items-center justify-end text-white/70 font-mono text-[10px]" style={{ top: screenPos.y, transform: 'translateY(-50%)' }}>
               <span className="mr-1">{val}</span>
-              <div className="w-1.5 h-px bg-white/70"></div>
+              <div className="w-1.5 h-px bg-slate-700/70"></div>
             </div>
           );
         })}
@@ -4794,7 +4804,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
            if (screenPos.x < -50 || screenPos.x > width + 50) return null;
            return (
              <div key={val} className="absolute bottom-0 flex flex-col items-center text-white/70 font-mono text-[10px]" style={{ left: screenPos.x, transform: 'translateX(-50%)' }}>
-                <div className="h-1.5 w-px bg-white/70 mb-0.5"></div>
+                <div className="h-1.5 w-px bg-slate-700/70 mb-0.5"></div>
                 <span>{val}</span>
              </div>
            );
@@ -5138,16 +5148,16 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                  <div className="col-start-3 row-start-2"><ManualNestBtn icon="keyboard_arrow_right" label="" small /></div>
               </div>
               <div className="col-span-4 mt-2 space-y-1">
-                 <label className="flex items-center space-x-2 text-[10px] text-gray-300">
-                   <input type="checkbox" defaultChecked className="w-3 h-3 text-blue-600 rounded-sm border-gray-300" />
+                 <label className="flex items-center space-x-2 text-[10px] text-white">
+                   <input type="checkbox" defaultChecked className="w-3 h-3 text-blue-600 rounded-sm border-slate-500" />
                    <span>Collision Check</span>
                  </label>
-                 <label className="flex items-center space-x-2 text-[10px] text-gray-300">
-                   <input type="checkbox" className="w-3 h-3 text-blue-600 rounded-sm border-gray-300" />
+                 <label className="flex items-center space-x-2 text-[10px] text-white">
+                   <input type="checkbox" className="w-3 h-3 text-blue-600 rounded-sm border-slate-500" />
                    <span>Snap to Grid</span>
                  </label>
               </div>
-              <div className="col-span-4 mt-2 p-1 bg-yellow-900/20 border border-yellow-800 rounded text-[9px] text-gray-400">
+              <div className="col-span-4 mt-2 p-1 bg-yellow-900/20 border border-yellow-800 rounded text-[9px] text-white">
                  Select a part from the sidebar or click a nested part to manipulate.
               </div>
            </div>
@@ -5159,11 +5169,11 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         <div className="absolute inset-0 flex items-center justify-center z-[80] pointer-events-auto bg-black/20 backdrop-blur-[1px]">
           <div className="w-[400px] bg-slate-900 shadow-modal border-2 border-slate-600 flex flex-col font-sans text-xs">
              <div className="h-7 bg-gradient-to-r from-slate-700 to-slate-600 flex justify-between items-center px-2 select-none border-b border-slate-500">
-                <span className="font-bold text-gray-100 flex items-center gap-2">
-                   <span className="material-icons-outlined text-gray-300">info</span>
+                <span className="font-bold text-white flex items-center gap-2">
+                   <span className="material-icons-outlined text-white">info</span>
                    Nesting Information
                 </span>
-                <button onClick={onCloseNestingInfo} className="hover:text-red-500 text-gray-300">
+                <button onClick={onCloseNestingInfo} className="hover:text-red-500 text-white">
                   <span className="material-icons-outlined text-sm">close</span>
                 </button>
              </div>
@@ -5182,7 +5192,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                    </table>
                 </div>
                 <div className="flex justify-end">
-                   <button onClick={onCloseNestingInfo} className="px-6 py-1 bg-slate-700 border border-slate-500 shadow-sm hover:bg-slate-600 text-gray-200">
+                   <button onClick={onCloseNestingInfo} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm hover:bg-slate-600 text-white">
                      Close
                    </button>
                 </div>
@@ -5192,29 +5202,29 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       )}
 
       {/* Close Button Overlay */}
-      <button className="absolute bottom-0 right-0 bg-white text-black p-0.5 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm">
+      <button className="absolute bottom-0 right-0 bg-slate-700 text-black p-0.5 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm">
         <span className="material-symbols-outlined text-xs block">close</span>
       </button>
 
       {/* Nesting Modal (Main Modal) */}
       {showModal && (
         <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="w-[840px] h-[550px] bg-slate-800 shadow-modal border-2 border-blue-700 flex flex-col pointer-events-auto text-xs text-gray-200 font-sans">
+          <div className="w-[840px] h-[550px] bg-slate-800 shadow-modal border-2 border-blue-700 flex flex-col pointer-events-auto text-xs text-white font-sans cursor-default">
             
             {/* Modal Header */}
             <div className="h-7 bg-gradient-to-r from-slate-700 to-slate-600 flex justify-between items-center px-2 select-none border-b border-slate-500">
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-[#7ab708] text-white flex items-center justify-center text-[9px] font-bold border border-white">AX</div>
-                <span className="font-normal text-gray-100">{activeNestList || 'New Nest List'}</span>
+                <span className="font-normal text-white">{activeNestList || 'New Nest List'}</span>
               </div>
               <div className="flex space-x-1">
-                <button className="w-6 h-4 flex items-center justify-center text-gray-300 hover:bg-slate-500 rounded-sm">
+                <button className="w-6 h-4 flex items-center justify-center text-white hover:bg-slate-500 rounded-sm">
                   <span className="material-symbols-outlined text-[10px]">minimize</span>
                 </button>
-                <button className="w-6 h-4 flex items-center justify-center text-gray-300 hover:bg-slate-500 rounded-sm">
+                <button className="w-6 h-4 flex items-center justify-center text-white hover:bg-slate-500 rounded-sm">
                   <span className="material-symbols-outlined text-[10px]">crop_square</span>
                 </button>
-                <button onClick={onCloseModal} className="w-6 h-4 flex items-center justify-center text-gray-300 hover:bg-red-600 rounded-sm">
+                <button onClick={onCloseModal} className="w-6 h-4 flex items-center justify-center text-white hover:bg-red-600 rounded-sm">
                   <span className="material-symbols-outlined text-[12px]">close</span>
                 </button>
               </div>
@@ -5247,7 +5257,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                 onClick={onAddSheetFromDrawing}
               />
               <div className="w-px bg-slate-600 mx-1 h-10 self-center"></div>
-              <ModalToolBtn icon="build" label="Settings" iconColor="text-gray-500" onClick={onOpenSettings} />
+              <ModalToolBtn icon="build" label="Settings" iconColor="text-white" onClick={onOpenSettings} />
               <ModalToolBtn icon="snippet_folder" label="Load<br/>Settings" iconColor="text-yellow-600" />
             </div>
 
@@ -5269,18 +5279,92 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                       <th>Nested</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-300">
+                  <tbody className="text-white">
                     {parts.map((part) => (
-                      <tr key={part.id} className="hover:bg-slate-700">
-                        <td>{part.name}</td>
-                        <td>{part.dimensions}</td>
-                        <td>{part.required}</td>
-                        <td>{part.priority}</td>
-                        <td>{part.mirrored ? 'Yes' : 'No'}</td>
-                        <td>{part.rotation}</td>
-                        <td>{part.smallPart ? 'Yes' : 'No'}</td>
-                        <td>{part.kitNumber}</td>
-                        <td>{part.isNested ? 'Yes' : 'No'}</td>
+                      <tr key={part.id} className="hover:bg-slate-700 group">
+                        <td className="p-0">
+                          <input 
+                            type="text" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={part.name}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { name: e.target.value })}
+                          />
+                        </td>
+                        <td className="p-0">
+                          <input 
+                            type="text" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={part.dimensions}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { dimensions: e.target.value })}
+                          />
+                        </td>
+                        <td className="p-0">
+                          <input 
+                            type="number" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={part.required}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { required: parseInt(e.target.value) || 0 })}
+                          />
+                        </td>
+                        <td className="p-0">
+                          <select 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none cursor-pointer appearance-none" 
+                            style={{ backgroundImage: 'none' }}
+                            value={part.priority}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { priority: parseInt(e.target.value) })}
+                          >
+                            <option value={1} className="bg-slate-800">1</option>
+                            <option value={2} className="bg-slate-800">2</option>
+                            <option value={3} className="bg-slate-800">3</option>
+                            <option value={4} className="bg-slate-800">4</option>
+                            <option value={5} className="bg-slate-800">5</option>
+                          </select>
+                        </td>
+                        <td className="p-0 text-center">
+                          <input 
+                            type="checkbox" 
+                            className="cursor-pointer" 
+                            checked={part.mirrored}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { mirrored: e.target.checked })}
+                          />
+                        </td>
+                        <td className="p-0">
+                          <select 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none cursor-pointer appearance-none"
+                            style={{ backgroundImage: 'none' }}
+                            value={part.rotation}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { rotation: e.target.value })}
+                          >
+                            <option value="None" className="bg-slate-800">None</option>
+                            <option value="90" className="bg-slate-800">90°</option>
+                            <option value="180" className="bg-slate-800">180°</option>
+                            <option value="Any Angle" className="bg-slate-800">Any</option>
+                          </select>
+                        </td>
+                        <td className="p-0 text-center">
+                          <input 
+                            type="checkbox" 
+                            className="cursor-pointer" 
+                            checked={part.smallPart}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { smallPart: e.target.checked })}
+                          />
+                        </td>
+                        <td className="p-0">
+                           <input 
+                            type="text" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={part.kitNumber || ''}
+                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { kitNumber: e.target.value })}
+                          />
+                        </td>
+                        <td className="p-0">
+                          <input 
+                            type="number" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none focus:text-white" 
+                            value={part.isNested ? 1 : 0}
+                            readOnly
+                          />
+                        </td>
                       </tr>
                     ))}
                     {Array.from({ length: Math.max(0, 9 - parts.length) }).map((_, i) => (
@@ -5311,13 +5395,41 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                       <th>Quantity</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-300">
+                  <tbody className="text-white">
                     {sheets.map((sheet) => (
                       <tr key={sheet.id} className="hover:bg-slate-700">
-                        <td>{sheet.material}</td>
-                        <td>{sheet.dimensions}</td>
-                        <td>{sheet.thickness}</td>
-                        <td>{sheet.quantity}</td>
+                        <td className="p-0">
+                          <input 
+                            type="text" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={sheet.material}
+                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { material: e.target.value })}
+                          />
+                        </td>
+                        <td className="p-0">
+                          <input 
+                            type="text" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={sheet.dimensions}
+                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { dimensions: e.target.value })}
+                          />
+                        </td>
+                        <td className="p-0">
+                           <input 
+                            type="number" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={sheet.thickness}
+                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { thickness: parseFloat(e.target.value) || 0 })}
+                          />
+                        </td>
+                        <td className="p-0">
+                           <input 
+                            type="number" 
+                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
+                            value={sheet.quantity}
+                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { quantity: parseInt(e.target.value) || 1 })}
+                          />
+                        </td>
                       </tr>
                     ))}
                     {Array.from({ length: Math.max(0, 4 - sheets.length) }).map((_, i) => (
@@ -5341,12 +5453,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                       console.error('ERROR: onStartNesting is undefined!');
                     }
                   }}
-                  className="px-6 py-1 bg-white border border-gray-400 shadow-sm hover:bg-green-100 active:translate-y-px text-sm text-black font-bold"
+                  className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm hover:bg-green-800 active:translate-y-px text-sm text-black font-bold"
 
                 >
                   Nest
                 </button>
-                <button onClick={onCloseModal} className="px-6 py-1 bg-white border border-gray-400 shadow-sm hover:bg-gray-50 active:translate-y-px text-sm text-black">Close</button>
+                <button onClick={onCloseModal} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm hover:bg-slate-600 active:translate-y-px text-sm text-black">Close</button>
               </div>
             </div>
           </div>
@@ -5358,13 +5470,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         <div className="absolute inset-0 flex items-center justify-center z-[80] bg-black/40 backdrop-blur-[1px]">
            <div className="bg-slate-800 w-[600px] shadow-modal border-2 border-yellow-600 flex flex-col font-sans text-xs">
                 <div className="h-7 bg-gradient-to-r from-slate-700 to-slate-600 flex justify-between items-center px-2 select-none border-b border-slate-500">
-                   <span className="font-bold text-gray-100 flex items-center gap-2">Stock Sheet Database</span>
+                   <span className="font-bold text-white flex items-center gap-2">Stock Sheet Database</span>
                    <button onClick={() => setShowStockModal(false)}><span className="material-symbols-outlined text-sm">close</span></button>
                 </div>
-                <div className="p-2 h-64 overflow-auto bg-slate-900 border-b border-gray-300">
+                <div className="p-2 h-64 overflow-auto bg-slate-900 border-b border-slate-500">
                   <table className="w-full text-left border-collapse retro-table">
                     <thead><tr><th>Material</th><th>Width</th><th>Height</th><th>Thick</th><th>Avail</th></tr></thead>
-                    <tbody className="text-gray-300 bg-slate-800">
+                    <tbody className="text-white bg-slate-800">
                       {stockSheets.map(stock => (
                         <tr key={stock.id} className={`cursor-pointer hover:bg-slate-700 ${selectedStockId === stock.id ? 'bg-blue-900' : ''}`} onClick={() => setSelectedStockId(stock.id)}>
                           <td>{stock.material}</td><td>{stock.width}</td><td>{stock.height}</td><td>{stock.thickness}</td><td>{stock.available}</td>
@@ -5374,8 +5486,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                   </table>
                 </div>
                 <div className="flex justify-end space-x-2 px-3 py-2 bg-slate-800">
-                   <button onClick={handleAddFromStock} className="px-4 py-1 bg-white border border-gray-300 shadow-sm">Add to List</button>
-                   <button onClick={() => setShowStockModal(false)} className="px-4 py-1 bg-white border border-gray-300 shadow-sm">Cancel</button>
+                   <button onClick={handleAddFromStock} className="px-4 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm">Add to List</button>
+                   <button onClick={() => setShowStockModal(false)} className="px-4 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm">Cancel</button>
                 </div>
            </div>
         </div>
@@ -5398,7 +5510,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           <div className="w-[520px] bg-black shadow-modal rounded-lg flex flex-col pointer-events-auto text-xs font-sans border border-gray-700 animate-text-flash">
             <div className="flex justify-between items-center px-3 py-2 border-b border-gray-800 select-none">
               <span className="font-medium text-[13px] animate-text-flash">Define Sheet Parameters</span>
-              <button onClick={onCloseSheetParams} className="text-gray-500 hover:text-gray-300 rounded-sm">
+              <button onClick={onCloseSheetParams} className="text-white hover:text-white rounded-sm">
                 <span className="material-symbols-outlined text-[16px] animate-text-flash">close</span>
               </button>
             </div>
@@ -5416,18 +5528,18 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                       className="w-full h-full"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                    <div className="w-full h-full flex items-center justify-center text-white text-xs">
                       No Geometry
                     </div>
                   )}
                 </div>
                 {/* Dimensions Display */}
                 <div className="mt-2 text-center">
-                  <div className="text-[10px] text-gray-400">Dimensions (mm)</div>
+                  <div className="text-[10px] text-white">Dimensions (mm)</div>
                   <div className="text-blue-400 font-bold text-sm animate-text-flash">
                     {formSheetWidth} × {formSheetHeight}
                   </div>
-                  <div className="text-[10px] text-gray-400">
+                  <div className="text-[10px] text-white">
                     Area: {((formSheetWidth * formSheetHeight) / 1000000).toFixed(2)} m²
                   </div>
                 </div>
@@ -5448,13 +5560,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     <div className="flex flex-col border-l border-gray-600 bg-gray-900">
                       <button 
                         onClick={() => setFormSheetQty(prev => prev + 1)}
-                        className="h-3 w-4 flex items-center justify-center hover:bg-gray-800 border-b border-gray-600 text-gray-400"
+                        className="h-3 w-4 flex items-center justify-center hover:bg-gray-800 border-b border-gray-600 text-white"
                       >
                         <span className="material-symbols-outlined text-[8px] leading-none animate-text-flash">arrow_drop_up</span>
                       </button>
                       <button 
                         onClick={() => setFormSheetQty(prev => Math.max(0, prev - 1))}
-                        className="h-3 w-4 flex items-center justify-center hover:bg-gray-800 text-gray-400"
+                        className="h-3 w-4 flex items-center justify-center hover:bg-gray-800 text-white"
                       >
                         <span className="material-symbols-outlined text-[8px] leading-none animate-text-flash">arrow_drop_down</span>
                       </button>
@@ -5489,7 +5601,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     <option value="Aluminum">Aluminum</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                    <span className="material-symbols-outlined text-[14px] text-gray-500 animate-text-flash">expand_more</span>
+                    <span className="material-symbols-outlined text-[14px] text-white animate-text-flash">expand_more</span>
                   </div>
                 </div>
               </div>
@@ -5521,39 +5633,39 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         <div className="absolute inset-0 flex items-center justify-center z-[70] bg-black/20 backdrop-blur-[1px]">
              <div className="bg-panel-light rounded shadow-2xl w-[600px] border border-gray-500 flex flex-col font-sans text-xs pointer-events-auto select-none">
                 <div className="flex justify-between items-center px-3 py-2">
-                    <h3 className="font-normal text-gray-800">Define Part Parameters</h3>
-                    <button onClick={onClosePartParams} className="text-gray-500 hover:text-red-500">
+                    <h3 className="font-normal text-white">Define Part Parameters</h3>
+                    <button onClick={onClosePartParams} className="text-white hover:text-red-500">
                         <span className="material-icons-outlined text-sm">close</span>
                     </button>
                 </div>
                 <div className="flex p-4 gap-6">
                     <div className="flex-1 space-y-3">
                         <div className="grid grid-cols-[110px_1fr] items-center gap-2">
-                            <label className="text-right text-gray-200 font-semibold">Name of Part</label>
+                            <label className="text-right text-white font-semibold">Name of Part</label>
                             <input 
-                                className="w-full h-7 px-2 border border-gray-300 rounded text-xs font-medium text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
+                                className="w-full h-7 px-2 border border-slate-500 bg-slate-700 text-white rounded text-xs font-medium text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
                                 type="text" 
                                 value={formPartName} 
                                 onChange={(e)=>setFormPartName(e.target.value)}
                             />
                         </div>
                         <div className="grid grid-cols-[110px_1fr] items-start gap-2 pt-1">
-                            <label className="text-right text-gray-200 mt-1 font-semibold">Number Required</label>
+                            <label className="text-right text-white mt-1 font-semibold">Number Required</label>
                             <div className="space-y-1">
                                 <div className="flex items-center">
                                     <input 
-                                        className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                        className="w-3 h-3 text-blue-600 border-slate-500 focus:ring-blue-500" 
                                         id="maxPoss" 
                                         name="numReq" 
                                         type="radio"
                                         checked={formReqType === 'max'}
                                         onChange={() => setFormReqType('max')}
                                     />
-                                    <label className="ml-2 text-gray-200 font-medium" htmlFor="maxPoss">Maximum possible</label>
+                                    <label className="ml-2 text-white font-medium" htmlFor="maxPoss">Maximum possible</label>
                                 </div>
                                 <div className="flex items-center">
                                     <input 
-                                        className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                        className="w-3 h-3 text-blue-600 border-slate-500 focus:ring-blue-500" 
                                         id="fixedNum" 
                                         name="numReq" 
                                         type="radio"
@@ -5561,7 +5673,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                         onChange={() => setFormReqType('fixed')}
                                     />
                                     <input 
-                                        className="ml-2 w-24 h-6 px-2 border border-gray-300 rounded text-xs font-medium text-gray-800" 
+                                        className="ml-2 w-24 h-6 px-2 border border-slate-500 bg-slate-700 text-white rounded text-xs font-medium text-white" 
                                         type="text" 
                                         value={formNumReq} 
                                         onChange={(e)=>setFormNumReq(Number(e.target.value))}
@@ -5570,12 +5682,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 </div>
                             </div>
                         </div>
-                        <fieldset className="border border-gray-200 rounded p-2 mt-2">
-                            <legend className="px-1 text-gray-400 text-[10px] font-semibold">Rotations to try</legend>
+                        <fieldset className="border border-slate-600 rounded p-2 mt-2">
+                            <legend className="px-1 text-white text-[10px] font-semibold">Rotations to try</legend>
                             <div className="grid grid-cols-[90px_1fr] items-center gap-2">
-                                <label className="text-right text-gray-200 font-medium">Rotation Angle</label>
+                                <label className="text-right text-white font-medium">Rotation Angle</label>
                                 <select 
-                                    className="w-full h-7 px-2 py-0 border border-gray-300 rounded text-xs bg-white font-medium text-gray-800"
+                                    className="w-full h-7 px-2 py-0 border border-slate-500 bg-slate-700 text-white rounded text-xs bg-slate-700 font-medium text-white"
                                     value={formRotation}
                                     onChange={(e)=>setFormRotation(e.target.value)}
                                 >
@@ -5588,38 +5700,38 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <div className="pl-[118px] space-y-1">
                             <div className="flex items-center">
                                 <input 
-                                    className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+                                    className="w-3 h-3 text-blue-600 border-slate-500 rounded focus:ring-blue-500" 
                                     id="mirrored" 
                                     type="checkbox"
                                     checked={formMirrored}
                                     onChange={(e)=>setFormMirrored(e.target.checked)}
                                 />
-                                <label className="ml-2 text-gray-200 font-medium" htmlFor="mirrored">Try Mirrored Shape</label>
+                                <label className="ml-2 text-white font-medium" htmlFor="mirrored">Try Mirrored Shape</label>
                             </div>
                             <div className="flex items-center">
                                 <input 
-                                    className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+                                    className="w-3 h-3 text-blue-600 border-slate-500 rounded focus:ring-blue-500" 
                                     id="smallPart" 
                                     type="checkbox"
                                     checked={formSmallPart}
                                     onChange={(e)=>setFormSmallPart(e.target.checked)}
                                 />
-                                <label className="ml-2 text-gray-200 font-medium" htmlFor="smallPart">Define as Small Part</label>
+                                <label className="ml-2 text-white font-medium" htmlFor="smallPart">Define as Small Part</label>
                             </div>
                         </div>
                         <div className="grid grid-cols-[110px_1fr] items-center gap-2 pt-2">
-                            <label className="text-right text-gray-200 font-semibold">Priority (1=Highest)</label>
+                            <label className="text-right text-white font-semibold">Priority (1=Highest)</label>
                             <input 
-                                className="w-24 h-7 px-2 border border-gray-300 rounded text-xs font-medium text-gray-800" 
+                                className="w-24 h-7 px-2 border border-slate-500 bg-slate-700 text-white rounded text-xs font-medium text-white" 
                                 type="text" 
                                 value={formPriority} 
                                 onChange={(e)=>setFormPriority(Number(e.target.value))}
                             />
                         </div>
                         <div className="grid grid-cols-[110px_1fr] items-center gap-2">
-                            <label className="text-right text-gray-200 font-semibold">Kit Number</label>
+                            <label className="text-right text-white font-semibold">Kit Number</label>
                             <input 
-                                className="w-24 h-7 px-2 border border-gray-300 rounded text-xs font-medium text-gray-800" 
+                                className="w-24 h-7 px-2 border border-slate-500 bg-slate-700 text-white rounded text-xs font-medium text-white" 
                                 type="text"
                                 value={formKitNum}
                                 onChange={(e)=>setFormKitNum(e.target.value)}
@@ -5629,7 +5741,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     
                     {/* Preview Panel */}
                     <div className="w-[220px] flex flex-col gap-2">
-                        <div className="text-center text-sm text-gray-200 font-semibold">
+                        <div className="text-center text-sm text-white font-semibold">
                             Preview 
                             <span className="text-[10px] text-yellow-400 ml-2">
                                 ({selectedPartGeometry?.length || 0} entities)
@@ -5646,12 +5758,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                     className="w-full h-full"
                                 />
                             ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 text-xs gap-2">
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-xs gap-2">
                                     <div>No Preview</div>
                                     <div className="text-[10px] text-red-400">
                                         Debug: {selectedPartGeometry === null ? 'NULL' : `Empty (${selectedPartGeometry?.length})`}
                                     </div>
-                                    <div className="text-[10px] text-gray-600">
+                                    <div className="text-[10px] text-white">
                                         Check console for details
                                     </div>
                                 </div>
@@ -5661,15 +5773,15 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         {/* Dimensions Info */}
                         <div className="bg-gray-800 rounded p-2 space-y-1">
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-gray-400">Width:</span>
+                                <span className="text-[10px] text-white">Width:</span>
                                 <span className="text-sm text-blue-400 font-bold">{formPartWidth || 0} mm</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-gray-400">Height:</span>
+                                <span className="text-[10px] text-white">Height:</span>
                                 <span className="text-sm text-blue-400 font-bold">{formPartHeight || 0} mm</span>
                             </div>
                             <div className="flex justify-between items-center pt-1 border-t border-gray-700">
-                                <span className="text-[10px] text-gray-400">Area:</span>
+                                <span className="text-[10px] text-white">Area:</span>
                                 <span className="text-xs text-green-400 font-semibold">
                                     {(((formPartWidth || 0) * (formPartHeight || 0)) / 1000000).toFixed(4)} m²
                                 </span>
@@ -5678,8 +5790,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     </div>
                 </div>
                 <div className="flex justify-end space-x-2 px-4 py-3 pb-4">
-                    <button onClick={handleParamsOK} className="px-6 py-1 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 text-gray-800 font-medium">OK</button>
-                    <button onClick={onClosePartParams} className="px-6 py-1 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 text-gray-800 font-medium">Cancel</button>
+                    <button onClick={handleParamsOK} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white rounded shadow-sm hover:bg-slate-600 text-white font-medium">OK</button>
+                    <button onClick={onClosePartParams} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white rounded shadow-sm hover:bg-slate-600 text-white font-medium">Cancel</button>
                 </div>
              </div>
         </div>
@@ -5688,12 +5800,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       {/* Settings Modal (Corrected UI) */}
       {showSettingsModal && (
          <div className="absolute inset-0 flex items-center justify-center z-[60] pointer-events-none">
-             <div className="w-[650px] h-auto bg-[#f0f0f0] shadow-modal border border-gray-400 flex flex-col pointer-events-auto text-[11px] text-gray-800 font-sans rounded-sm select-none">
+             <div className="w-[650px] h-auto bg-slate-800 shadow-modal border border-slate-500 bg-slate-700 text-white flex flex-col pointer-events-auto text-[11px] text-white font-sans rounded-sm select-none cursor-default">
                 {/* Header */}
-                <div className="h-8 bg-white flex justify-between items-center px-2 select-none border-b border-gray-200">
+                <div className="h-8 bg-slate-700 flex justify-between items-center px-2 select-none border-b border-slate-600">
                    <div className="flex items-center space-x-2">
-                      <span className="material-symbols-outlined text-gray-600 text-sm">build</span>
-                      <span className="font-normal text-gray-900 text-xs">Settings</span>
+                      <span className="material-symbols-outlined text-white text-sm">build</span>
+                      <span className="font-normal text-white text-xs">Settings</span>
                    </div>
                    <button onClick={onCloseSettings} className="w-6 h-5 flex items-center justify-center hover:bg-red-500 hover:text-white rounded-sm transition-colors">
                      <span className="material-symbols-outlined text-sm">close</span>
@@ -5701,56 +5813,56 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                 </div>
 
                  {/* Tabs */}
-                 <div className="px-2 pt-2 bg-white border-b border-gray-300 flex space-x-0.5">
-                    <div onClick={() => setSettingsTab('general')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'general' ? 'bg-[#f0f0f0] border-gray-300 text-gray-900 font-semibold relative top-px z-10' : 'bg-white border-transparent text-gray-500 hover:bg-gray-50'}`}>General</div>
-                    <div onClick={() => setSettingsTab('engine')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'engine' ? 'bg-[#f0f0f0] border-gray-300 text-gray-900 font-semibold relative top-px z-10' : 'bg-white border-transparent text-gray-500 hover:bg-gray-50'}`}>Engine</div>
-                    <div onClick={() => setSettingsTab('rectengine')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'rectengine' ? 'bg-[#f0f0f0] border-gray-300 text-gray-900 font-semibold relative top-px z-10' : 'bg-white border-transparent text-gray-500 hover:bg-gray-50'}`}>Rect Engine</div>
-                    <div onClick={() => setSettingsTab('extensions')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'extensions' ? 'bg-[#f0f0f0] border-gray-300 text-gray-900 font-semibold relative top-px z-10' : 'bg-white border-transparent text-gray-500 hover:bg-gray-50'}`}>Extensions</div>
+                 <div className="px-2 pt-2 bg-slate-700 border-b border-slate-500 flex space-x-0.5">
+                    <div onClick={() => setSettingsTab('general')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'general' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>General</div>
+                    <div onClick={() => setSettingsTab('engine')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'engine' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>Engine</div>
+                    <div onClick={() => setSettingsTab('rectengine')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'rectengine' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>Rect Engine</div>
+                    <div onClick={() => setSettingsTab('extensions')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'extensions' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>Extensions</div>
                  </div>
 
                 {/* Content Area */}
-                <div className="p-3 bg-[#f0f0f0] min-h-[300px]">
+                <div className="p-3 bg-slate-800 min-h-[300px]">
                   {settingsTab === 'general' && (
                      <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-3">
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Settings</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Settings</legend>
                             <div className="flex space-x-1 mb-2 mt-0.5">
-                              <button className="p-1 hover:bg-gray-200 border border-transparent hover:border-gray-300 rounded-sm">
+                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
                                 <span className="material-symbols-outlined text-yellow-600 text-base">note_add</span>
                               </button>
-                              <button className="p-1 hover:bg-gray-200 border border-transparent hover:border-gray-300 rounded-sm">
+                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
                                 <span className="material-symbols-outlined text-yellow-600 text-base">folder_open</span>
                               </button>
-                              <button className="p-1 hover:bg-gray-200 border border-transparent hover:border-gray-300 rounded-sm">
-                                <span className="material-symbols-outlined text-gray-600 text-base">save</span>
+                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
+                                <span className="material-symbols-outlined text-white text-base">save</span>
                               </button>
-                              <button className="p-1 hover:bg-gray-200 border border-transparent hover:border-gray-300 rounded-sm">
+                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
                                 <span className="material-symbols-outlined text-red-600 text-base">delete</span>
                               </button>
                             </div>
                             <div className="space-y-1">
-                              <label className="block text-gray-600">Default NestList Settings File:</label>
-                              <input className="w-full h-6 border border-gray-300 bg-white px-1 text-xs focus:ring-0 focus:border-blue-400" disabled type="text"/>
+                              <label className="block text-white">Default NestList Settings File:</label>
+                              <input className="w-full h-6 border border-slate-500 bg-slate-700 text-white px-1 text-xs focus:ring-0 focus:border-blue-400" disabled type="text"/>
                             </div>
                           </fieldset>
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Export / Import</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Export / Import</legend>
                             <div className="flex space-x-1 mt-2">
-                              <button onClick={handleExportSettings} className="flex-1 p-2 bg-blue-100 border border-blue-300 hover:bg-blue-200 rounded-sm text-xs font-medium text-blue-800 flex items-center justify-center space-x-1">
+                              <button onClick={handleExportSettings} className="flex-1 p-2 bg-blue-800 border border-blue-500 hover:bg-blue-700 rounded-sm text-xs font-medium text-blue-200 flex items-center justify-center space-x-1">
                                 <span className="material-symbols-outlined text-sm">file_download</span>
                                 <span>Export Settings</span>
                               </button>
-                              <button onClick={handleImportSettings} className="flex-1 p-2 bg-green-100 border border-green-300 hover:bg-green-200 rounded-sm text-xs font-medium text-green-800 flex items-center justify-center space-x-1">
+                              <button onClick={handleImportSettings} className="flex-1 p-2 bg-green-800 border border-green-500 hover:bg-green-700 rounded-sm text-xs font-medium text-green-200 flex items-center justify-center space-x-1">
                                 <span className="material-symbols-outlined text-sm">file_upload</span>
                                 <span>Import Settings</span>
                               </button>
                             </div>
                           </fieldset>
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Nesting Method</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Nesting Method</legend>
                             <select 
-                               className="w-full h-7 border border-gray-300 bg-white text-xs py-0 pl-1 pr-6 focus:ring-0 focus:border-blue-400 mt-1"
+                               className="w-full h-7 border border-slate-500 bg-slate-700 text-white text-xs py-0 pl-1 pr-6 focus:ring-0 focus:border-blue-400 mt-1"
                                value={appSettings.nestingMethod}
                                onChange={(e) => handleSettingChange('nestingMethod', e.target.value)}
                             >
@@ -5760,26 +5872,26 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                               <option value="VeroNester">Vero Nester</option>
                             </select>
                           </fieldset>
-                         <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                           <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Items to be Nested</legend>
+                         <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                           <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Items to be Nested</legend>
                            <div className="flex flex-col space-y-1.5 mt-1">
                              <label className="flex items-center space-x-2 cursor-pointer">
-                               <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Toolpaths'} onChange={() => handleSettingChange('itemType', 'Toolpaths')} />
+                               <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Toolpaths'} onChange={() => handleSettingChange('itemType', 'Toolpaths')} />
                                <span>Toolpaths</span>
                              </label>
                              <label className="flex items-center space-x-2 cursor-pointer">
-                               <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Geometries'} onChange={() => handleSettingChange('itemType', 'Geometries')} />
+                               <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Geometries'} onChange={() => handleSettingChange('itemType', 'Geometries')} />
                                <span className="font-medium">Geometries</span>
                              </label>
                              <label className="flex items-center space-x-2 cursor-pointer">
-                               <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Both'} onChange={() => handleSettingChange('itemType', 'Both')} />
+                               <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Both'} onChange={() => handleSettingChange('itemType', 'Both')} />
                                <span>Toolpaths and Enclosed Geometries</span>
                              </label>
                            </div>
                          </fieldset>
                        </div>
                        <div className="space-y-4">
-                         <div className="w-full aspect-[4/3] bg-white border border-yellow-400 relative p-2">
+                         <div className="w-full aspect-[4/3] bg-slate-700 border border-yellow-400 relative p-2">
                            {/* SVG Preview for General Tab */}
                            <svg className="w-full h-full" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
                              <path d="M10,10 L80,10 L80,50 L50,50 L50,90 L10,90 Z" fill="none" stroke="#76ff03" strokeWidth="1.5"></path>
@@ -5792,9 +5904,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                              <circle cx="20" cy="110" r="2" fill="none" stroke="#76ff03" strokeWidth="1.5"></circle>
                            </svg>
                          </div>
-                         <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50 relative pt-3">
-                           <legend className="absolute -top-2 left-2 px-1 text-gray-600 bg-[#f0f0f0] text-[10px]">Nest List Name</legend>
-                           <input className="w-full h-7 border border-gray-300 bg-white px-2 text-xs focus:ring-0 focus:border-blue-400" type="text" defaultValue={activeNestList || "New Nest List 1"} />
+                         <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50 relative pt-3">
+                           <legend className="absolute -top-2 left-2 px-1 text-white bg-slate-800 text-[10px]">Nest List Name</legend>
+                           <input className="w-full h-7 border border-slate-500 bg-slate-700 text-white px-2 text-xs focus:ring-0 focus:border-blue-400" type="text" defaultValue={activeNestList || "New Nest List 1"} />
                          </fieldset>
                        </div>
                      </div>
@@ -5804,8 +5916,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                       <div className="flex space-x-4">
                         <div className="w-1/2 space-y-3">
                           {/* Pack Direction 3x3 Grid */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Pack Direction</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Pack Direction</legend>
                             <div className="grid grid-cols-3 gap-2 mt-2">
                               {[
                                 { value: 'TL', label: 'TL' },
@@ -5824,7 +5936,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                   className={`py-1 px-2 text-xs font-semibold border rounded transition-all ${
                                     appSettings.packTo === btn.value
                                       ? 'bg-blue-500 border-blue-600 text-white'
-                                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                      : 'bg-slate-700 border-slate-500 text-white hover:bg-slate-600'
                                   }`}
                                 >
                                   {btn.label}
@@ -5835,14 +5947,14 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
                           {/* Custom Angle (visible when Custom is selected) */}
                           {appSettings.packTo === 'Custom' && (
-                            <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                              <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Custom Angle (°)</legend>
+                            <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                              <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Custom Angle (°)</legend>
                               <div className="flex items-center gap-2 mt-1">
                                 <input 
                                   type="number" 
                                   value={appSettings.customAngle}
                                   onChange={(e) => handleSettingChange('customAngle', Number(e.target.value))}
-                                  className="w-16 h-7 border border-gray-300 px-2 text-xs focus:ring-0 focus:border-blue-400 bg-white"
+                                  className="w-16 h-7 border border-slate-500 bg-slate-700 text-white px-2 text-xs focus:ring-0 focus:border-blue-400"
                                 />
                                 <input 
                                   type="range" 
@@ -5857,28 +5969,28 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                           )}
 
                           {/* Gap Fields */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Gap Settings</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Gap Settings</legend>
                             <div className="space-y-2 mt-1">
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Min Gap Between Paths</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Min Gap Between Paths</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
                               </div>
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Sheet Edge Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Sheet Edge Gap</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
                               </div>
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Lead In Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Lead In Gap</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
                               </div>
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Time Per Sheet</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Time Per Sheet</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
                               </div>
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Total Comp Time</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Total Comp Time</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
                               </div>
                             </div>
                           </fieldset>
@@ -5886,8 +5998,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
                         <div className="w-1/2 space-y-3">
                           {/* Search Resolution */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Search Resolution</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Search Resolution</legend>
                             <div className="flex items-center gap-2 mt-2">
                               <input 
                                 type="range" 
@@ -5897,21 +6009,21 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 onChange={(e) => handleSettingChange('searchResolution', Number(e.target.value))}
                                 className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                               />
-                              <span className="text-xs font-semibold text-gray-700 min-w-[30px]">{appSettings.searchResolution}</span>
+                              <span className="text-xs font-semibold text-white min-w-[30px]">{appSettings.searchResolution}</span>
                             </div>
                           </fieldset>
 
                           {/* Evenly Spaced Parts */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Options</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Options</legend>
                             <label className="flex items-center space-x-2 cursor-pointer mt-1">
                               <input 
                                 type="checkbox" 
                                 checked={appSettings.evenlySpacedParts}
                                 onChange={(e) => handleSettingChange('evenlySpacedParts', e.target.checked)}
-                                className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5"
+                                className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5"
                               />
-                              <span className="text-gray-700 text-xs">Evenly Spaced Parts</span>
+                              <span className="text-white text-xs">Evenly Spaced Parts</span>
                             </label>
                           </fieldset>
                         </div>
@@ -5922,54 +6034,54 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                       <div className="flex space-x-4">
                         <div className="w-1/2 space-y-3">
                           {/* Optimize For */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Optimize For</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Optimize For</legend>
                             <div className="flex flex-col space-y-1 mt-1">
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.optimizeFor === 'Cuts'} onChange={() => handleRectEngineChange('optimizeFor', 'Cuts')} />
-                                <span className="text-xs text-gray-700">Cuts</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.optimizeFor === 'Cuts'} onChange={() => handleRectEngineChange('optimizeFor', 'Cuts')} />
+                                <span className="text-xs text-white">Cuts</span>
                               </label>
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.optimizeFor === 'Space'} onChange={() => handleRectEngineChange('optimizeFor', 'Space')} />
-                                <span className="text-xs text-gray-700">Space</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.optimizeFor === 'Space'} onChange={() => handleRectEngineChange('optimizeFor', 'Space')} />
+                                <span className="text-xs text-white">Space</span>
                               </label>
                             </div>
                           </fieldset>
 
                           {/* Cut Direction */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Cut Direction</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Cut Direction</legend>
                             <div className="flex flex-col space-y-1 mt-1">
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'X'} onChange={() => handleRectEngineChange('cutDirection', 'X')} />
-                                <span className="text-xs text-gray-700">X</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'X'} onChange={() => handleRectEngineChange('cutDirection', 'X')} />
+                                <span className="text-xs text-white">X</span>
                               </label>
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'Y'} onChange={() => handleRectEngineChange('cutDirection', 'Y')} />
-                                <span className="text-xs text-gray-700">Y</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'Y'} onChange={() => handleRectEngineChange('cutDirection', 'Y')} />
+                                <span className="text-xs text-white">Y</span>
                               </label>
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'Auto'} onChange={() => handleRectEngineChange('cutDirection', 'Auto')} />
-                                <span className="text-xs text-gray-700">Auto</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'Auto'} onChange={() => handleRectEngineChange('cutDirection', 'Auto')} />
+                                <span className="text-xs text-white">Auto</span>
                               </label>
                             </div>
                           </fieldset>
 
                           {/* Number Inputs */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Dimensions</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Dimensions</legend>
                             <div className="space-y-2 mt-1">
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Cut Width</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.rectEngine.cutWidth} onChange={(e) => handleRectEngineChange('cutWidth', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Cut Width</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.rectEngine.cutWidth} onChange={(e) => handleRectEngineChange('cutWidth', Number(e.target.value))} />
                               </div>
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Min Part Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.rectEngine.minPartGap} onChange={(e) => handleRectEngineChange('minPartGap', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Min Part Gap</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.rectEngine.minPartGap} onChange={(e) => handleRectEngineChange('minPartGap', Number(e.target.value))} />
                               </div>
                               <div className="flex items-center justify-between">
-                                <label className="text-gray-700 text-[10px]">Gap at Sheet Edge</label>
-                                <input className="w-12 h-6 text-right px-1 border border-gray-300 text-xs" type="number" value={appSettings.rectEngine.gapAtSheetEdge} onChange={(e) => handleRectEngineChange('gapAtSheetEdge', Number(e.target.value))} />
+                                <label className="text-white text-[10px]">Gap at Sheet Edge</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-700 text-white text-xs" type="number" value={appSettings.rectEngine.gapAtSheetEdge} onChange={(e) => handleRectEngineChange('gapAtSheetEdge', Number(e.target.value))} />
                               </div>
                             </div>
                           </fieldset>
@@ -5977,23 +6089,23 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
                         <div className="w-1/2 space-y-3">
                           {/* NC Code */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">NC Code</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">NC Code</legend>
                             <div className="flex flex-col space-y-1 mt-1">
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.ncCode === 'Subroutines'} onChange={() => handleRectEngineChange('ncCode', 'Subroutines')} />
-                                <span className="text-xs text-gray-700">Subroutines</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.ncCode === 'Subroutines'} onChange={() => handleRectEngineChange('ncCode', 'Subroutines')} />
+                                <span className="text-xs text-white">Subroutines</span>
                               </label>
                               <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.ncCode === 'Linear'} onChange={() => handleRectEngineChange('ncCode', 'Linear')} />
-                                <span className="text-xs text-gray-700">Linear</span>
+                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.ncCode === 'Linear'} onChange={() => handleRectEngineChange('ncCode', 'Linear')} />
+                                <span className="text-xs text-white">Linear</span>
                               </label>
                             </div>
                           </fieldset>
 
                           {/* Optimise Level */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Optimise Level (1-10)</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Optimise Level (1-10)</legend>
                             <div className="flex items-center gap-2 mt-2">
                               <input 
                                 type="range" 
@@ -6003,13 +6115,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 onChange={(e) => handleRectEngineChange('optimiseLevel', Number(e.target.value))}
                                 className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                               />
-                              <span className="text-xs font-semibold text-gray-700 min-w-[20px]">{appSettings.rectEngine.optimiseLevel}</span>
+                              <span className="text-xs font-semibold text-white min-w-[20px]">{appSettings.rectEngine.optimiseLevel}</span>
                             </div>
                           </fieldset>
 
                           {/* Sheet/Nest Balance */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Sheet/Nest Balance (1-10)</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Sheet/Nest Balance (1-10)</legend>
                             <div className="flex items-center gap-2 mt-2">
                               <input 
                                 type="range" 
@@ -6019,21 +6131,21 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 onChange={(e) => handleRectEngineChange('sheetNestBalance', Number(e.target.value))}
                                 className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                               />
-                              <span className="text-xs font-semibold text-gray-700 min-w-[20px]">{appSettings.rectEngine.sheetNestBalance}</span>
+                              <span className="text-xs font-semibold text-white min-w-[20px]">{appSettings.rectEngine.sheetNestBalance}</span>
                             </div>
                           </fieldset>
 
                           {/* Select Best Sheet */}
-                          <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50">
-                            <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Options</legend>
+                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
+                            <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Options</legend>
                             <label className="flex items-center space-x-2 cursor-pointer mt-1">
                               <input 
                                 type="checkbox" 
                                 checked={appSettings.rectEngine.selectBestSheet}
                                 onChange={(e) => handleRectEngineChange('selectBestSheet', e.target.checked)}
-                                className="text-blue-600 border-gray-300 focus:ring-0 w-3.5 h-3.5"
+                                className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5"
                               />
-                              <span className="text-gray-700 text-xs">Select Best Sheet</span>
+                              <span className="text-white text-xs">Select Best Sheet</span>
                             </label>
                           </fieldset>
                         </div>
@@ -6043,16 +6155,16 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                   {settingsTab === 'extensions' && (
                      <div className="flex space-x-4 h-[300px]">
                        <div className="w-1/2 flex flex-col h-full">
-                         <fieldset className="border border-gray-300 p-2 rounded-sm bg-white/50 flex flex-col h-full">
-                           <legend className="px-1 ml-1 text-gray-800 font-semibold bg-[#f0f0f0] rounded">Special Functions</legend>
-                           <div className="bg-white border border-gray-300 overflow-y-scroll flex-1 p-1">
+                         <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50 flex flex-col h-full">
+                           <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Special Functions</legend>
+                           <div className="bg-slate-700 border border-slate-500 bg-slate-700 text-white overflow-y-scroll flex-1 p-1">
                              <div className="flex flex-col space-y-0.5">
                               {['Assisted Nest', 'Bridged Nesting', 'Cut Small Parts First', 'Cut Whole Part Together', 'Drill then Cut Inner Paths First', 'Group Each Part Separately', 'Leave Edge Gap Uncut', 'Merge Like Part Quantities', 'Minimise Sheet Patterns', 'Minimise Tool Changes', 'Nest Small Parts First', 'Onion Skin Small Parts', 'Order By Part', 'Part Quantity Multiplier'].map((label, idx) => {
                                 const isEnabled = appSettings.extensions.enabledExtensions.includes(label);
                                 return (
-                                  <label key={idx} className={`flex items-center space-x-2 cursor-pointer hover:bg-blue-50 px-1 py-0.5 ${isEnabled ? 'bg-blue-100' : ''}`}>
+                                  <label key={idx} className={`flex items-center space-x-2 cursor-pointer hover:bg-blue-900 px-1 py-0.5 ${isEnabled ? 'bg-blue-800' : ''}`}>
                                     <input 
-                                      className="text-blue-600 border-gray-300 rounded-sm focus:ring-0 w-3.5 h-3.5" 
+                                      className="text-blue-600 border-slate-500 rounded-sm focus:ring-0 w-3.5 h-3.5" 
                                       type="checkbox" 
                                       checked={isEnabled}
                                       onChange={() => {
@@ -6071,11 +6183,11 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                            </div>
                          </fieldset>
                          <div className="mt-2 flex justify-center">
-                           <button className="px-8 py-1 bg-white border border-gray-300 shadow-sm hover:bg-gray-50 active:translate-y-px rounded-[2px]">Configure</button>
+                           <button className="px-8 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm hover:bg-slate-600 active:translate-y-px rounded-[2px]">Configure</button>
                          </div>
                        </div>
                        <div className="w-1/2 flex items-start justify-center pt-2">
-                         <div className="bg-white p-4 shadow-sm border border-gray-200">
+                         <div className="bg-slate-700 p-4 shadow-sm border border-slate-600">
                            <svg height="180" viewBox="0 0 250 180" width="250" xmlns="http://www.w3.org/2000/svg">
                              <rect fill="none" height="179" stroke="#FFFF00" strokeWidth="2" width="249" x="0.5" y="0.5"></rect>
                              <path d="M10,10 L70,10 L70,30 L130,30 L130,130 L70,130 L70,170 L10,170 Z" fill="none" stroke="#00FF00" strokeWidth="2"></path>
@@ -6102,9 +6214,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                 </div>
                 
                 {/* Footer */}
-                <div className="px-3 py-2 bg-[#f0f0f0] flex justify-end space-x-2 border-t border-gray-300">
-                   <button onClick={handleSaveSettings} className="px-6 py-1 bg-white border border-gray-300 shadow-sm hover:bg-gray-50 active:translate-y-px rounded-[2px] min-w-[70px]">OK</button>
-                   <button onClick={onCloseSettings} className="px-6 py-1 bg-white border border-gray-300 shadow-sm hover:bg-gray-50 active:translate-y-px rounded-[2px] min-w-[70px]">Cancel</button>
+                <div className="px-3 py-2 bg-slate-800 flex justify-end space-x-2 border-t border-slate-500">
+                   <button onClick={handleSaveSettings} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm hover:bg-slate-600 active:translate-y-px rounded-[2px] min-w-[70px]">OK</button>
+                   <button onClick={onCloseSettings} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-700 text-white shadow-sm hover:bg-slate-600 active:translate-y-px rounded-[2px] min-w-[70px]">Cancel</button>
                 </div>
              </div>
          </div>
@@ -6156,31 +6268,31 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
  };
 
 const TabButton: React.FC<{ label: string; active: boolean; onClick: () => void }> = ({ label, active, onClick }) => (
-  <div onClick={onClick} className={`px-4 py-1 cursor-pointer border-t border-l border-r border-b ${active ? 'bg-[#f0f0f0] border-gray-300 border-b-transparent text-gray-900 relative top-px z-10 font-semibold' : 'bg-white border-transparent text-gray-500 hover:bg-gray-50'}`}>{label}</div>
+  <div onClick={onClick} className={`px-4 py-1 cursor-pointer border-t border-l border-r border-b ${active ? 'bg-slate-800 border-slate-500 border-b-transparent text-white relative top-px z-10 font-semibold' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>{label}</div>
 );
 
 const ModalToolBtn: React.FC<{ icon: string; label: string; iconColor: string; onClick?: () => void }> = ({ icon, label, iconColor, onClick }) => (
   <button onClick={onClick} className={`flex flex-col items-center p-1 hover:bg-[#ffe8a6] hover:border-[#e5cd7a] border border-transparent rounded-[2px] min-w-[50px] group ${onClick ? 'cursor-pointer' : 'cursor-default'}`}>
     <span className={`material-symbols-outlined ${iconColor} text-2xl drop-shadow-sm`}>{icon}</span>
-    <span className="text-[9px] text-center leading-tight mt-0.5 text-gray-200" dangerouslySetInnerHTML={{ __html: label }}></span>
+    <span className="text-[9px] text-center leading-tight mt-0.5 text-white" dangerouslySetInnerHTML={{ __html: label }}></span>
   </button>
 );
 
 const ControlButton: React.FC<{ icon: string }> = ({ icon }) => (
-  <button className="p-1 bg-[#f0f0f0] border border-gray-400 rounded hover:bg-gray-200 active:bg-gray-300 shadow-sm"><span className="material-symbols-outlined text-lg text-gray-600">{icon}</span></button>
+  <button className="p-1 bg-slate-800 border border-slate-500 bg-slate-700 text-white rounded hover:bg-slate-600 active:bg-gray-300 shadow-sm"><span className="material-symbols-outlined text-lg text-white">{icon}</span></button>
 );
 
 const ManualNestBtn: React.FC<{ icon: string; label: string; small?: boolean }> = ({ icon, label, small }) => (
    <button className={`flex flex-col items-center justify-center p-1 border border-slate-600 bg-slate-700 hover:bg-slate-600 rounded-sm active:translate-y-px shadow-sm ${small ? 'h-8' : 'h-12'}`}>
-      <span className={`material-symbols-outlined text-gray-200 ${small ? 'text-sm' : 'text-xl'}`}>{icon}</span>
-      {!small && <span className="text-[9px] text-gray-400 mt-0.5">{label}</span>}
+      <span className={`material-symbols-outlined text-white ${small ? 'text-sm' : 'text-xl'}`}>{icon}</span>
+      {!small && <span className="text-[9px] text-white mt-0.5">{label}</span>}
    </button>
 );
 
 const InfoRow: React.FC<{ label: string; value: string; highlight?: boolean }> = ({ label, value, highlight }) => (
   <tr>
-    <td className="py-2 px-3 text-gray-400 text-xs font-medium border-b border-slate-700">{label}:</td>
-    <td className={`py-2 px-3 text-right text-xs border-b border-slate-700 ${highlight ? 'font-bold text-green-600' : 'text-gray-200'}`}>{value}</td>
+    <td className="py-2 px-3 text-white text-xs font-medium border-b border-slate-700">{label}:</td>
+    <td className={`py-2 px-3 text-right text-xs border-b border-slate-700 ${highlight ? 'font-bold text-green-600' : 'text-white'}`}>{value}</td>
   </tr>
 );
 

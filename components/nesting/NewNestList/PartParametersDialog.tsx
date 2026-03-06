@@ -140,6 +140,7 @@ const PartParametersDialog: React.FC<PartParametersDialogProps> = ({
       symmetry: 'Symmetry',
       rotation: 'Rotation',
       smallPart: 'Small Part',
+      kit: 'Kit Number',
       preview: 'Preview',
       size: 'Size',
       cancel: 'Cancel',
@@ -155,6 +156,7 @@ const PartParametersDialog: React.FC<PartParametersDialogProps> = ({
       symmetry: '対称',
       rotation: '回転',
       smallPart: '小部品',
+      kit: 'キット番号',
       preview: 'プレビュー',
       size: 'サイズ',
       cancel: 'キャンセル',
@@ -197,6 +199,7 @@ const PartParametersDialog: React.FC<PartParametersDialogProps> = ({
       symmetry: params.symmetry,
       rotation: params.rotation,
       isSmallPart: params.isSmallPart,
+      kitNumber: params.kitNumber,
       geometry: selectedGeometry,
       thumbnail: finalThumbnail
     };
@@ -391,17 +394,29 @@ const PartParametersDialog: React.FC<PartParametersDialogProps> = ({
               </div>
             </div>
 
-            {/* Small Part */}
-            <div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={params.isSmallPart}
-                  onChange={(e) => setParams({ ...params, isSmallPart: e.target.checked })}
-                  className="w-4 h-4 text-cyan-500 bg-gray-800 border-cyan-500/30 rounded"
-                />
-                <span className="text-white text-sm">{t.smallPart}</span>
-              </label>
+            {/* Small Part & Kit Number */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                 <label className="block text-xs font-medium text-gray-400 mb-1">{t.kit}</label>
+                 <input
+                    type="text"
+                    value={params.kitNumber || ''}
+                    onChange={(e) => setParams({ ...params, kitNumber: e.target.value })}
+                    className="w-full px-3 py-1.5 text-sm bg-gray-800 text-white border border-cyan-500/30 rounded-lg focus:border-cyan-500 focus:outline-none"
+                    placeholder="Optional"
+                 />
+              </div>
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={params.isSmallPart}
+                    onChange={(e) => setParams({ ...params, isSmallPart: e.target.checked })}
+                    className="w-4 h-4 text-cyan-500 bg-gray-800 border-cyan-500/30 rounded"
+                  />
+                  <span className="text-white text-sm">{t.smallPart}</span>
+                </label>
+              </div>
             </div>
           </div>
 

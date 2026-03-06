@@ -94,7 +94,21 @@ const MaterialListGrid: React.FC<MaterialListGridProps> = ({
 
               {/* Size */}
               <td className="px-3 py-2 text-gray-300">
-                {sheet.size.width} × {sheet.size.height}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    value={sheet.size.width}
+                    onChange={(e) => onUpdate(sheet.id, { size: { ...sheet.size, width: Number(e.target.value) } })}
+                    className="w-16 bg-transparent text-white text-right px-1 py-1 rounded border border-transparent hover:border-cyan-500/30 focus:border-cyan-500 focus:outline-none focus:bg-gray-800 transition-colors text-xs"
+                  />
+                  <span className="text-gray-500">x</span>
+                  <input
+                    type="number"
+                    value={sheet.size.height}
+                    onChange={(e) => onUpdate(sheet.id, { size: { ...sheet.size, height: Number(e.target.value) } })}
+                    className="w-16 bg-transparent text-white text-right px-1 py-1 rounded border border-transparent hover:border-cyan-500/30 focus:border-cyan-500 focus:outline-none focus:bg-gray-800 transition-colors text-xs"
+                  />
+                </div>
               </td>
 
               {/* Thickness */}

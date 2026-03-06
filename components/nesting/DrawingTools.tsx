@@ -20,6 +20,7 @@ export type CadEntity = {
   type: string;
   points: { x: number; y: number }[];
   properties?: any;
+  layerId?: string;
 };
 
 interface DrawingToolsProps {

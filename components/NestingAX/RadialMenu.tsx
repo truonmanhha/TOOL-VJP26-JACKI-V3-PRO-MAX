@@ -27,6 +27,8 @@ const MENU_DATA = [
   { name: "Lớp (Layers)", icon: "icon-layer", action: "layer_panel", color: "#FFD600", sub: null },
   { name: "Xóa (Del)", icon: "icon-del", action: "delete", color: "#FF1744", sub: null },
   { name: "Chỉnh sửa", icon: "icon-edit", action: null, color: "#00E676", sub: [
+    { name: "Trim", icon: "icon-trim", action: "trim", color: "#FF5252" },
+    { name: "Extend", icon: "icon-extend", action: "extend", color: "#00E676" },
     { name: "Di chuyển", icon: "icon-move", action: "move", color: "#00E676" },
     { name: "Sao chép", icon: "icon-copy", action: "copy", color: "#69F0AE" },
     { name: "Xoay", icon: "icon-rotate", action: "rotate", color: "#B2FF59" },
@@ -50,7 +52,7 @@ const MENU_DATA = [
   { name: "Zoom Fit", icon: "icon-zoom", action: "zoom_fit", color: "#40C4FF", sub: null },
   { name: "Redo", icon: "icon-redo", action: "redo", color: "#B0BEC5", sub: null },
   { name: "Undo", icon: "icon-undo", action: "undo", color: "#90A4AE", sub: null },
-  { name: "Pháo Hoa", icon: "icon-firework", action: "fireworks", color: "#FF6B35", sub: null },
+  { name: "Osnap", icon: "icon-zap", action: "osnap_toggle", color: "#FFD700", sub: null },
   { name: "Auto Fit", icon: "icon-zoom", action: "zoom_fit", color: "#40C4FF", sub: null },
   { name: "Gia công CAM", icon: "icon-cam", action: null, color: "#E040FB", sub: [
     { name: "Chọn dao", icon: "icon-drill", action: "select_tool", color: "#E040FB" },

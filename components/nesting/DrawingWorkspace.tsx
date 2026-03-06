@@ -10,6 +10,8 @@ import DrawingTools, {
   type DrawState 
 } from './DrawingTools';
 import { GeometryUtils } from '@/services/GeometryUtils';
+import { SnapEngine } from '../../services/SnapEngine';
+import { ModifyEngine } from '../../services/ModifyEngine';
 
 interface DrawingWorkspaceProps {
   onCadEntitiesChange?: (entities: CadEntity[]) => void;
@@ -39,6 +41,21 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
     currentPos: null
   });
   const [activeDrawTool, setActiveDrawTool] = useState<string | null>(externalActiveTool || null);
+  const [commandPrompt, setCommandPrompt] = useState<string>('');
+  // Layer State
+  const [layers, setLayers] = useState<any[]>([
+    { id: '0', name: '0', color: '#ffffff', lineWidth: 1, lineType: 'solid', visible: true, locked: false, frozen: false, printable: true },
+    { id: 'defpoints', name: 'Defpoints', color: '#888888', lineWidth: 1, lineType: 'solid', visible: true, locked: false, frozen: false, printable: false },
+    { id: 'cut', name: 'Cut', color: '#ff0000', lineWidth: 1, lineType: 'solid', visible: true, locked: false, frozen: false, printable: true }
+  ]);
+  const [currentLayerId, setCurrentLayerId] = useState<string>('0');
+
+  // OSNAP State
+  const [osnapEnabled, setOsnapEnabled] = useState(true);
+  const [activeSnaps, setActiveSnaps] = useState<any[]>(['endpoint', 'midpoint', 'center', 'intersection']);
+  const [currentSnap, setCurrentSnap] = useState<any>(null);
+
+
 
   // View/Zoom State
   const [zoom, setZoom] = useState(1);
@@ -67,6 +84,11 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
   // Reset drawing state when tool changes
   useEffect(() => {
     setDrawState({ step: 0, points: [], currentPos: null });
+    if (activeDrawTool === 'trim') {
+        setCommandPrompt('Lệnh Trim: Chọn đoạn thẳng để cắt...');
+    } else {
+        setCommandPrompt('');
+    }
   }, [activeDrawTool]);
 
   // Prevent page scrolling when mouse in workspace
@@ -115,7 +137,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
             {
               id: crypto.randomUUID(),
               type: activeDrawTool,
-              points: [currentDrawState.points[0], worldPos]
+              points: [currentDrawState.points[0], worldPos],
+              layerId: currentLayerId
             }
           ]);
           setDrawState({ step: 0, points: [], currentPos: null });
@@ -134,7 +157,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
               id: crypto.randomUUID(),
               type: 'circle',
               points: [center, worldPos],
-              properties: { radius }
+              properties: { radius },
+              layerId: currentLayerId
             }
           ]);
           setDrawState({ step: 0, points: [], currentPos: null });
@@ -153,7 +177,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
             {
               id: crypto.randomUUID(),
               type: 'arc',
-              points: [...currentDrawState.points, worldPos]
+              points: [...currentDrawState.points, worldPos],
+              layerId: currentLayerId
             }
           ]);
           setDrawState({ step: 0, points: [], currentPos: null });
@@ -179,7 +204,41 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
       // Left mouse button
       if (e.button === 0) {
         if (activeDrawTool) {
-          handleDrawingClick(worldPos, drawState);
+          if (activeDrawTool === 'trim') {
+            // Trim logic
+            const hitThreshold = 10 / zoom;
+            const hitEntity = [...cadEntities].reverse().find(entity => {
+              if (entity.type === 'line') {
+                const p1 = entity.points[0];
+                const p2 = entity.points[1];
+                const dist = Math.abs((p2.y - p1.y) * worldPos.x - (p2.x - p1.x) * worldPos.y + p2.x * p1.y - p2.y * p1.x) / Math.sqrt((p2.y - p1.y) ** 2 + (p2.x - p1.x) ** 2);
+                
+                // also check bounds
+                const minX = Math.min(p1.x, p2.x) - hitThreshold;
+                const maxX = Math.max(p1.x, p2.x) + hitThreshold;
+                const minY = Math.min(p1.y, p2.y) - hitThreshold;
+                const maxY = Math.max(p1.y, p2.y) + hitThreshold;
+
+                return dist < hitThreshold && worldPos.x >= minX && worldPos.x <= maxX && worldPos.y >= minY && worldPos.y <= maxY;
+              }
+              return false; // only support trim line for now
+            });
+
+            if (hitEntity) {
+               const boundaries = cadEntities.filter(e => e.id !== hitEntity.id);
+               const newEntities = ModifyEngine.trimLine(hitEntity, boundaries, worldPos);
+               
+               // Replace hitEntity with newEntities
+               setCadEntities(prev => {
+                  const filtered = prev.filter(e => e.id !== hitEntity.id);
+                  return [...filtered, ...newEntities];
+               });
+            }
+            return;
+          }
+
+          const clickPos = currentSnap && osnapEnabled ? currentSnap.point : worldPos;
+          handleDrawingClick(clickPos, drawState);
           return;
         } else {
           // SELECTION MODE - Precision Hit Testing
@@ -230,7 +289,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
               {
                 id: crypto.randomUUID(),
                 type: activeDrawTool,
-                points: drawState.points
+                points: drawState.points,
+                layerId: currentLayerId
               }
             ]);
             setDrawState({ step: 0, points: [], currentPos: null });
@@ -249,8 +309,19 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
       const screenY = e.clientY - rect.top;
       const worldPos = screenToWorld(screenX, screenY);
 
+      let finalPos = worldPos;
+      if (osnapEnabled && activeDrawTool) {
+         const snap = SnapEngine.findSnapPoint(cadEntities, worldPos, activeSnaps, 20 / pixelsPerUnit);
+         setCurrentSnap(snap);
+         if (snap) {
+            finalPos = snap.point;
+         }
+      } else {
+         setCurrentSnap(null);
+      }
+
       if (activeDrawTool) {
-        setDrawState(prev => ({ ...prev, currentPos: worldPos }));
+        setDrawState(prev => ({ ...prev, currentPos: finalPos }));
       }
 
       if (isDragging) {
@@ -262,7 +333,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
         });
       }
     },
-    [activeDrawTool, screenToWorld, isDragging, dragStart, dragStartView, pixelsPerUnit]
+    [activeDrawTool, screenToWorld, isDragging, dragStart, dragStartView, pixelsPerUnit, osnapEnabled, cadEntities, activeSnaps]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -346,11 +417,16 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
     }
 
     // Draw entities
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 2;
-    ctx.fillStyle = 'rgba(0, 255, 136, 0.1)';
-
     cadEntities.forEach(entity => {
+      // Find layer
+      const layer = layers.find(l => l.id === entity.layerId);
+      
+      // Check visibility
+      if (layer && !layer.visible) return;
+      
+      ctx.strokeStyle = layer?.color || '#00ff88';
+      ctx.lineWidth = layer?.lineWidth || 2;
+      ctx.fillStyle = layer?.color ? layer.color + '1a' : 'rgba(0, 255, 136, 0.1)'; // 10% opacity
       const screenPoints = entity.points.map(p => worldToScreen(p.x, p.y));
 
       if (entity.type === 'line') {
@@ -435,7 +511,35 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
         });
       }
     });
-  }, [cadEntities, width, height, worldToScreen, pixelsPerUnit, showGrid, gridSize, gridSizePx, viewOffset]);
+
+    // Draw OSNAP indicator
+    if (currentSnap && osnapEnabled) {
+      const sp = worldToScreen(currentSnap.point.x, currentSnap.point.y);
+      ctx.strokeStyle = '#FFD700'; // Vàng
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      const size = 10;
+      switch (currentSnap.type) {
+        case 'endpoint':
+          ctx.rect(sp.x - size/2, sp.y - size/2, size, size);
+          break;
+        case 'midpoint':
+          ctx.moveTo(sp.x, sp.y - size/2);
+          ctx.lineTo(sp.x + size/2, sp.y + size/2);
+          ctx.lineTo(sp.x - size/2, sp.y + size/2);
+          ctx.closePath();
+          break;
+        case 'center':
+          ctx.arc(sp.x, sp.y, size/2, 0, Math.PI * 2);
+          break;
+        default:
+          ctx.arc(sp.x, sp.y, size/2, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+    }
+  }, [cadEntities, width, height, worldToScreen, pixelsPerUnit, showGrid, gridSize, gridSizePx, viewOffset, currentSnap, osnapEnabled]);
+
 
   // Render drawing preview
   const renderDrawingPreview = useMemo(() => {
@@ -482,8 +586,9 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({
 
       {/* Info Bar */}
       <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-800 rounded px-2 py-1">
-        <div>
-          Zoom: {zoom.toFixed(2)}x | Entities: {cadEntities.length} | Grid: {showGrid ? 'On' : 'Off'}
+        <div className="flex items-center gap-4">
+          <span>Zoom: {zoom.toFixed(2)}x | Entities: {cadEntities.length} | Grid: {showGrid ? 'On' : 'Off'}</span>
+          {commandPrompt && <span className="text-emerald-400 font-medium">{commandPrompt}</span>}
         </div>
         <button
           onClick={() => setShowGrid(!showGrid)}

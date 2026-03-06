@@ -611,6 +611,20 @@ function NestingAXApp() {
       undoManager.redo();
       return;
     }
+    if (tool === 'osnap_toggle') {
+      handleToggleSnap();
+      return;
+    }
+    if (tool === 'layer_panel') {
+      // For now just toggle a simple state or ignore, since we don't have complex UI
+      console.log('Layer panel triggered');
+      return;
+    }
+    if (tool === 'trim' || tool === 'extend' || tool === 'offset') {
+      // Enable command mode in Workspace
+      setActiveDrawTool(tool);
+      return;
+    }
     if (tool === 'layer_panel') {
       setShowLayerPanel(prev => !prev);
       return;
@@ -776,6 +790,7 @@ function NestingAXApp() {
           onSelectPart={handleSelectPart}
           activePartId={activePartId}
           nestingMethod={nestingMethod}
+          onUpdatePart={handleUpdatePart}
         />
 
         {showLayerPanel && (
