@@ -58,15 +58,18 @@ export const renderEngineSVG = (packTo: string, customAngle: number) => {
   let tx = "0%";
   let ty = "0%";
   
+  // If the inner div is 50% of parent, then max translate is 100% of its own size to reach the other side.
+  // Halfway is 50%.
+  
   if (packTo === "TL") { tx = "0%"; ty = "0%"; }
-  else if (packTo === "T") { tx = "30%"; ty = "0%"; }
-  else if (packTo === "TR") { tx = "60%"; ty = "0%"; }
-  else if (packTo === "L") { tx = "0%"; ty = "30%"; }
-  else if (packTo === "Custom") { tx = "30%"; ty = "30%"; }
-  else if (packTo === "R") { tx = "60%"; ty = "30%"; }
-  else if (packTo === "BL") { tx = "0%"; ty = "60%"; }
-  else if (packTo === "B") { tx = "30%"; ty = "60%"; }
-  else if (packTo === "BR") { tx = "60%"; ty = "60%"; }
+  else if (packTo === "T") { tx = "50%"; ty = "0%"; }
+  else if (packTo === "TR") { tx = "100%"; ty = "0%"; }
+  else if (packTo === "L") { tx = "0%"; ty = "50%"; }
+  else if (packTo === "Custom") { tx = "50%"; ty = "50%"; }
+  else if (packTo === "R") { tx = "100%"; ty = "50%"; }
+  else if (packTo === "BL") { tx = "0%"; ty = "100%"; }
+  else if (packTo === "B") { tx = "50%"; ty = "100%"; }
+  else if (packTo === "BR") { tx = "100%"; ty = "100%"; }
 
   return (
     <div className="relative w-full aspect-[4/3] max-w-[200px] bg-slate-800 rounded shadow-inner p-2 border border-slate-600 overflow-hidden">
@@ -78,7 +81,7 @@ export const renderEngineSVG = (packTo: string, customAngle: number) => {
          <div 
            className="relative flex flex-wrap gap-1 transition-all duration-700 ease-in-out bg-white/5 border border-white/10 p-1 rounded-sm shadow-xl"
            style={{
-             width: '60%', height: '60%',
+             width: '50%', height: '50%',
              transform: `translate(${tx}, ${ty}) ${packTo === 'Custom' ? `rotate(${customAngle}deg)` : 'rotate(0deg)'}`
            }}
          >
