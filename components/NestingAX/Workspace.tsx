@@ -5902,15 +5902,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                          </fieldset>
                        </div>
                        
-                       {/* SVG Preview Right Column */}
-                       <div className="w-1/2 flex flex-col justify-center items-center">
-                          <div className="w-full aspect-[4/3] relative p-4 shadow-inner mb-4 flex items-center justify-center bg-slate-700 border-slate-500 border">
-                            {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
-                          </div>
-                          <div className="text-xs text-slate-400 text-center px-4">
-                            Mô phỏng hướng xếp (Pack Direction). Các chi tiết sẽ được đẩy về phía góc được chỉ định để tối ưu hóa không gian.
-                          </div>
-                       </div>
+
                      </div>
                   )}
 
@@ -6022,12 +6014,22 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                        </div>
                        
                        {/* SVG Preview Right Column */}
-                       <div className="w-1/2 flex flex-col justify-center items-center">
-                          <div className="w-full aspect-[4/3] relative p-4 shadow-inner mb-4 flex items-center justify-center bg-slate-700 border-slate-500 border">
-                            {renderRectEngineSVG(appSettings.rectEngine.cutDirection, appSettings.rectEngine.optimizeFor)}
+                       <div className="w-1/2 flex flex-col justify-center items-center gap-4">
+                          <div className="w-full flex flex-col items-center">
+                            <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
+                              {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
+                            </div>
+                            <div className="text-xs text-slate-400 text-center px-2">
+                              Mô phỏng hướng xếp (Pack Direction)
+                            </div>
                           </div>
-                          <div className="text-xs text-slate-400 text-center px-4">
-                            Mô phỏng hướng cắt Guillotine (Rectangular). Đường cắt đứt đoạn đỏ mô phỏng nhát cắt xuyên suốt.
+                          <div className="w-full flex flex-col items-center border-t border-slate-600 pt-4">
+                            <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
+                              {renderRectEngineSVG(appSettings.rectEngine.cutDirection, appSettings.rectEngine.optimizeFor)}
+                            </div>
+                            <div className="text-xs text-slate-400 text-center px-2">
+                              Mô phỏng hướng cắt (Guillotine)
+                            </div>
                           </div>
                        </div>
                      </div>
