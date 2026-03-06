@@ -1,3 +1,4 @@
+import { renderGeneralSVG, renderEngineSVG, renderRectEngineSVG } from "./renderSettingsSVG";
 
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Part, Sheet, StockSheet, db, AppSettings, Layer, CadEntity } from './services/db';
@@ -5893,28 +5894,29 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                        <div className="space-y-4">
                          <div className="w-full aspect-[4/3] bg-slate-700 border border-yellow-400 relative p-2">
                            {/* SVG Preview for General Tab */}
-                           <svg className="w-full h-full" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
-                             <path d="M10,10 L80,10 L80,50 L50,50 L50,90 L10,90 Z" fill="none" stroke="#76ff03" strokeWidth="1.5"></path>
-                             <circle cx="20" cy="20" r="2" fill="none" stroke="#76ff03" strokeWidth="1.5"></circle>
-                             <circle cx="70" cy="20" r="2" fill="none" stroke="#76ff03" strokeWidth="1.5"></circle>
-                             <path d="M90,10 L190,10 L190,140 L160,140 L160,40 L90,40 Z" fill="none" stroke="#76ff03" strokeWidth="1.5"></path>
-                             <circle cx="180" cy="20" r="2" fill="none" stroke="#76ff03" strokeWidth="1.5"></circle>
-                             <circle cx="180" cy="130" r="2" fill="none" stroke="#76ff03" strokeWidth="1.5"></circle>
-                             <path d="M10,100 L80,100 L80,140 L10,140 Z" fill="none" stroke="#76ff03" strokeWidth="1.5"></path>
-                             <circle cx="20" cy="110" r="2" fill="none" stroke="#76ff03" strokeWidth="1.5"></circle>
-                           </svg>
+                           {renderGeneralSVG(appSettings.nestingMethod)}
                          </div>
                          <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50 relative pt-3">
                            <legend className="absolute -top-2 left-2 px-1 text-white bg-slate-800 text-[10px]">Nest List Name</legend>
                            <input className="w-full h-7 border border-slate-500 bg-slate-700 text-white px-2 text-xs focus:ring-0 focus:border-blue-400" type="text" defaultValue={activeNestList || "New Nest List 1"} />
                          </fieldset>
                        </div>
+                       
+                       {/* SVG Preview Right Column */}
+                       <div className="w-1/2 flex flex-col justify-center items-center">
+                          <div className="w-full aspect-[4/3] bg-slate-700 border border-yellow-400 relative p-2 shadow-inner mb-4">
+                            {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
+                          </div>
+                          <div className="text-xs text-slate-400 text-center px-4">
+                            Mô phỏng hướng xếp (Pack Direction). Các chi tiết sẽ được đẩy về phía góc được chỉ định để tối ưu hóa không gian.
+                          </div>
+                       </div>
                      </div>
                   )}
 
                    {settingsTab === 'engine' && (
-                      <div className="flex space-x-4">
-                        <div className="w-1/2 space-y-3">
+                     <div className="flex space-x-4">
+                       <div className="w-1/2 h-[300px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                           {/* Pack Direction 3x3 Grid */}
                           <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
                             <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Pack Direction</legend>
@@ -5994,9 +5996,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                               </div>
                             </div>
                           </fieldset>
-                        </div>
-
-                        <div className="w-1/2 space-y-3">
+                          {/* Second half moved under first half */}
                           {/* Search Resolution */}
                           <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
                             <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Search Resolution</legend>
@@ -6026,13 +6026,23 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                               <span className="text-white text-xs">Evenly Spaced Parts</span>
                             </label>
                           </fieldset>
-                        </div>
-                      </div>
-                   )}
+                       </div>
+                       
+                       {/* SVG Preview Right Column */}
+                       <div className="w-1/2 flex flex-col justify-center items-center">
+                          <div className="w-full aspect-[4/3] bg-slate-700 border border-yellow-400 relative p-2 shadow-inner mb-4">
+                            {renderRectEngineSVG(appSettings.rectEngine.cutDirection, appSettings.rectEngine.optimizeFor)}
+                          </div>
+                          <div className="text-xs text-slate-400 text-center px-4">
+                            Mô phỏng hướng cắt Guillotine (Rectangular). Đường cắt đứt đoạn đỏ mô phỏng nhát cắt xuyên suốt.
+                          </div>
+                       </div>
+                     </div>
+                  )}
 
                    {settingsTab === 'rectengine' && (
-                      <div className="flex space-x-4">
-                        <div className="w-1/2 space-y-3">
+                     <div className="flex space-x-4">
+                       <div className="w-1/2 h-[300px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                           {/* Optimize For */}
                           <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
                             <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">Optimize For</legend>
@@ -6085,9 +6095,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                               </div>
                             </div>
                           </fieldset>
-                        </div>
-
-                        <div className="w-1/2 space-y-3">
+                          {/* Second half moved under first half */}
                           {/* NC Code */}
                           <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50">
                             <legend className="px-1 ml-1 text-white font-semibold bg-slate-800 rounded">NC Code</legend>
