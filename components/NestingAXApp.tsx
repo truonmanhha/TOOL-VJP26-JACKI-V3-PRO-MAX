@@ -1051,7 +1051,7 @@ function NestingAXApp() {
             <div className="flex items-center gap-1 text-[10px] text-white/60">
               <span className="material-icons-outlined text-[12px]">straighten</span>
               <input
-                type="number" className="w-12 h-5 bg-slate-200 border border-slate-400 rounded px-1 text-center text-slate-900 font-bold outline-none focus:border-emerald-500 focus:bg-white text-[10px]" 
+                type="number" className="w-12 h-5 bg-slate-200 border border-slate-400 rounded px-1 text-center text-black font-bold outline-none focus:border-emerald-500 focus:bg-white text-[10px]" 
                 min={10}
                 max={100}
                 value={wsCrosshairSize}
