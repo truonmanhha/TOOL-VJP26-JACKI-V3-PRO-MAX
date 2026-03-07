@@ -154,7 +154,7 @@ export const renderGapSVG = (gaps: AppSettings['gaps']) => {
         
         {/* Sheet Edge Gap Distance Line/Label */}
         <line x1={sheetX} y1={svgHeight/2} x2={innerX} y2={svgHeight/2} stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrow)" markerStart="url(#arrow)" />
-        <text x={sheetX + visualSheetGap/2} y={svgHeight/2 - 5} fill="#fca5a5" fontSize="14" textAnchor="middle" fontWeight="bold" stroke="#0f172a" strokeWidth="3" paintOrder="stroke">
+        <text x={sheetX + visualSheetGap/2} y={svgHeight/2 - 5} fill="#fde047" fontSize="14" textAnchor="middle" fontWeight="bold" stroke="#0f172a" strokeWidth="3" paintOrder="stroke">
           {gaps.sheetEdgeGap}
         </text>
 
@@ -168,7 +168,7 @@ export const renderGapSVG = (gaps: AppSettings['gaps']) => {
 
         {/* Min Gap Path Distance Line/Label */}
         <line x1={part1X + partW} y1={svgHeight/2} x2={part2X} y2={svgHeight/2} stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arrow-blue)" markerStart="url(#arrow-blue)" />
-        <text x={part1X + partW + visualPartGap/2} y={svgHeight/2 - 5} fill="#93c5fd" fontSize="14" textAnchor="middle" fontWeight="bold" stroke="#0f172a" strokeWidth="3" paintOrder="stroke">
+        <text x={part1X + partW + visualPartGap/2} y={svgHeight/2 - 5} fill="#fde047" fontSize="14" textAnchor="middle" fontWeight="bold" stroke="#0f172a" strokeWidth="3" paintOrder="stroke">
           {gaps.minGapPath}
         </text>
 
