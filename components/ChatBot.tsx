@@ -904,7 +904,29 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
           </motion.button>
         </div>
       )}
-    </div>
+    
+      {/* Floating Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          userInteractedRef.current = true;
+          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+        }}
+        className={`relative flex items-center justify-center p-4 rounded-full shadow-2xl transition-all duration-500 ${
+          isOpen ? 'bg-red-500/20 text-red-500 hover:bg-red-500/40 border border-red-500/50' : 
+          'bg-[#1C1C1E]/80 backdrop-blur-md text-[#007AFF] hover:bg-[#2C2C2E] border border-white/10'
+        }`}
+      >
+        {isOpen ? <X size={28} /> : <Bot size={28} />}
+        
+        {/* Unread dot */}
+        {!isOpen && messages.length > 0 && messages[messages.length - 1].role === 'model' && (
+          <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1C1C1E]"></span>
+        )}
+      </motion.button>
+</div>
   );
 };
 
