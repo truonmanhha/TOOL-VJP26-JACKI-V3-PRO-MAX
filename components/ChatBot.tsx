@@ -333,6 +333,7 @@ const extractCode = (text: string): string | null => {
 
 const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettings }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -920,7 +921,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
           >
             
             
-            {/* iOS Top Navigation Bar */}
+                        {!showSettings ? (
+              <>
+{/* iOS Top Navigation Bar */}
             <nav className="sticky top-0 z-20 ios-nav-glass px-2 pt-6 pb-2 flex items-center justify-between">
               <button onClick={() => setIsOpen(false)} className="text-primary flex items-center gap-1">
                 <span className="material-symbols-outlined !text-[24px]">chevron_left</span>
@@ -933,7 +936,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
                   <span className="text-[11px] text-white/50 uppercase tracking-widest font-medium">TRỰC TUYẾN</span>
                 </div>
               </div>
-              <button className="text-primary">
+              <button onClick={() => setShowSettings(true)} className="text-primary">
                 <span className="material-symbols-outlined !text-[24px]">settings</span>
               </button>
             </nav>
@@ -1048,7 +1051,130 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
               </div>
             </footer>
 
-          </motion.div>
+                        </>
+            ) : (
+              <div className="flex flex-col h-full bg-[#000000] text-white overflow-hidden w-full relative z-30">
+<nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-8 pb-2 flex items-center justify-between">
+<button onClick={() => setShowSettings(false)} className="text-primary flex items-center -ml-1">
+<span className="material-symbols-outlined !text-[32px]">chevron_left</span>
+<span className="text-[17px]">Quay lại</span>
+</button>
+<h1 className="text-[17px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Cài đặt</h1>
+<button onClick={() => setShowSettings(false)} className="text-primary text-[17px] font-normal">Xong</button>
+</nav>
+<main className="flex-1 overflow-y-auto pt-6 scrollbar-hide">
+<div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">TÀI KHOẢN</div>
+<div className="px-3">
+<div className="rounded-xl overflow-hidden mb-6">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-primary flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">person</span>
+</div>
+<span className="text-[17px]">Thông tin cá nhân</span>
+</div>
+<span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors"><div className="flex items-center gap-3"><div className="size-7 rounded-full bg-neutral-600 flex items-center justify-center"><span className="material-symbols-outlined !text-[18px] text-white">key</span></div><span className="text-[17px]">API Key</span></div><div className="flex items-center gap-1"><span className="text-[17px] text-white/40">••••••••4291</span><span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span></div></div>
+</div>
+</div>
+<div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">TÙY CHỌN TRỢ LÝ</div>
+<div className="px-3">
+<div className="rounded-xl overflow-hidden mb-6">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-purple-500 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">psychology</span>
+</div>
+<span className="text-[17px]">Thông tin cá nhân</span>
+</div>
+<div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#34C759]">
+<span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[20px]"></span>
+</div>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-orange-500 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">history</span>
+</div>
+<span className="text-[17px]">Context Awareness</span>
+</div>
+<div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#34C759]">
+<span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[20px]"></span>
+</div>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-blue-400 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">model_training</span>
+</div>
+<span className="text-[17px]">Model Version</span>
+</div>
+<div className="flex items-center gap-1">
+<span className="text-[17px] text-white/40">GPT-4o</span>
+<span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span>
+</div>
+</div><div className="h-[0.5px] bg-white/10 ml-12"></div><div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors"><div className="flex items-center gap-3"><div className="size-7 rounded-full bg-red-600 flex items-center justify-center"><span className="material-symbols-outlined !text-[18px] text-white">security_update_warning</span></div><span className="text-[17px]">Bypass Mode (Lách luật)</span></div><div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#39393D]"><span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[2px]"></span></div></div>
+</div>
+</div>
+<div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">THÔNG BÁO</div>
+<div className="px-3">
+<div className="rounded-xl overflow-hidden mb-6">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-red-500 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">notifications</span>
+</div>
+<span className="text-[17px]">Thông tin cá nhân</span>
+</div>
+<div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#34C759]">
+<span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[20px]"></span>
+</div>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-green-500 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">volume_up</span>
+</div>
+<span className="text-[17px]">Voice Output</span>
+</div>
+<div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#39393D]">
+<span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[2px]"></span>
+</div>
+</div><div className="h-[0.5px] bg-white/10 ml-12"></div><div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors"><div className="flex items-center gap-3"><div className="size-7 rounded-full bg-blue-500 flex items-center justify-center"><span className="material-symbols-outlined !text-[18px] text-white">record_voice_over</span></div><span className="text-[17px]">Voice Type</span></div><div className="flex items-center gap-1"><span className="text-[17px] text-white/40">Samantha</span><span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span></div></div><div className="h-[0.5px] bg-white/10 ml-12"></div><div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors"><div className="flex items-center gap-3"><div className="size-7 rounded-full bg-yellow-500 flex items-center justify-center"><span className="material-symbols-outlined !text-[18px] text-white">speed</span></div><span className="text-[17px]">Speaking Speed</span></div><div className="flex items-center gap-1"><span className="text-[17px] text-white/40">1.0x</span><span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span></div></div>
+</div>
+</div>
+<div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">GIAO DIỆN</div>
+<div className="px-3">
+<div className="rounded-xl overflow-hidden mb-6">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-blue-600 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">palette</span>
+</div>
+<span className="text-[17px]">Thông tin cá nhân</span>
+</div>
+<div className="flex items-center gap-1">
+<span className="text-[17px] text-white/40">Thông tin cá nhân</span>
+<span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<div className="text-center pb-20">
+<p className="text-[13px] text-white/30">Phiên bản Trợ lý AI 2.4.0</p>
+</div>
+</main>
+<footer className="absolute bottom-0 w-full p-2 flex justify-center pointer-events-none">
+<div className="w-32 h-1 bg-white/25 rounded-full mb-2"></div>
+</footer>
+              </div>
+            )}
+</motion.div>
         )}
       </AnimatePresence>
 
