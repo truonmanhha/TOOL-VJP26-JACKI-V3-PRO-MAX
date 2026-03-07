@@ -916,8 +916,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             onClick={handleInteraction}
-            className="relative w-[320px] h-[568px] bg-[#000000] flex flex-col overflow-hidden shadow-2xl rounded-2xl border border-white/10 mb-4 transition-all duration-500 ease-out"
+            className="relative w-[320px] h-[568px] bg-[#000000] flex flex-col overflow-hidden shadow-none border-none mb-4 transition-all duration-500 ease-out"
           >
+            
             
             {/* iOS Top Navigation Bar */}
             <nav className="sticky top-0 z-20 ios-nav-glass px-2 pt-6 pb-2 flex items-center justify-between">
@@ -1046,8 +1047,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
                 <div className="w-24 h-1 bg-white/20 rounded-full"></div>
               </div>
             </footer>
-            {/* Focus Glow Accent (Subtle) */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 blur-[80px] -z-10 pointer-events-none"></div>
 
           </motion.div>
         )}
