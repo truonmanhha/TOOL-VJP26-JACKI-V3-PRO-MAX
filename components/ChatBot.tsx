@@ -918,55 +918,72 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             onClick={handleInteraction}
             className="relative w-[320px] h-[568px] bg-[#000000] flex flex-col overflow-hidden shadow-2xl rounded-2xl border border-white/10 mb-4 transition-all duration-500 ease-out"
           >
+            
             {/* iOS Top Navigation Bar */}
             <nav className="sticky top-0 z-20 ios-nav-glass px-2 pt-6 pb-2 flex items-center justify-between">
-              <button onClick={() => setIsOpen(false)} className="text-[#007AFF] flex items-center gap-1">
-                <span className="material-symbols-outlined !text-[28px]"><X size={24}/></span>
+              <button onClick={() => setIsOpen(false)} className="text-primary flex items-center gap-1">
+                <span className="material-symbols-outlined !text-[24px]">chevron_left</span>
+                <span className="text-[15px]">Trở lại</span>
               </button>
               <div className="flex flex-col items-center">
-                <h1 className="text-[17px] font-semibold tracking-tight text-white">VJP26.CORE</h1>
+                <h1 className="text-[15px] font-semibold tracking-tight text-white">Trợ lý AI</h1>
                 <div className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span className="text-[11px] text-white/50 uppercase tracking-widest font-medium">LVL {intelLevel}</span>
+                  <span className="text-[11px] text-white/50 uppercase tracking-widest font-medium">TRỰC TUYẾN</span>
                 </div>
               </div>
-              <button className="text-[#007AFF]">
-                <Monitor size={20} className={isFullScreen ? "text-white" : ""} onClick={() => setIsFullScreen(!isFullScreen)} />
+              <button className="text-primary">
+                <span className="material-symbols-outlined !text-[24px]">settings</span>
               </button>
             </nav>
 
             {/* Chat Area */}
-            <main ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-6 flex flex-col scroll-smooth custom-scrollbar">
+            <main ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-4 flex flex-col scroll-smooth">
               {messages.map((msg, i) => (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end self-end' : 'items-start'} max-w-[85%]`}>
                   {msg.role === 'model' && (
                     <div className="flex items-center gap-2 mb-1.5 ml-1">
-                      <div className="size-5 rounded-full bg-[#007AFF]/20 flex items-center justify-center">
-                        <Bot size={12} className="text-[#007AFF]" />
+                      <div className="size-5 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="material-symbols-outlined !text-[12px] text-primary">auto_awesome</span>
                       </div>
                       <span className="text-[12px] font-medium text-white/40">Trợ lý</span>
                     </div>
                   )}
-                  <div className={`${msg.role === 'user' ? 'user-gradient rounded-tr-none' : 'glass rounded-tl-none'} text-white px-4 py-3 rounded-2xl shadow-lg border border-white/5`}>
-                    {msg.role === "model" ? <TypewriterMessage text={msg.text} /> : <p className="text-[16px] leading-relaxed">{msg.text}</p>}
+                  
+                  <div className={`${msg.role === 'user' ? 'user-gradient text-white px-4 py-3 rounded-2xl rounded-tr-none shadow-md' : 'glass text-white px-4 py-3 rounded-2xl rounded-tl-none border border-white/5 shadow-lg'}`}>
+                    {msg.role === 'model' ? (
+                      <TypewriterMessage 
+                        text={msg.text} 
+                        onComplete={() => {}} 
+                        speed={30}
+                      />
+                    ) : (
+                      <p className="text-[16px] leading-relaxed">{msg.text}</p>
+                    )}
+                    
                     {msg.code && (
-                      <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                        <button onClick={() => setPreviewCode(msg.code!)} className="px-3 py-1.5 bg-[#007AFF] text-white rounded-lg font-black text-[10px] uppercase transition-all active:scale-95">EXECUTE CODE</button>
+                      <div className="mt-3 p-3 bg-black/50 rounded-xl border border-white/10 relative overflow-hidden group">
+                        <pre className="text-[10px] font-mono text-emerald-400 overflow-x-auto custom-scrollbar pb-2">
+                          <code>{msg.code}</code>
+                        </pre>
+                        <button onClick={() => setPreviewCode(msg.code!)} className="mt-2 w-full py-1.5 bg-primary/20 hover:bg-primary/40 text-primary border border-primary/30 rounded-lg font-semibold text-[10px] uppercase transition-all">CHẠY CODE</button>
                       </div>
                     )}
                   </div>
-                  <span className={`text-[10px] text-white/20 mt-1 uppercase ${msg.role === 'user' ? 'mr-1 flex items-center gap-1' : 'ml-1'}`}>
-                     {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                     {msg.role === 'user' && <CheckCircle2 size={12} className="text-[#007AFF] ml-1" />}
-                  </span>
+                  
+                  <div className={`flex items-center gap-1 mt-1 ${msg.role === 'user' ? 'mr-1' : 'ml-1'}`}>
+                     <span className="text-[10px] text-white/20 uppercase">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                     {msg.role === 'user' && <span className="material-symbols-outlined !text-[12px] text-primary">done_all</span>}
+                  </div>
                 </motion.div>
               ))}
+
               <AnimatePresence>
                 {isLoading && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-start max-w-[85%]">
                      <div className="flex items-center gap-2 mb-1.5 ml-1">
-                      <div className="size-5 rounded-full bg-[#007AFF]/20 flex items-center justify-center">
-                        <Bot size={12} className="text-[#007AFF]" />
+                      <div className="size-5 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="material-symbols-outlined !text-[12px] text-primary">auto_awesome</span>
                       </div>
                       <span className="text-[12px] font-medium text-white/40">Trợ lý</span>
                     </div>
@@ -980,51 +997,58 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 
             {/* Bottom Input Area */}
             <footer className="ios-nav-glass p-3 pb-4">
-              <div className="flex items-end gap-3">
+              <div className="flex items-end gap-2">
+                {/* Attach Icon */}
                 <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-[#007AFF] transition-opacity hover:opacity-70">
-                  <Paperclip size={24} />
+                <button onClick={() => fileInputRef.current?.click()} className="p-1 text-primary transition-opacity hover:opacity-70">
+                  <span className="material-symbols-outlined !text-[28px]">add</span>
                 </button>
+                
+                {/* Text Input Container */}
                 <div className="relative flex-1 group">
                   <label className="block h-auto">
-                    <div className="input-glow flex items-center bg-white/10 border border-white/10 rounded-full px-4 py-2 transition-all duration-300">
+                    <div className="input-glow flex items-center bg-white/10 border border-white/10 rounded-full px-3 py-1.5 transition-all duration-300">
                       <textarea 
-                        value={input} 
-                        onChange={(e) => { setInput(e.target.value); handleInteraction(); }} 
-                        onKeyDown={(e) => { 
-                          handleInteraction(); 
-                          if (e.key === "Enter" && !e.shiftKey) {
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            handleSend(); 
+                            handleSend();
                           }
-                        }} 
-                        className="w-full bg-transparent border-none focus:ring-0 text-white placeholder-white/40 text-[16px] py-1 resize-none max-h-32" 
+                        }}
+                        className="w-full bg-transparent border-none focus:ring-0 text-white placeholder-white/40 text-[14px] py-1 resize-none max-h-24" 
                         placeholder="Tin nhắn" 
                         rows={1}
                       />
+                      <button className="p-1 text-white/40 hover:text-white">
+                        <span className="material-symbols-outlined !text-[22px]">face</span>
+                      </button>
                     </div>
                   </label>
                 </div>
-                <button onClick={() => handleSend()} disabled={!input.trim() || isLoading} className={`size-9 rounded-full ${!input.trim() || isLoading ? 'bg-white/10 text-white/30' : 'user-gradient text-white shadow-lg shadow-[#007AFF]/20'} flex items-center justify-center active:scale-95 transition-transform`}>
-                  <Send size={16} className="ml-0.5" />
+                
+                {/* Send Button */}
+                <button 
+                  onClick={() => handleSend()}
+                  disabled={isLoading || (!input.trim())}
+                  className={`size-8 shrink-0 rounded-full flex items-center justify-center text-white shadow-lg transition-transform ${
+                    (isLoading || (!input.trim())) 
+                      ? 'bg-white/10 text-white/30 cursor-not-allowed shadow-none' 
+                      : 'user-gradient shadow-primary/20 active:scale-95'
+                  }`}
+                >
+                  <span className="material-symbols-outlined !text-[20px] ml-0.5">arrow_upward</span>
                 </button>
               </div>
-              {/* Home Indicator */}
-              <div className="mt-6 flex justify-center">
-                <div className="w-32 h-1 bg-white/20 rounded-full"></div>
+              {/* Home Indicator (iOS Style) */}
+              <div className="mt-3 flex justify-center">
+                <div className="w-24 h-1 bg-white/20 rounded-full"></div>
               </div>
             </footer>
-            {/* Focus Glow Accent */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-[#007AFF]/10 blur-[80px] -z-10 pointer-events-none"></div>
-            
-            <style dangerouslySetInnerHTML={{ __html: `
-              * { scrollbar-width: none; -ms-overflow-style: none; }
-              *::-webkit-scrollbar { display: none; }
-              .glass { background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-              .ios-nav-glass { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-bottom: 0.5px solid rgba(255, 255, 255, 0.1); }
-              .user-gradient { background: linear-gradient(180deg, #0091FF 0%, #007AFF 100%); }
-              .input-glow:focus-within { box-shadow: 0 0 15px rgba(0, 122, 255, 0.3); border-color: rgba(0, 122, 255, 0.5); }
-            ` }} />
+            {/* Focus Glow Accent (Subtle) */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 blur-[80px] -z-10 pointer-events-none"></div>
+
           </motion.div>
         )}
       </AnimatePresence>
