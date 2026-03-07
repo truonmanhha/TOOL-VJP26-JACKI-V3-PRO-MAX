@@ -864,7 +864,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
   const config = PERSONALITY_CONFIG[personality];
 
   return (
-    <div className={`flex flex-col items-end ${!isFullScreen ? 'fixed bottom-6 right-6 z-[100]' : ''}`}>
+    <div className={`flex flex-col items-end ${!isFullScreen ? 'fixed bottom-6 right-6 z-[9999]' : ''}`}>
       {/* Hidden Camera Elements */}
       <video ref={videoRef} className="hidden" playsInline muted></video>
       <canvas ref={canvasRef} width="320" height="240" className="hidden"></canvas>
@@ -915,7 +915,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             initial={{ opacity: 0, y: 50, scale: 0.95, transformOrigin: 'bottom right' }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             onClick={handleInteraction}
-            className="fixed bottom-6 right-6 z-[100] relative w-[320px] h-[568px] bg-[#000000] flex flex-col overflow-hidden shadow-2xl rounded-2xl border border-white/10 mb-4 transition-all duration-500 ease-out"
+            className="relative w-[320px] h-[568px] bg-[#000000] flex flex-col overflow-hidden shadow-2xl rounded-2xl border border-white/10 mb-4 transition-all duration-500 ease-out"
           >
             {/* iOS Top Navigation Bar */}
             <nav className="sticky top-0 z-20 ios-nav-glass px-4 pt-10 pb-3 flex items-center justify-between">
@@ -1028,7 +1028,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 
       {/* Launcher */}
       {!isOpen && (
-        <div className="relative flex flex-col items-center">
+        <div className="relative flex flex-col items-center z-[150]">
           <AnimatePresence>
             {showIdleBubble && (
               <motion.div initial={{ opacity: 0, y: 10, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.5 }} className="absolute bottom-20 right-0 w-48 p-3 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[110]">
