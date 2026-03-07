@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppSettings } from '../../types';
+import { AppSettings } from './services/db';
 
 export const renderGeneralSVG = (method: string) => {
   let content = null;
@@ -112,6 +112,79 @@ export const renderEngineSVG = (packTo: string, customAngle: number) => {
   );
 };
 
+export const renderGapSVG = (gaps: AppSettings['gaps']) => {
+  // Normalize gaps for visualization to avoid too small/large gaps breaking the SVG
+  const visualSheetGap = Math.max(2, Math.min(20, gaps.sheetEdgeGap * 2)); // Scale for visibility
+  const visualPartGap = Math.max(2, Math.min(20, gaps.minGapPath * 2));
+
+  // Base dimensions
+  const svgWidth = 200;
+  const svgHeight = 150;
+  
+  // Sheet borders
+  const sheetX = 10;
+  const sheetY = 10;
+  const sheetW = svgWidth - 20;
+  const sheetH = svgHeight - 20;
+
+  // Inner usable area (after sheet gap)
+  const innerX = sheetX + visualSheetGap;
+  const innerY = sheetY + visualSheetGap;
+  const innerW = sheetW - (visualSheetGap * 2);
+  const innerH = sheetH - (visualSheetGap * 2);
+
+  // Two sample parts to show part gap
+  const partW = (innerW - visualPartGap) / 2;
+  const partH = innerH;
+  
+  const part1X = innerX;
+  const part1Y = innerY;
+  
+  const part2X = innerX + partW + visualPartGap;
+  const part2Y = innerY;
+
+  return (
+    <div className="relative w-full aspect-[4/3] max-w-[200px] flex items-center justify-center bg-slate-800 rounded shadow-inner p-2 border border-slate-600">
+      <svg className="w-full h-full" viewBox={`0 0 ${svgWidth} ${svgHeight}`} xmlns="http://www.w3.org/2000/svg">
+        {/* Sheet Outer Border */}
+        <rect x={sheetX} y={sheetY} width={sheetW} height={sheetH} fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" opacity="0.8" />
+        
+        {/* Usable Area Indicator (light fill) */}
+        <rect x={innerX} y={innerY} width={innerW} height={innerH} fill="#334155" opacity="0.5" />
+        
+        {/* Sheet Edge Gap Distance Line/Label */}
+        <line x1={sheetX} y1={svgHeight/2} x2={innerX} y2={svgHeight/2} stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrow)" markerStart="url(#arrow)" />
+        <text x={sheetX + visualSheetGap/2} y={svgHeight/2 - 5} fill="#ef4444" fontSize="10" textAnchor="middle" fontWeight="bold">
+          {gaps.sheetEdgeGap}
+        </text>
+
+        {/* Part 1 */}
+        <rect x={part1X} y={part1Y} width={partW} height={partH} fill="none" stroke="#76ff03" strokeWidth="2" className="transition-all duration-300" />
+        <rect x={part1X} y={part1Y} width={partW} height={partH} fill="#76ff03" opacity="0.2" className="transition-all duration-300" />
+        
+        {/* Part 2 */}
+        <rect x={part2X} y={part2Y} width={partW} height={partH} fill="none" stroke="#76ff03" strokeWidth="2" className="transition-all duration-300" />
+        <rect x={part2X} y={part2Y} width={partW} height={partH} fill="#76ff03" opacity="0.2" className="transition-all duration-300" />
+
+        {/* Min Gap Path Distance Line/Label */}
+        <line x1={part1X + partW} y1={svgHeight/2} x2={part2X} y2={svgHeight/2} stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arrow-blue)" markerStart="url(#arrow-blue)" />
+        <text x={part1X + partW + visualPartGap/2} y={svgHeight/2 - 5} fill="#3b82f6" fontSize="10" textAnchor="middle" fontWeight="bold">
+          {gaps.minGapPath}
+        </text>
+
+        {/* Markers for arrows */}
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+          </marker>
+          <marker id="arrow-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  );
+};
 export const renderRectEngineSVG = (cutDirection: string, optimizeFor: string) => {
   const isX = cutDirection === 'X' || cutDirection === 'Auto';
   const isY = cutDirection === 'Y' || cutDirection === 'Auto';

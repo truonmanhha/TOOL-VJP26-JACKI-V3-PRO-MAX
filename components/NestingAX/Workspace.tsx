@@ -1,4 +1,4 @@
-import { renderGeneralSVG, renderEngineSVG, renderRectEngineSVG } from "./renderSettingsSVG";
+import { renderGeneralSVG, renderEngineSVG, renderRectEngineSVG, renderGapSVG } from "./renderSettingsSVG";
 
 import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { Part, Sheet, StockSheet, db, AppSettings, Layer, CadEntity } from './services/db';
@@ -5958,26 +5958,33 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                           {/* Gap Fields */}
                           <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
                             <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Gap Settings</legend>
-                            <div className="space-y-2 mt-1">
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Min Gap Between Paths</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                              {/* Left Side: Inputs */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-gray-200">Min Gap Between Paths</label>
+                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <label className="text-gray-200">Sheet Edge Gap</label>
+                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <label className="text-gray-200">Lead In Gap</label>
+                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <label className="text-gray-200">Time Per Sheet</label>
+                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <label className="text-gray-200">Total Comp Time</label>
+                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
+                                </div>
                               </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Sheet Edge Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Lead In Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Time Per Sheet</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Total Comp Time</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
+                              {/* Right Side: Gap Settings SVG */}
+                              <div className="flex items-center justify-center">
+                                {renderGapSVG(appSettings.gaps)}
                               </div>
                             </div>
                           </fieldset>
