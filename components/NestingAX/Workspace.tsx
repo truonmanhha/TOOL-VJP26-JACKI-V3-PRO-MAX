@@ -6027,9 +6027,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
-                                className="w-full flex flex-col items-center"
+                                className="w-full h-full flex flex-col items-center justify-between"
                               >
-                                <div className="w-full aspect-[4/3] max-h-[220px] relative p-2 shadow-inner mb-4 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
+                                <div className="w-full h-[250px] relative overflow-hidden shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
                                   {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
                                 </div>
                                 <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
@@ -6048,9 +6048,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
-                                className="w-full flex flex-col items-center"
+                                className="w-full h-full flex flex-col items-center justify-between"
                               >
-                                <div className="w-full aspect-[4/3] max-h-[220px] relative p-2 shadow-inner mb-4 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
+                                <div className="w-full h-[250px] relative overflow-hidden shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
                                   {renderGapSVG(appSettings.gaps)}
                                 </div>
                                 <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
