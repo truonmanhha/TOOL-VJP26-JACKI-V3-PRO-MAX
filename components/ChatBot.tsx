@@ -919,7 +919,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             className="relative w-[320px] h-[568px] bg-[#000000] flex flex-col overflow-hidden shadow-2xl rounded-2xl border border-white/10 mb-4 transition-all duration-500 ease-out"
           >
             {/* iOS Top Navigation Bar */}
-            <nav className="sticky top-0 z-20 ios-nav-glass px-4 pt-10 pb-3 flex items-center justify-between">
+            <nav className="sticky top-0 z-20 ios-nav-glass px-2 pt-6 pb-2 flex items-center justify-between">
               <button onClick={() => setIsOpen(false)} className="text-[#007AFF] flex items-center gap-1">
                 <span className="material-symbols-outlined !text-[28px]"><X size={24}/></span>
               </button>
@@ -936,7 +936,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             </nav>
 
             {/* Chat Area */}
-            <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-6 flex flex-col scroll-smooth custom-scrollbar">
+            <main ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-6 flex flex-col scroll-smooth custom-scrollbar">
               {messages.map((msg, i) => (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end self-end' : 'items-start'} max-w-[85%]`}>
                   {msg.role === 'model' && (
@@ -979,7 +979,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             </main>
 
             {/* Bottom Input Area */}
-            <footer className="ios-nav-glass p-4 pb-8">
+            <footer className="ios-nav-glass p-3 pb-4">
               <div className="flex items-end gap-3">
                 <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                 <button onClick={() => fileInputRef.current?.click()} className="p-2 text-[#007AFF] transition-opacity hover:opacity-70">
@@ -1018,6 +1018,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-[#007AFF]/10 blur-[80px] -z-10 pointer-events-none"></div>
             
             <style dangerouslySetInnerHTML={{ __html: `
+              * { scrollbar-width: none; -ms-overflow-style: none; }
+              *::-webkit-scrollbar { display: none; }
               .glass { background: rgba(28, 28, 30, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
               .ios-nav-glass { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-bottom: 0.5px solid rgba(255, 255, 255, 0.1); }
               .user-gradient { background: linear-gradient(180deg, #0091FF 0%, #007AFF 100%); }
