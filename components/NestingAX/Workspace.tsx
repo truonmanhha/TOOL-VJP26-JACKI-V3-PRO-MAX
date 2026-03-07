@@ -170,6 +170,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   
   // Settings Logic
   const [settingsTab, setSettingsTab] = useState<'general' | 'engine' | 'rectengine' | 'extensions'>('general');
+  const [activeEnginePreview, setActiveEnginePreview] = useState<'packTo' | 'guillotine' | 'gaps'>('packTo');
   const [appSettings, setAppSettings] = useState<AppSettings>(db.getSettings());
 
   // Drawing State
@@ -5926,7 +5927,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                               ].map(btn => (
                                 <button
                                   key={btn.value}
-                                  onClick={() => handleSettingChange('packTo', btn.value)}
+                                  onClick={() => {
+                                    handleSettingChange('packTo', btn.value);
+                                    setActiveEnginePreview('packTo');
+                                  }}
                                   className={`py-1 px-2 text-xs font-semibold border rounded transition-all ${
                                     appSettings.packTo === btn.value
                                       ? 'bg-blue-600 border-blue-700 text-white'
@@ -5956,7 +5960,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                           )}
 
                           {/* Gap Fields */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
+                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50" onFocusCapture={() => setActiveEnginePreview('gaps')} onClickCapture={() => setActiveEnginePreview('gaps')}>
                             <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Gap Settings</legend>
                             <div className="space-y-2 mt-2">
                               <div className="flex items-center justify-between">
@@ -6014,36 +6018,47 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                        </div>
                        
                        {/* SVG Preview Right Column */}
-                       <div className="w-1/2 flex flex-col justify-start items-center gap-4 overflow-y-auto max-h-[300px] custom-scrollbar pr-2">
-                          <div className="w-full flex flex-col items-center flex-shrink-0">
-                            <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
-                              {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
-                            </div>
-                            <div className="text-xs text-slate-400 text-center px-2">
-                              {appSettings.packTo === 'TL' ? 'Xếp lên góc trên trái' :
-                               appSettings.packTo === 'BL' ? 'Xếp xuống góc dưới trái' :
-                               appSettings.packTo === 'Custom' ? 'Xếp theo góc tùy chỉnh (0-360 độ)' :
-                               'Tự động chọn hướng xếp tối ưu nhất'}
-                            </div>
-                          </div>
-                          
-                          <div className="w-full flex flex-col items-center flex-shrink-0">
-                            <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
-                              {renderRectEngineSVG(appSettings.rectEngine.cutDirection, appSettings.rectEngine.optimizeFor)}
-                            </div>
-                            <div className="text-xs text-slate-400 text-center px-2">
-                              Mô phỏng Rect Engine
-                            </div>
-                          </div>
+                       <div className="w-1/2 flex flex-col justify-start items-center gap-4 p-4 h-[300px]">
+                          <AnimatePresence mode="wait">
+                            {activeEnginePreview === 'packTo' && (
+                              <motion.div
+                                key="packTo"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="w-full flex flex-col items-center"
+                              >
+                                <div className="w-full aspect-[4/3] max-h-[220px] relative p-2 shadow-inner mb-4 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
+                                  {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
+                                </div>
+                                <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
+                                  {appSettings.packTo === 'TL' ? 'Xếp lên góc trên trái' :
+                                   appSettings.packTo === 'BL' ? 'Xếp xuống góc dưới trái' :
+                                   appSettings.packTo === 'Custom' ? 'Xếp theo góc tùy chỉnh (0-360 độ)' :
+                                   'Hướng xếp tối ưu tự động'}
+                                </div>
+                              </motion.div>
+                            )}
 
-                          <div className="w-full flex flex-col items-center flex-shrink-0">
-                            <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
-                              {renderGapSVG(appSettings.gaps)}
-                            </div>
-                            <div className="text-xs text-slate-400 text-center px-2">
-                              Mô phỏng khoảng cách (Gaps)
-                            </div>
-                          </div>
+                            {activeEnginePreview === 'gaps' && (
+                              <motion.div
+                                key="gaps"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="w-full flex flex-col items-center"
+                              >
+                                <div className="w-full aspect-[4/3] max-h-[220px] relative p-2 shadow-inner mb-4 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
+                                  {renderGapSVG(appSettings.gaps)}
+                                </div>
+                                <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
+                                  Mô phỏng khoảng cách (Gaps)
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                        </div>
                      </div>
                   )}
