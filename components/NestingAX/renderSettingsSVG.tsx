@@ -46,7 +46,7 @@ export const renderGeneralSVG = (method: string) => {
   }
   
   return (
-    <div className="relative w-full aspect-[4/3] max-w-[200px] flex items-center justify-center bg-slate-800 rounded shadow-inner p-2 border border-slate-600">
+    <div className="relative w-full h-full overflow-hidden">
       <div className="absolute inset-2 border-2 border-yellow-400 opacity-80 pointer-events-none"></div>
       {content}
     </div>
@@ -72,7 +72,7 @@ export const renderEngineSVG = (packTo: string, customAngle: number) => {
   else if (packTo === "BR") { tx = "100%"; ty = "100%"; }
 
   return (
-    <div className="relative w-full aspect-[4/3] max-w-[200px] bg-slate-800 rounded shadow-inner p-2 border border-slate-600">
+    <div className="relative w-full h-full overflow-hidden">
       {/* Sheet Boundary - we will make it contain everything tightly */}
       <div className="absolute inset-2 border-2 border-yellow-400 opacity-80 overflow-hidden bg-slate-900">
         
@@ -144,7 +144,7 @@ export const renderGapSVG = (gaps: AppSettings['gaps']) => {
   const part2Y = innerY;
 
   return (
-    <div className="relative w-full aspect-[4/3] max-w-[200px] flex items-center justify-center bg-slate-800 rounded shadow-inner p-2 border border-slate-600">
+    <div className="relative w-full h-full overflow-hidden">
       <svg className="w-full h-full" viewBox={`0 0 ${svgWidth} ${svgHeight}`} xmlns="http://www.w3.org/2000/svg">
         {/* Sheet Outer Border */}
         <rect x={sheetX} y={sheetY} width={sheetW} height={sheetH} fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" opacity="0.8" />
@@ -191,7 +191,7 @@ export const renderRectEngineSVG = (cutDirection: string, optimizeFor: string) =
   const isSpace = optimizeFor === 'Space';
 
   return (
-    <div className="relative w-full aspect-[4/3] max-w-[200px] bg-slate-800 rounded shadow-inner p-2 border border-slate-600 overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden">
       <div className="absolute inset-2 border-2 border-yellow-400 opacity-80 z-10"></div>
       
       {/* Dynamic Parts based on optimization type */}
