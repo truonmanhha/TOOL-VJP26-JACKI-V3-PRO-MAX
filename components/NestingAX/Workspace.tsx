@@ -5909,7 +5909,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
                    {settingsTab === 'engine' && (
                      <div className="flex space-x-4">
-                       <div className="w-1/2 h-[300px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                       <div className="w-1/2 h-[360px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                           {/* Pack Direction 3x3 Grid */}
                           <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
                             <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Pack Direction</legend>
@@ -6029,7 +6029,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 transition={{ duration: 0.2 }}
                                 className="w-full h-full flex flex-col items-center justify-between"
                               >
-                                <div className="w-full h-[250px] relative overflow-hidden shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
+                                <div className="w-full flex-1 relative overflow-hidden shadow-inner mb-3 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
                                   {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
                                 </div>
                                 <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
@@ -6050,7 +6050,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                                 transition={{ duration: 0.2 }}
                                 className="w-full h-full flex flex-col items-center justify-between"
                               >
-                                <div className="w-full h-[250px] relative overflow-hidden shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
+                                <div className="w-full flex-1 relative overflow-hidden shadow-inner mb-3 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
                                   {renderGapSVG(appSettings.gaps)}
                                 </div>
                                 <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
@@ -6065,7 +6065,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
                    {settingsTab === 'rectengine' && (
                      <div className="flex space-x-4">
-                       <div className="w-1/2 h-[300px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                       <div className="w-1/2 h-[360px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                           {/* Optimize For */}
                           <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
                             <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Optimize For</legend>
