@@ -5958,33 +5958,26 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                           {/* Gap Fields */}
                           <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
                             <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Gap Settings</legend>
-                            <div className="grid grid-cols-2 gap-4 mt-2">
-                              {/* Left Side: Inputs */}
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <label className="text-gray-200">Min Gap Between Paths</label>
-                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <label className="text-gray-200">Sheet Edge Gap</label>
-                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <label className="text-gray-200">Lead In Gap</label>
-                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <label className="text-gray-200">Time Per Sheet</label>
-                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <label className="text-gray-200">Total Comp Time</label>
-                                  <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
-                                </div>
+                            <div className="space-y-2 mt-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-gray-200">Min Gap Between Paths</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
                               </div>
-                              {/* Right Side: Gap Settings SVG */}
-                              <div className="flex items-center justify-center">
-                                {renderGapSVG(appSettings.gaps)}
+                              <div className="flex items-center justify-between">
+                                <label className="text-gray-200">Sheet Edge Gap</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <label className="text-gray-200">Lead In Gap</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <label className="text-gray-200">Time Per Sheet</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <label className="text-gray-200">Total Comp Time</label>
+                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
                               </div>
                             </div>
                           </fieldset>
@@ -6021,21 +6014,34 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                        </div>
                        
                        {/* SVG Preview Right Column */}
-                       <div className="w-1/2 flex flex-col justify-center items-center gap-4">
-                          <div className="w-full flex flex-col items-center">
+                       <div className="w-1/2 flex flex-col justify-start items-center gap-4 overflow-y-auto max-h-[300px] custom-scrollbar pr-2">
+                          <div className="w-full flex flex-col items-center flex-shrink-0">
                             <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
                               {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
                             </div>
                             <div className="text-xs text-slate-400 text-center px-2">
-                              Mô phỏng hướng xếp (Pack Direction)
+                              {appSettings.packTo === 'TL' ? 'Xếp lên góc trên trái' :
+                               appSettings.packTo === 'BL' ? 'Xếp xuống góc dưới trái' :
+                               appSettings.packTo === 'Custom' ? 'Xếp theo góc tùy chỉnh (0-360 độ)' :
+                               'Tự động chọn hướng xếp tối ưu nhất'}
                             </div>
                           </div>
-                          <div className="w-full flex flex-col items-center border-t border-slate-600 pt-4">
+                          
+                          <div className="w-full flex flex-col items-center flex-shrink-0">
                             <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
                               {renderRectEngineSVG(appSettings.rectEngine.cutDirection, appSettings.rectEngine.optimizeFor)}
                             </div>
                             <div className="text-xs text-slate-400 text-center px-2">
-                              Mô phỏng hướng cắt (Guillotine)
+                              Mô phỏng Rect Engine
+                            </div>
+                          </div>
+
+                          <div className="w-full flex flex-col items-center flex-shrink-0">
+                            <div className="w-full aspect-[4/3] max-h-[160px] relative p-2 shadow-inner mb-2 flex items-center justify-center bg-slate-700 border-slate-500 border">
+                              {renderGapSVG(appSettings.gaps)}
+                            </div>
+                            <div className="text-xs text-slate-400 text-center px-2">
+                              Mô phỏng khoảng cách (Gaps)
                             </div>
                           </div>
                        </div>
