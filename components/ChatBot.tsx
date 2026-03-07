@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Loader2, Minimize2, Paperclip, Heart, ShieldAlert, Zap, Coffee, Scale, Ghost, Code, Play, Eye, EyeOff, Copy, CheckCircle2, Terminal, Sparkles, BrainCircuit, TrendingUp, Gauge, Lock, Unlock, Bug, ShieldCheck, MessageSquare, History, FileJson, Layers, Cpu, Radio, Activity, Maximize2, ChevronRight, Smartphone, Monitor, Camera, Video, VideoOff, Moon } from 'lucide-react';
+import { X, Send, Bot, Loader2, Minimize2, Paperclip, Heart, ShieldAlert, Zap, Coffee, Scale, Ghost, Code, Play, Eye, EyeOff, Copy, CheckCircle2, Terminal, Sparkles, BrainCircuit, TrendingUp, Gauge, Lock, Unlock, Bug, ShieldCheck, MessageSquare, History, FileJson, Layers, Cpu, Radio, Activity, Maximize2, ChevronRight, Smartphone, Monitor, Camera, Video, VideoOff, Moon, Settings, ChevronLeft, ArrowUp } from 'lucide-react';
 import { GoogleGenAI, Chat, GenerateContentResponse, Type, FunctionDeclaration } from "@google/genai";
 import { Language, TRANSLATIONS } from '../constants';
 import { DXFEntityResult, STANDARD_PLATE_AREA } from '../types';
@@ -100,28 +99,6 @@ const evadeSafetyFilters = (text: string): string => {
   return text;
 };
 
-// --- SHARINGAN COMPONENT ---
-const SharinganEye: React.FC = () => (
-  <div className="w-full h-full rounded-full bg-red-600 relative overflow-hidden animate-spin-slow" style={{ animationDuration: '3s' }}>
-    {/* Outer Ring */}
-    <div className="absolute inset-0 border-2 border-black rounded-full opacity-60"></div>
-    {/* Center Pupil */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-black rounded-full z-10"></div>
-    {/* Tomoe 1 */}
-    <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-2 h-2 bg-black rounded-full">
-       <div className="absolute top-[-2px] left-[-2px] w-full h-full bg-black rounded-full transform -rotate-45 skew-x-12 origin-bottom"></div>
-    </div>
-    {/* Tomoe 2 */}
-    <div className="absolute bottom-[20%] left-[20%] w-2 h-2 bg-black rounded-full transform rotate-120">
-       <div className="absolute top-[-2px] left-[-2px] w-full h-full bg-black rounded-full transform -rotate-45 skew-x-12 origin-bottom"></div>
-    </div>
-    {/* Tomoe 3 */}
-    <div className="absolute bottom-[20%] right-[20%] w-2 h-2 bg-black rounded-full transform -rotate-120">
-       <div className="absolute top-[-2px] left-[-2px] w-full h-full bg-black rounded-full transform -rotate-45 skew-x-12 origin-bottom"></div>
-    </div>
-  </div>
-);
-
 // Custom Bot Visual
 const BotVisual: React.FC<{ 
     mousePos: { x: number, y: number }, 
@@ -132,129 +109,8 @@ const BotVisual: React.FC<{
     isSleeping: boolean,
     isSharingan: boolean
 }> = ({ mousePos, isIdle, color, personality, isRecording, isSleeping, isSharingan }) => {
-  const botRef = useRef<HTMLDivElement>(null);
-  const [pupilPos, setPupilPos] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    if (botRef.current && !isIdle && !isSleeping) {
-      const rect = botRef.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      
-      const dx = mousePos.x - centerX;
-      const dy = mousePos.y - centerY;
-      const angle = Math.atan2(dy, dx);
-      
-      const maxDist = 2.5;
-      setPupilPos({
-        x: Math.cos(angle) * maxDist,
-        y: Math.sin(angle) * maxDist
-      });
-    } else {
-      setPupilPos({ x: 0, y: 0 });
-    }
-  }, [mousePos, isIdle, isSleeping]);
-
   return (
-    <div ref={botRef} className="relative w-12 h-12 flex items-center justify-center">
-      <AnimatePresence mode="wait">
-        <motion.div 
-          key="bot-face"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative w-full h-full flex flex-col items-center justify-center"
-        >
-          {/* Antennae */}
-          <div className="absolute top-[-2px] left-0 w-full h-full pointer-events-none flex justify-between px-2">
-             <div className={`w-[1.5px] h-[12px] bg-current origin-bottom -rotate-[25deg] relative transition-all ${isSleeping ? 'rotate-[45deg] opacity-50' : ''}`}>
-                <div className="absolute -top-1.5 -left-1 w-2.5 h-2.5 bg-current rounded-full" />
-             </div>
-             <div className={`w-[1.5px] h-[12px] bg-current origin-bottom rotate-[25deg] relative transition-all ${isSleeping ? '-rotate-[45deg] opacity-50' : ''}`}>
-                <div className="absolute -top-1.5 -left-1 w-2.5 h-2.5 bg-current rounded-full" />
-             </div>
-          </div>
-
-          {/* Body/Head */}
-          <div className={`w-[42px] h-[32px] bg-slate-950 rounded-[10px] border-2 border-white/10 relative flex flex-col items-center justify-center mt-2 shadow-2xl ${color}`}>
-            
-            {/* Zzz Animation when sleeping */}
-            {isSleeping && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 0, x: 10 }}
-                    animate={{ opacity: [0, 1, 0], y: -20, x: 20 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute -top-4 -right-4 text-xs font-black text-slate-400 z-50"
-                >
-                    Zzz...
-                </motion.div>
-            )}
-
-            {/* Camera Active Indicator */}
-            {isRecording && (
-                <motion.div 
-                    animate={{ opacity: [1, 0.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="absolute -top-1 right-[-4px] w-2.5 h-2.5 bg-red-600 rounded-full border border-white/20 z-50 shadow-[0_0_10px_red]"
-                />
-            )}
-
-            {/* Eyes Section */}
-            <div className="flex gap-2.5 mb-1 mt-0.5">
-              {[1, 2].map((i) => (
-                <div key={i} className="w-[11px] h-[11px] bg-slate-900 rounded-full relative overflow-hidden border border-white/5 shadow-inner flex items-center justify-center">
-                   {isSleeping ? (
-                       // Sleeping Eye (Closed) - Fixed visibility
-                       <div className="w-2.5 h-0.5 bg-white/70 rounded-full" />
-                   ) : isSharingan ? (
-                       // Sharingan Eye
-                       <SharinganEye />
-                   ) : (
-                       // Normal Eye
-                       <motion.div
-                          animate={{ 
-                            x: pupilPos.x, 
-                            y: pupilPos.y,
-                            scale: isRecording ? 0.5 : (personality === 'pleasant' ? [1, 1.05, 1] : 1)
-                          }}
-                          transition={{ type: 'spring', stiffness: 2000, damping: 20 }}
-                          className={`relative w-[8px] h-[8px] rounded-full ${
-                            isRecording ? 'bg-red-500 shadow-[0_0_5px_red]' : 
-                            personality === 'aggressive' ? 'bg-red-500' : 
-                            personality === 'sulky' ? 'bg-purple-400' : 
-                            'bg-white' // Pleasant mode = WHITE
-                          }`}
-                       >
-                         {!isRecording && (
-                             <>
-                                <div className="absolute top-[10%] left-[10%] w-[35%] h-[35%] bg-white rounded-full opacity-90" />
-                                <div className="absolute bottom-[20%] right-[15%] w-[15%] h-[15%] bg-white rounded-full opacity-60" />
-                             </>
-                         )}
-                       </motion.div>
-                   )}
-                </div>
-              ))}
-            </div>
-
-            {/* Mouth */}
-            {isSleeping ? (
-                <div className="w-1.5 h-1.5 bg-pink-400/50 rounded-full mt-1" /> // Drool/Sleep mouth
-            ) : (
-                <div className={`w-4 h-[3px] border-b-2 ${isRecording ? 'border-red-500' : 'border-white'} rounded-full opacity-90 transition-all ${isSharingan ? 'border-red-600 w-5 transform rotate-3' : ''}`} />
-            )}
-            
-            {/* Personality Expressive Overlays */}
-            {personality === 'aggressive' && !isSleeping && (
-               <motion.div 
-                 animate={{ opacity: [0, 0.4, 0] }}
-                 transition={{ repeat: Infinity, duration: 0.1 }}
-                 className="absolute inset-0 bg-red-600/10 rounded-[10px]"
-               />
-            )}
-          </div>
-        </motion.div>
-      </AnimatePresence>
-    </div>
+    <Sparkles size={28} className="text-white drop-shadow-md" />
   );
 };
 
@@ -265,129 +121,19 @@ const ThoughtBubble: React.FC<{ message: string }> = ({ message }) => (
     exit={{ opacity: 0, y: 15, scale: 0.8 }}
     className="absolute bottom-20 right-0 z-[120] flex flex-col items-end pointer-events-none"
   >
-    <div className="relative bg-slate-900 text-red-400 px-5 py-3 rounded-[2rem] shadow-2xl border-2 border-red-500/50 min-w-[120px] text-center">
-      <div className="text-[11px] font-black uppercase tracking-tight leading-tight">{message}</div>
-      <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-slate-900 rounded-full border-2 border-red-500/50 -z-10" />
-      <div className="absolute -top-1 -right-1 w-4 h-4 bg-slate-900 rounded-full border-2 border-red-500/50 -z-10" />
+    <div className="relative bg-[#1C1C1E] text-[#007AFF] px-5 py-3 rounded-2xl shadow-2xl border border-white/10 min-w-[120px] text-center font-['SF_Pro_Display',sans-serif]">
+      <div className="text-[12px] font-semibold leading-tight">{message}</div>
     </div>
-    <div className="mr-8 mt-1 space-y-1 flex flex-col items-center">
-      <div className="w-3 h-3 bg-red-500/50 rounded-full shadow-lg" />
-      <div className="w-2 h-2 bg-red-500/50 rounded-full shadow-md ml-4" />
-      <div className="w-1.5 h-1.5 bg-red-500/50 rounded-full shadow-sm ml-6" />
+    <div className="mr-6 mt-1 space-y-1 flex flex-col items-center">
+      <div className="w-2.5 h-2.5 bg-[#1C1C1E] border border-white/10 rounded-full shadow-lg" />
+      <div className="w-1.5 h-1.5 bg-[#1C1C1E] border border-white/10 rounded-full shadow-md ml-3" />
     </div>
   </motion.div>
 );
 
-const PERSONALITY_CONFIG = {
-  pleasant: {
-    color: 'border-emerald-500/40',
-    bg: 'from-emerald-950/90 via-slate-950/95 to-slate-900/90',
-    btn: 'from-emerald-500 to-teal-600',
-    accent: 'text-emerald-400',
-    glow: 'shadow-[0_0_20px_rgba(16,185,129,0.2)]',
-    icon: <Heart className="text-emerald-400 fill-emerald-400/20" size={20} />,
-    title: 'SWEET MODE',
-    sub: 'Dạ vâng sếp ơi'
-  },
-  serious: {
-    color: 'border-blue-500/40',
-    bg: 'from-blue-950/90 via-slate-950/95 to-slate-900/90',
-    btn: 'from-blue-500 to-indigo-600',
-    accent: 'text-blue-400',
-    glow: 'shadow-[0_0_20px_rgba(59,130,246,0.2)]',
-    icon: <Scale className="text-blue-400" size={20} />,
-    title: 'LOGIC MODE',
-    sub: 'Phân tích dữ liệu'
-  },
-  aggressive: {
-    color: 'border-red-600/50',
-    bg: 'from-red-950/90 via-black/95 to-red-950/90',
-    btn: 'from-red-600 to-orange-700',
-    accent: 'text-red-500',
-    glow: 'shadow-[0_0_30px_rgba(239,68,68,0.3)]',
-    icon: <ShieldAlert className="text-red-500 animate-pulse" size={20} />,
-    title: 'BLACK GPT',
-    sub: 'Đang xả code...'
-  },
-  sulky: {
-    color: 'border-purple-500/40',
-    bg: 'from-purple-950/90 via-slate-950/95 to-slate-900/90',
-    btn: 'from-purple-600 to-fuchsia-700',
-    accent: 'text-purple-400',
-    glow: 'shadow-[0_0_20px_rgba(168,85,247,0.2)]',
-    icon: <Ghost className="text-purple-400" size={20} />,
-    title: 'MOODY MODE',
-    sub: 'Hơi mệt nha...'
-  }
-};
-
 const extractCode = (text: string): string | null => {
   const match = text.match(/```(?:[a-z]+)?\n([\s\S]*?)\n```/);
   return match ? match[1] : null;
-};
-
-
-// --- CYBERPUNK HUD COMPONENTS ---
-
-
-// --- MATRIX RAIN COMPONENT ---
-const MatrixRain: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas dimensions
-    const resizeCanvas = () => {
-      canvas.width = canvas.parentElement?.clientWidth || window.innerWidth;
-      canvas.height = canvas.parentElement?.clientHeight || window.innerHeight;
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+{}|:"<>?~';
-    const fontSize = 14;
-    const columns = canvas.width / fontSize;
-    const drops: number[] = [];
-
-    for (let x = 0; x < columns; x++) {
-      drops[x] = 1;
-    }
-
-    let animationFrameId: number;
-
-    const draw = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = '#0F0'; // Green text
-      ctx.font = fontSize + 'px monospace';
-
-      for (let i = 0; i < drops.length; i++) {
-        const text = characters.charAt(Math.floor(Math.random() * characters.length));
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
-      animationFrameId = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-40 pointer-events-none" />;
 };
 
 const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettings }) => {
@@ -920,10 +666,36 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const config = PERSONALITY_CONFIG[personality];
-
   return (
     <div className={`flex flex-col items-end ${!isFullScreen ? 'fixed bottom-6 right-6 z-[100]' : ''}`}>
+      <style>{`
+        .glass {
+            background: rgba(28, 28, 30, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .ios-nav-glass {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+        }
+        .user-gradient {
+            background: linear-gradient(180deg, #0091FF 0%, #007AFF 100%);
+        }
+        .input-glow:focus-within {
+            box-shadow: 0 0 15px rgba(0, 122, 255, 0.3);
+            border-color: rgba(0, 122, 255, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+      `}</style>
+      
       {/* Hidden Camera Elements */}
       <video ref={videoRef} className="hidden" playsInline muted></video>
       <canvas ref={canvasRef} width="320" height="240" className="hidden"></canvas>
@@ -939,18 +711,18 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
           >
             <div className="p-4 bg-slate-900/90 border-b border-white/5 flex items-center justify-between backdrop-blur-md">
               <div className="flex items-center gap-4">
-                <div className="p-2 bg-emerald-500/10 rounded-lg"><Terminal size={18} className="text-emerald-400" /></div>
+                <div className="p-2 bg-blue-500/10 rounded-lg"><Terminal size={18} className="text-[#007AFF]" /></div>
                 <div>
                   <h4 className="text-white font-black text-[10px] uppercase tracking-[0.2em]">SANDBOX V3.0</h4>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <ShieldCheck size={10} className="text-emerald-400" />
-                    <span className="text-[8px] text-emerald-400/70 font-bold uppercase">AI-VERIFIED COMPILE</span>
+                    <ShieldCheck size={10} className="text-[#007AFF]" />
+                    <span className="text-[8px] text-[#007AFF]/70 font-bold uppercase">AI-VERIFIED COMPILE</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => handleCopy(previewCode!, -1)} className="p-2.5 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-all">
-                  {copyingId === -1 ? <CheckCircle2 size={20} className="text-emerald-400" /> : <Copy size={20} />}
+                  {copyingId === -1 ? <CheckCircle2 size={20} className="text-[#007AFF]" /> : <Copy size={20} />}
                 </button>
                 <div className="w-px h-6 bg-white/10 mx-1" />
                 <button onClick={() => setPreviewCode(null)} className="p-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-all"><X size={22} /></button>
@@ -974,80 +746,127 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             initial={{ opacity: 0, y: 50, scale: 0.95, transformOrigin: 'bottom right' }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             onClick={handleInteraction}
-            variants={{ aggressive: { opacity: 1, y: 0, scale: 1, x: [-2, 2, -1, 1, 0], filter: ['hue-rotate(0deg)', 'hue-rotate(90deg)', 'hue-rotate(0deg)'] }, idle: { opacity: 1, y: 0, scale: 1 } }}
-            animate={personality === 'aggressive' && !isSleeping ? 'aggressive' : { opacity: 1, y: 0, scale: 1 }}
-            transition={{ aggressive: { repeat: Infinity, repeatDelay: 2.5, duration: 0.15 } }}
-            className={`${isFullScreen ? "fixed inset-0 z-[200] w-full h-full rounded-none" : "fixed bottom-6 right-6 z-[100] w-[320px] h-[568px] rounded-none"} bg-black border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.2)] overflow-hidden flex flex-col mb-4 transition-all duration-500 ease-out relative`}
+            className={`${isFullScreen ? "fixed inset-0 z-[200] w-full h-full rounded-none" : "fixed bottom-6 right-6 z-[100] w-[320px] h-[568px] rounded-[1.25rem]"} bg-[#000000] border border-white/5 shadow-2xl overflow-hidden flex flex-col transition-all duration-500 ease-out relative`}
           >
-            {/* HUD Streams */}
-                        {/* Ambient Background Glow */}
-            
-            {/* Header */}
-            <div className="px-4 sm:px-6 py-4 bg-black border-b border-emerald-500/50 flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-                <div className="relative flex-shrink-0">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} className={`absolute inset-[-4px] border border-dashed rounded-full ${config.accent} opacity-30`} />
-                  <motion.div 
-                    animate={isLoading ? {
-                      boxShadow: ['0 0 0px rgba(0,0,0,0)', `0 0 20px ${personality === 'aggressive' ? 'rgba(239,68,68,0.5)' : 'rgba(59,130,246,0.5)'}`, '0 0 0px rgba(0,0,0,0)']
-                    } : {}}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-slate-900 border border-white/10 shadow-xl relative z-10 ${config.accent}`}
-                  >
-                    <BotVisual mousePos={mousePos} isIdle={isIdle} color={config.accent} personality={personality} isRecording={isRecording} isSleeping={isSleeping} isSharingan={isSharingan} />
-                  </motion.div>
+            {/* iOS Top Navigation Bar */}
+            <nav className="sticky top-0 z-20 ios-nav-glass px-4 pt-10 pb-3 flex items-center justify-between">
+                <button onClick={() => setIsOpen(false)} className="text-[#007AFF] flex items-center gap-1 hover:opacity-80">
+                    <ChevronLeft size={28} />
+                    <span className="text-[17px] font-['SF_Pro_Display',sans-serif]">Trò chuyện</span>
+                </button>
+                <div className="flex flex-col items-center">
+                    <h1 className="text-[17px] font-semibold tracking-tight text-white font-['SF_Pro_Display',sans-serif]">Trợ lý AI</h1>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span className="text-[11px] text-white/50 uppercase tracking-widest font-medium font-['SF_Pro_Display',sans-serif]">TRỰC TUYẾN</span>
+                    </div>
                 </div>
-                <div className="truncate">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-emerald-400 font-mono font-black text-xs sm:text-sm tracking-widest uppercase">VJP26.CORE</h3>
-                    <div className="px-1 py-0.5 bg-blue-600/20 rounded border border-blue-500/30 text-[7px] font-black text-blue-400 uppercase tracking-tighter">LVL {intelLevel}</div>
-                  </div>
-                  <span className={`text-[9px] font-black uppercase tracking-widest ${config.accent}`}>{isSleeping ? 'SLEEPING MODE' : config.title}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setIsFullScreen(!isFullScreen)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-all hidden sm:block"><Maximize2 size={18} /></button>
-                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-all"><X size={20} /></button>
-              </div>
-            </div>
+                <button onClick={() => setIsFullScreen(!isFullScreen)} className="text-[#007AFF] hover:opacity-80">
+                    <Settings size={24} />
+                </button>
+            </nav>
 
-            {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-transparent custom-scrollbar relative z-10">
+            {/* Chat Area */}
+            <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-6 flex flex-col scroll-smooth custom-scrollbar">
               {messages.map((msg, i) => (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? 'flex flex-col items-end' : 'flex flex-col items-start'}`}>
-                    <div className={`p-3.5 sm:p-4 text-[13px] sm:text-[13.5px] font-mono rounded-none shadow-none ${msg.role === "user" ? "bg-black/50 border border-emerald-500/50 text-emerald-400" : "bg-black/80 backdrop-blur-md border-l-2 border-emerald-500 text-emerald-50"}`}>
-                      {msg.role === "user" && <span className="mr-2 text-emerald-500">&gt;</span>}
-                      {msg.role === "model" ? <TypewriterMessage text={msg.text} /> : <>{msg.role === "user" && <span className="mr-2 text-emerald-500">&gt;</span>}{msg.text}</>}
+                msg.role === 'model' ? (
+                  <div key={i} className="flex flex-col items-start max-w-[85%] group">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                      <div className="w-5 h-5 rounded-full bg-[#007AFF]/20 flex items-center justify-center">
+                        <Sparkles size={12} className="text-[#007AFF]" />
+                      </div>
+                      <span className="text-[12px] font-medium text-white/40 font-['SF_Pro_Display',sans-serif]">Trợ lý</span>
+                    </div>
+                    <div className="glass text-white px-4 py-3 rounded-2xl rounded-tl-none border border-white/5 shadow-lg">
+                      <div className="text-[16px] leading-relaxed font-['SF_Pro_Display',sans-serif]">
+                        <TypewriterMessage text={msg.text} />
+                      </div>
                       {msg.code && (
                         <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                          <button onClick={() => setPreviewCode(msg.code!)} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg font-black text-[8px] uppercase transition-all active:scale-95">EXECUTE</button>
+                          <button onClick={() => setPreviewCode(msg.code!)} className="px-3 py-1.5 bg-[#007AFF] text-white rounded-lg font-black text-[12px] uppercase transition-all active:scale-95 font-['SF_Pro_Display',sans-serif]">EXECUTE</button>
                         </div>
                       )}
                     </div>
+                    <span className="text-[10px] text-white/20 mt-1 ml-1 uppercase font-['SF_Pro_Display',sans-serif]">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                   </div>
-                </motion.div>
+                ) : (
+                  <div key={i} className="flex flex-col items-end self-end max-w-[85%]">
+                    <div className="user-gradient text-white px-4 py-3 rounded-2xl rounded-tr-none shadow-md">
+                      <p className="text-[16px] leading-relaxed font-['SF_Pro_Display',sans-serif]">{msg.text}</p>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1 mr-1">
+                      <span className="text-[10px] text-white/20 uppercase font-['SF_Pro_Display',sans-serif]">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <CheckCircle2 size={12} className="text-[#007AFF]" />
+                    </div>
+                  </div>
+                )
               ))}
+              
               <AnimatePresence>
                 {isLoading && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex gap-3 items-center bg-slate-900/60 p-3 rounded-2xl w-fit border border-white/5">
-                    <DotLoading />
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-start max-w-[85%] group">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                      <div className="w-5 h-5 rounded-full bg-[#007AFF]/20 flex items-center justify-center">
+                        <Sparkles size={12} className="text-[#007AFF]" />
+                      </div>
+                      <span className="text-[12px] font-medium text-white/40 font-['SF_Pro_Display',sans-serif]">Trợ lý</span>
+                    </div>
+                    <div className="glass text-white px-4 py-4 rounded-2xl rounded-tl-none border border-white/5 shadow-lg w-fit">
+                        <DotLoading />
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </main>
 
-            {/* Footer */}
-            <div className={`p-4 sm:p-6 bg-black border-t border-emerald-500/50 relative z-10`}>
-              <div className="flex gap-2 sm:gap-3 items-center">
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                <button onClick={() => fileInputRef.current?.click()} className="p-3 bg-black text-emerald-500 rounded-none border border-emerald-500/50"><Paperclip size={18} /></button>
-                <div className="relative flex-1">
-                  <input type="text" value={input} onChange={(e) => { setInput(e.target.value); handleInteraction(); }} onKeyDown={(e) => { handleInteraction(); if (e.key === "Enter") handleSend(); }} placeholder="Nhập cái gì đi..." className="w-full bg-black border border-emerald-500/50 rounded-none px-5 py-3.5 text-emerald-400 font-mono text-[14px] outline-none focus:border-emerald-400 transition-all duration-300" />
-                  <button onClick={() => handleSend()} disabled={!input.trim() || isLoading} className={`absolute right-1 top-1/2 -translate-y-1/2 p-2.5 rounded-none ${!input.trim() || isLoading ? "text-emerald-900" : "text-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)] transition-all duration-300"}`}><Send size={18} /></button>
+            {/* Bottom Input Area */}
+            <footer className="ios-nav-glass p-4 pb-8">
+                <div className="flex items-end gap-3">
+                    {/* Attach Icon */}
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 text-[#007AFF] transition-opacity hover:opacity-70">
+                        <div className="text-[28px] leading-none">+</div>
+                    </button>
+                    {/* Text Input Container */}
+                    <div className="relative flex-1 group">
+                        <label className="block h-auto">
+                            <div className="input-glow flex items-center bg-white/10 border border-white/10 rounded-full px-4 py-2 transition-all duration-300">
+                                <textarea 
+                                    value={input}
+                                    onChange={(e) => { setInput(e.target.value); handleInteraction(); }}
+                                    onKeyDown={(e) => { 
+                                        handleInteraction(); 
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend(); 
+                                        }
+                                    }}
+                                    className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white placeholder-white/40 text-[16px] py-1 resize-none max-h-32 font-['SF_Pro_Display',sans-serif]" 
+                                    placeholder="Tin nhắn" 
+                                    rows={1}
+                                ></textarea>
+                                <button className="p-1 text-white/40 hover:text-white ml-2">
+                                    <MessageSquare size={22} />
+                                </button>
+                            </div>
+                        </label>
+                    </div>
+                    {/* Send Button */}
+                    <button 
+                        onClick={() => handleSend()} 
+                        disabled={!input.trim() || isLoading}
+                        className={`w-9 h-9 rounded-full user-gradient flex items-center justify-center text-white shadow-lg shadow-[#007AFF]/20 active:scale-95 transition-transform ${(!input.trim() && !isLoading) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                        <ArrowUp size={20} className="ml-[1px] mb-[1px]" />
+                    </button>
                 </div>
-              </div>
-            </div>
+                {/* Home Indicator (iOS Style) */}
+                <div className="mt-6 flex justify-center">
+                    <div className="w-32 h-1 bg-white/20 rounded-full"></div>
+                </div>
+            </footer>
+            {/* Focus Glow Accent (Subtle) */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-[#007AFF]/10 blur-[80px] -z-10 pointer-events-none"></div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1057,9 +876,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
         <div className="relative flex flex-col items-center">
           <AnimatePresence>
             {showIdleBubble && (
-              <motion.div initial={{ opacity: 0, y: 10, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.5 }} className="absolute bottom-20 right-0 w-48 p-3 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[110]">
-                <div className="text-[10px] text-slate-200 font-medium italic">"{idleMessage}"</div>
-                <div className="absolute -bottom-2 right-6 w-4 h-4 bg-slate-900 border-r border-b border-white/10 rotate-45" />
+              <motion.div initial={{ opacity: 0, y: 10, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.5 }} className="absolute bottom-20 right-0 w-48 p-3 bg-[#1C1C1E] border border-white/10 rounded-2xl shadow-2xl z-[110]">
+                <div className="text-[12px] text-white font-medium italic font-['SF_Pro_Display',sans-serif]">"{idleMessage}"</div>
+                <div className="absolute -bottom-2 right-6 w-4 h-4 bg-[#1C1C1E] border-r border-b border-white/10 rotate-45" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1073,17 +892,15 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
              whileTap={{ scale: 0.95 }} 
              onClick={() => {
                  setIsOpen(true);
-                 // FORCE WAKE UP LOGIC
                  setIsSleeping(false);
-                 setIsSharingan(false); // No Sharingan on simple click
-                 setPersonality('pleasant'); // Force White eyes (Pleasant mode)
+                 setIsSharingan(false); 
+                 setPersonality('pleasant'); 
                  lastInteractionTimeRef.current = Date.now();
-                 // Cancel any pending auto-close timer on manual open
                  if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
              }} 
-             className={`w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br ${config.btn} rounded-2xl sm:rounded-3xl shadow-2xl ${config.glow} flex items-center justify-center text-white border-2 border-white/20 relative group overflow-hidden`}
+             className={`w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-[#0091FF] to-[#007AFF] rounded-full shadow-[0_0_20px_rgba(0,122,255,0.3)] flex items-center justify-center text-white border border-white/20 relative group overflow-hidden`}
           >
-            <div className="relative z-10"><BotVisual mousePos={mousePos} isIdle={isIdle} color="text-white" personality={personality} isRecording={isRecording} isSleeping={isSleeping} isSharingan={isSharingan} /></div>
+            <Sparkles size={28} className="text-white drop-shadow-md" />
           </motion.button>
         </div>
       )}
