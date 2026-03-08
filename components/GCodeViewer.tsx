@@ -1549,7 +1549,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       </AnimatePresence>
       {!is3DFullScreen && (
         <header className="h-[67px] shrink-0 bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full relative z-[9999]">
-          <div className="flex items-start h-full w-full overflow-x-auto overflow-y-visible rounded-xl scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent pb-1">
+          <div className="flex items-start h-full w-full rounded-xl overflow-visible">
               {renderToolbarButtons()}
           </div>
         </header>
