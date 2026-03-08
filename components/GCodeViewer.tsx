@@ -996,6 +996,26 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [cpuThreads, setCpuThreads] = useState<number>(window.navigator.hardwareConcurrency || 4);
   const [gpuPreference, setGpuPreference] = useState<'high-performance' | 'low-power' | 'default'>(() => loadSetting('vjp26_gc_gpu_pref', 'high-performance'));
   const [showGpuMenu, setShowGpuMenu] = useState(false);
+  const [detectedGpus, setDetectedGpus] = useState<{high: string, low: string}>({ high: 'Đang quét...', low: 'Đang quét...' });
+  
+  useEffect(() => {
+    // Luôn quét sẵn để người dùng có thể thấy ngay
+    const getGpu = (pref: WebGLPowerPreference) => {
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl', { powerPreference: pref });
+            if (!gl) return 'Không xác định';
+            const ext = gl.getExtension('WEBGL_debug_renderer_info');
+            if (!ext) return 'Không xác định';
+            const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+            return renderer ? renderer.replace(/ANGLE \((.*)\)/, '$1').substring(0, 30) + '...' : 'Không xác định';
+        } catch(e) { return 'Không xác định'; }
+    };
+    setDetectedGpus({
+        high: getGpu('high-performance'),
+        low: getGpu('low-power')
+    });
+  }, []);
   useEffect(() => localStorage.setItem('vjp26_gc_gpu_pref', JSON.stringify(gpuPreference)), [gpuPreference]);
   const [toolConfig, setToolConfig] = useState<ToolConfig>(() => loadSetting('vjp26_gc_tool', { diameter: 6, length: 20, holderDiameter: 25, holderLength: 20 }));
   const [showToolConfig, setShowToolConfig] = useState(false);
@@ -1429,13 +1449,22 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
             <div className="flex space-x-0.5 flex-1">
                 <ToolbarButton icon={isLiteMode ? <Zap size={18} className="fill-amber-400" /> : <Gauge size={18} />} label={`Lite\nMode`} color={isLiteMode ? "text-amber-400" : "text-gray-400"} active={isLiteMode} onClick={() => setIsLiteMode(!isLiteMode)} />
                 <div className="relative">
+                    <div className="relative group flex flex-col items-center">
                     <ToolbarButton icon={<Monitor size={18} />} label={`GPU\nMode`} color={showGpuMenu ? "text-red-400" : "text-gray-400"} active={showGpuMenu} onClick={() => setShowGpuMenu(!showGpuMenu)} />
+                    <div className="absolute -bottom-2 whitespace-nowrap text-[6px] text-emerald-400 font-mono scale-75 opacity-70 max-w-[50px] overflow-hidden text-ellipsis pointer-events-none">{gpuName.replace(/ANGLE \((.*)\)/, '$1').split(' ')[0]}</div>
+                </div>
                     {showGpuMenu && <div className="absolute top-[56px] left-0 bg-slate-900 border border-white/10 rounded p-2 w-48 shadow-2xl z-[9999] flex flex-col gap-1">
-                        <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Cấu hình Card đồ họa</div>
-                        <button onClick={() => { setGpuPreference('high-performance'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'high-performance' ? 'bg-red-500/20 text-red-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>NVIDIA / AMD (Mạnh mẽ)</button>
-                        <button onClick={() => { setGpuPreference('low-power'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'low-power' ? 'bg-green-500/20 text-green-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Intel UHD (Tiết kiệm điện)</button>
-                        <button onClick={() => { setGpuPreference('default'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'default' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Mặc định của máy</button>
-                        <div className="text-[8px] text-slate-500 mt-1 italic">* Ứng dụng sẽ tự tải lại để áp dụng GPU mới</div>
+                        <div className="text-[10px] font-black uppercase text-slate-400 mb-1 flex justify-between items-center"><span>Cấu hình Card đồ họa</span><button onClick={() => setShowGpuMenu(false)}><X size={12} className="text-slate-500 hover:text-white" /></button></div>
+                        <button onClick={() => { setGpuPreference('high-performance'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'high-performance' ? 'bg-red-500/20 text-red-400 font-bold' : 'hover:bg-white/5 text-slate-300'} flex flex-col`}>
+                            <span>Hiệu năng cao (Card rời)</span>
+                            <span className="text-[8px] opacity-70 font-mono mt-0.5">{detectedGpus.high}</span>
+                        </button>
+                        <button onClick={() => { setGpuPreference('low-power'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'low-power' ? 'bg-green-500/20 text-green-400 font-bold' : 'hover:bg-white/5 text-slate-300'} flex flex-col`}>
+                            <span>Tiết kiệm điện (Card Onboard)</span>
+                            <span className="text-[8px] opacity-70 font-mono mt-0.5">{detectedGpus.low}</span>
+                        </button>
+                        <button onClick={() => { setGpuPreference('default'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'default' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Mặc định của hệ điều hành</button>
+                        <div className="text-[8px] text-slate-500 mt-1 italic">* Ứng dụng sẽ tải lại trang để áp dụng GPU mới. (Lưu ý: Một số trình duyệt tự ép dùng 1 card duy nhất)</div>
                     </div>}
                 </div>
                 <ToolbarButton icon={showGrid ? <Eye size={18} /> : <EyeOff size={18} />} label={`Show\nGrid`} color={showGrid ? "text-blue-400" : "text-gray-400"} active={showGrid} onClick={() => setShowGrid(!showGrid)} />
