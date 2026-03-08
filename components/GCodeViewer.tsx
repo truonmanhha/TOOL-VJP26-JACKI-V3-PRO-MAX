@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text, Html, Instance, Instances, Center } from '@react-three/drei';
 import * as THREE from 'three';
+import { Muxer, ArrayBufferTarget } from 'webm-muxer';
 import { Play, Pause, RotateCcw, Upload, Code, Monitor, Activity, Zap, Layers, Cpu, Ruler, MousePointer2, Settings, Palette, Eye, EyeOff, Save, X, ListFilter, ChevronDown, Check, MoreHorizontal, Circle, MousePointerClick, Send, Share2, Timer, Maximize, Minimize, Focus, Sparkles, Globe, Rocket, Swords, FastForward, CornerDownRight, ArrowRightCircle, Wrench, Replace, Search, CaseSensitive, Repeat, Undo2, Redo2, Copy, FileCode, RefreshCcw, Loader2, AlertCircle, Terminal, Bot, Gauge, HardDrive, PanelLeftClose, PanelLeftOpen, Home as HomeIcon, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GCodeService } from '../services/gcodeService';
@@ -1125,38 +1126,113 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       try {
           if (miniCanvasRef.current) {
               const canvas = miniCanvasRef.current;
-              const stream = canvas.captureStream(30);
-              const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-              const chunks: Blob[] = [];
               
-              recorder.ondataavailable = (e) => chunks.push(e.data);
+              // We will render it offline at 30 FPS.
+              // Calculate how many frames needed based on original speed setting and simulation time.
+              const totalDistance = commands.length > 0 ? analysis.totalCutDistance + analysis.totalRapidDistance : 0;
+              // Just a rough estimate for demo - let's render 120 frames minimum or max 300 frames to keep file size small
+              const numFrames = Math.min(300, Math.max(60, Math.floor(commands.length / 5))); 
               
-              const recordPromise = new Promise<Blob>((resolve) => {
-                  recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+              const width = canvas.width;
+              const height = canvas.height;
+              
+              // Create Muxer
+              let muxer = new Muxer({
+                  target: new ArrayBufferTarget(),
+                  video: {
+                      codec: 'V_VP8',
+                      width: width,
+                      height: height,
+                      frameRate: 30
+                  }
               });
               
-              setCurrentIndex(0);
-              simState.current.index = 0;
-              simState.current.progress = 0;
-              
-              // Chờ UI reset về điểm xuất phát
-              await new Promise(r => setTimeout(r, 500));
-              
-              recorder.start();
-              setIsPlaying(true);
-              
-              // Ghi hình cho đến khi chạy đến dòng lệnh cuối cùng (giữ đúng tốc độ hiện tại của người dùng)
-              // Capping thời gian ghi hình tối đa là 3 phút (180000ms) để đề phòng video quá nặng không gửi được lên Discord
-              let timeElapsed = 0;
-              while(simState.current.index < commands.length - 2 && timeElapsed < 180000) {
-                  await new Promise(r => setTimeout(r, 500));
-                  timeElapsed += 500;
+              let encoder: any = null;
+              if (typeof window !== 'undefined' && 'VideoEncoder' in window) {
+                  const config = {
+                      codec: 'vp8',
+                      width: width,
+                      height: height,
+                      bitrate: 2_500_000,
+                      framerate: 30
+                  };
+                  
+                  const support = await (window as any).VideoEncoder.isConfigSupported(config);
+                  if (support.supported) {
+                      encoder = new (window as any).VideoEncoder({
+                          output: (chunk: any, meta: any) => muxer.addVideoChunk(chunk, meta),
+                          error: (e: any) => console.error(e)
+                      });
+                      encoder.configure(config);
+                  }
               }
               
-              recorder.stop();
-              setIsPlaying(false);
-              
-              videoBlob = await recordPromise;
+              if (encoder) {
+                  // Mute the playback so the user doesn't see it jumping around
+                  const originalIndex = currentIndex;
+                  const originalIsPlaying = isPlaying;
+                  setIsPlaying(false);
+                  
+                  for (let i = 0; i < numFrames; i++) {
+                      // Map frame to command index
+                      const cmdIndex = Math.floor((i / numFrames) * commands.length);
+                      
+                      // Advance state synchronously (React might need time to re-render, so we mock advance the UI,
+                      // or better yet, we just capture what is on canvas by manually requesting it if possible).
+                      // Since we can't easily force R3F to render synchronously in a loop without requestAnimationFrame,
+                      // we'll step through using a fast timeout to allow R3F to paint.
+                      
+                      setCurrentIndex(cmdIndex);
+                      
+                      // Wait just a tiny bit for the canvas to update (1 frame at 60fps)
+                      await new Promise(r => setTimeout(r, 16));
+                      
+                      const timestampUs = Math.round((i * 1000000) / 30);
+                      const frame = new (window as any).VideoFrame(canvas, { timestamp: timestampUs });
+                      encoder.encode(frame, { keyFrame: i % 30 === 0 });
+                      frame.close();
+                  }
+                  
+                  await encoder.flush();
+                  encoder.close();
+                  muxer.finalize();
+                  
+                  videoBlob = new Blob([muxer.target.buffer], { type: 'video/webm' });
+                  
+                  // Restore state
+                  setCurrentIndex(originalIndex);
+                  if (originalIsPlaying) setIsPlaying(true);
+              } else {
+                  // Fallback to MediaRecorder if VideoEncoder is not supported
+                  const stream = canvas.captureStream(30);
+                  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                  const chunks: Blob[] = [];
+                  recorder.ondataavailable = (e) => chunks.push(e.data);
+                  const recordPromise = new Promise<Blob>((resolve) => {
+                      recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+                  });
+                  
+                  const originalSpeed = speedSliderVal;
+                  setCurrentIndex(0);
+                  simState.current.index = 0;
+                  simState.current.progress = 0;
+                  setSpeedSliderVal(100); // Need to speed up for fallback to not hang too long
+                  await new Promise(r => setTimeout(r, 500));
+                  
+                  recorder.start();
+                  setIsPlaying(true);
+                  
+                  let timeElapsed = 0;
+                  while(simState.current.index < commands.length - 2 && timeElapsed < 8000) {
+                      await new Promise(r => setTimeout(r, 200));
+                      timeElapsed += 200;
+                  }
+                  
+                  recorder.stop();
+                  setIsPlaying(false);
+                  setSpeedSliderVal(originalSpeed);
+                  videoBlob = await recordPromise;
+              }
           }
       } catch (e) {
           console.error("Video recording failed", e);
