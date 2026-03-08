@@ -1757,10 +1757,10 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         {showBorderFlash && (
           <>
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: [0, 1, 0, 0.8, 0], scale: [0.98, 1, 0.99, 1, 1] }} transition={{ duration: 1.5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }} className="absolute inset-0 z-[9999] pointer-events-none shadow-[inset_0_0_150px_rgba(59,130,246,0.5)] border-[8px] border-blue-500 rounded-xl" />
-            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute left-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute right-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.1 }} className="absolute left-0 right-0 top-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.1 }} className="absolute left-0 right-0 bottom-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute left-0 right-0 top-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.15 }} className="absolute left-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.15 }} className="absolute right-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.3 }} className="absolute left-0 right-0 bottom-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
           </>
         )}
       </AnimatePresence>
