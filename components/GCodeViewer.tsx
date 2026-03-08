@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text, Html, Instance, Instances, Center } from '@react-three/drei';
 import * as THREE from 'three';
-import { Muxer, ArrayBufferTarget } from 'webm-muxer';
+import { advanceMotion, MotionState } from '@/services/gcodeMotionHelper';
 import { Play, Pause, RotateCcw, Upload, Code, Monitor, Activity, Zap, Layers, Cpu, Ruler, MousePointer2, Settings, Palette, Eye, EyeOff, Save, X, ListFilter, ChevronDown, Check, MoreHorizontal, Circle, MousePointerClick, Send, Share2, Timer, Maximize, Minimize, Focus, Sparkles, Globe, Rocket, Swords, FastForward, CornerDownRight, ArrowRightCircle, Wrench, Replace, Search, CaseSensitive, Repeat, Undo2, Redo2, Copy, FileCode, RefreshCcw, Loader2, AlertCircle, Terminal, Bot, Gauge, HardDrive, PanelLeftClose, PanelLeftOpen, Home as HomeIcon, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GCodeService } from '../services/gcodeService';
@@ -13,7 +13,6 @@ import { GoogleGenAI } from "@google/genai";
 
 const gcodeService = new GCodeService();
 
-const DISCORD_REPORT_WEBHOOK = "https://discord.com/api/webhooks/1463256263029821661/fKyzfOyiaNWKwcxuKXcY-fMLHX5zSmAAuz-LS_8s7fYY_dkJoX-IdaEuLe7LO0TuEkJJ";
 
 interface GCodeViewerProps {
   lang: Language;
@@ -982,8 +981,6 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [speedSliderVal, setSpeedSliderVal] = useState(() => loadSetting('vjp26_gc_speed', 15));
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isReporting, setIsReporting] = useState(false);
-  const [recordingProgress, setRecordingProgress] = useState(0);
   const [showGrid, setShowGrid] = useState(() => loadSetting('vjp26_gc_grid', true));
   const [snapMode, setSnapMode] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<THREE.Vector3[]>([]);
@@ -1100,7 +1097,6 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const viewCubeControllerRef = useRef<any>(null);
-  const miniCanvasRef = useRef<HTMLCanvasElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => localStorage.setItem('vjp26_gc_speed', JSON.stringify(speedSliderVal)), [speedSliderVal]);
@@ -1157,21 +1153,27 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       const delta = (time - simState.current.lastTime) / 1000;
       simState.current.lastTime = time;
       if (delta > 0.1) { animationFrameId = requestAnimationFrame(animate); return; }
-      let { index: tempIndex, progress: tempProgress } = simState.current;
-      if (tempIndex >= commands.length - 1) { setIsPlaying(false); return; }
-      const currentCmd = commands[tempIndex], currentFeed = currentCmd.f || 1000;
-      let travelDist = (currentFeed / 60) * playbackSpeed * delta, pos = new THREE.Vector3();
-      while (travelDist > 0 && tempIndex < commands.length - 1) {
-          const c1 = commands[tempIndex], c2 = commands[tempIndex + 1];
-          const segLen = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2) + Math.pow(c2.z - c1.z, 2));
-          const remainingOnSeg = segLen * (1 - tempProgress);
-          if (travelDist >= remainingOnSeg) { travelDist -= remainingOnSeg; tempIndex++; tempProgress = 0; setElapsedTime(t => t + delta); }
-          else { const safeLen = segLen > 0.00001 ? segLen : 0.00001; tempProgress += travelDist / safeLen; travelDist = 0; const p1 = new THREE.Vector3(c1.x, c1.y, c1.z), p2 = new THREE.Vector3(c2.x, c2.y, c2.z); pos.lerpVectors(p1, p2, tempProgress); }
+      const res = advanceMotion(simState.current, commands, delta, playbackSpeed);
+      
+      simState.current.index = res.newIndex;
+      simState.current.progress = res.newProgress;
+      
+      if (res.elapsedDelta > 0) {
+        setElapsedTime(t => t + res.elapsedDelta);
       }
-      simState.current.index = tempIndex; simState.current.progress = tempProgress;
-      if (tempIndex >= commands.length - 1) { const last = commands[commands.length-1], endP = new THREE.Vector3(last.x, last.y, last.z); interpolatedPosRef.current.copy(endP); setDisplayPos(endP); setCurrentIndex(commands.length - 1); setIsPlaying(false); }
-      else { if (travelDist === 0) { interpolatedPosRef.current.copy(pos); setDisplayPos(pos); } else { const c = commands[tempIndex], p = new THREE.Vector3(c.x, c.y, c.z); interpolatedPosRef.current.copy(p); setDisplayPos(p); } setCurrentIndex(tempIndex); }
-      if (tempIndex < commands.length - 1) animationFrameId = requestAnimationFrame(animate);
+      
+      if (res.isFinished) {
+        interpolatedPosRef.current.copy(res.position);
+        setDisplayPos(res.position);
+        setCurrentIndex(res.newIndex);
+        setIsPlaying(false);
+      } else {
+        interpolatedPosRef.current.copy(res.position);
+        setDisplayPos(res.position);
+        setCurrentIndex(res.newIndex);
+      }
+
+      if (!res.isFinished) animationFrameId = requestAnimationFrame(animate);
     };
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
@@ -1299,261 +1301,6 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: `Phân tích đoạn mã G-Code CNC này và đưa ra nhận xét chuyên môn ngắn gọn (dưới 100 từ) về độ an toàn và hiệu quả.\n\nThông số kỹ thuật:\n- Tổng thời gian: ${report.totalTime}\n- Kích thước phôi: ${report.maxX - report.minX}x${report.maxY - report.minY}x${report.maxZ - report.minZ} mm\n- Số lần thay dao: ${report.toolChanges}\n- Cảnh báo va chạm: ${report.collisionWarnings.length}\n\nMã G-Code (50 dòng đầu):\n${content.substring(0, 1000)}...` });
         setAiAnalysis(response.text || "Không có phản hồi");
     } catch (error) { setAiAnalysis("Lỗi kết nối AI: " + (error as any).message); } finally { setIsAnalyzing(false); }
-  };
-  const handleSendReport = async () => {
-      if(!analysis || isReporting) return;
-      setIsReporting(true);
-      
-      let videoBlob: Blob | null = null;
-      try {
-// ══════════════════════════════════════════════════════════════
-// OFFSCREEN RENDERER — Fast, smooth, GPU-aware
-// ══════════════════════════════════════════════════════════════
-
-const RENDER_FPS = 30;
-const W = 1280, H = 720;
-
-// ── Bước 1: Tính tổng duration video theo playbackSpeed ───────
-let totalDurationS = 0;
-for (let i = 0; i < commands.length - 1; i++) {
-    const c1 = commands[i], c2 = commands[i + 1];
-    const segLen = Math.sqrt(
-        Math.pow(c2.x - c1.x, 2) +
-        Math.pow(c2.y - c1.y, 2) +
-        Math.pow(c2.z - c1.z, 2)
-    );
-    const feed = c1.f || 1000;
-    const speed = (feed / 60) * playbackSpeed;
-    if (speed > 0) totalDurationS += segLen / speed;
-}
-if (totalDurationS < 1) totalDurationS = 1;
-if (totalDurationS > 30) totalDurationS = 30;
-
-const totalFrames = Math.floor(totalDurationS * RENDER_FPS);
-const frameDeltaS = 1 / RENDER_FPS;
-
-// ── Bước 2: Build geometry standalone ────────────────────────
-const positions: number[] = [];
-const colors: number[] = [];
-const cmdToVert = new Int32Array(commands.length + 1);
-let vertCount = 0;
-
-const colG0 = new THREE.Color(theme.g0);
-const colG1 = new THREE.Color(theme.g1);
-const colArc = new THREE.Color(theme.arc);
-
-for (let i = 0; i < commands.length - 1; i++) {
-    const c1 = commands[i], c2 = commands[i + 1];
-    cmdToVert[i] = vertCount;
-
-    if (c1.type === 'OTHER' || c2.type === 'OTHER') continue;
-    if (
-        Math.abs(c1.x - c2.x) < 0.001 &&
-        Math.abs(c1.y - c2.y) < 0.001 &&
-        Math.abs(c1.z - c2.z) < 0.001
-    ) continue;
-
-    const col = c2.type === 'G0' ? colG0 : (c2.type === 'G1' ? colG1 : colArc);
-    positions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
-    colors.push(col.r, col.g, col.b, col.r, col.g, col.b);
-    vertCount += 2;
-}
-cmdToVert[commands.length - 1] = vertCount;
-cmdToVert[commands.length] = vertCount;
-
-// ── Bước 3: Setup Three.js Offscreen Scene ────────────────────
-const offscreen = new OffscreenCanvas(W, H);
-const offscreenRenderer = new THREE.WebGLRenderer({
-    canvas: offscreen as any,
-    antialias: false,
-    powerPreference: gpuPreference,
-});
-offscreenRenderer.setSize(W, H);
-offscreenRenderer.setClearColor(new THREE.Color(theme.background));
-
-const offscreenScene = new THREE.Scene();
-
-// Ghost line: toàn bộ path, mờ
-const ghostGeo = new THREE.BufferGeometry();
-ghostGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-ghostGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-const ghostMat = new THREE.LineBasicMaterial({ vertexColors: true, opacity: 0.15, transparent: true });
-const ghostLine = new THREE.LineSegments(ghostGeo, ghostMat);
-offscreenScene.add(ghostLine);
-
-// Active line: draw range tăng dần theo progress
-const activeGeo = new THREE.BufferGeometry();
-activeGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-activeGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-activeGeo.setDrawRange(0, 0);
-const activeMat = new THREE.LineBasicMaterial({ vertexColors: true, opacity: 1 });
-const activeLine = new THREE.LineSegments(activeGeo, activeMat);
-offscreenScene.add(activeLine);
-
-// Tool head sphere
-const sphereGeo = new THREE.SphereGeometry(
-    Math.max(
-        (analysis.maxX - analysis.minX) * 0.008,
-        (analysis.maxY - analysis.minY) * 0.008,
-        2
-    ),
-    8, 8
-);
-const sphereMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-const toolSphere = new THREE.Mesh(sphereGeo, sphereMat);
-offscreenScene.add(toolSphere);
-
-// Camera: orthographic top-down, fit bounds
-const cx = (analysis.minX + analysis.maxX) / 2;
-const cy = (analysis.minY + analysis.maxY) / 2;
-const spanX = (analysis.maxX - analysis.minX) * 1.15 || 100;
-const spanY = (analysis.maxY - analysis.minY) * 1.15 || 100;
-const aspect = W / H;
-const halfH = Math.max(spanX / aspect, spanY) / 2;
-const offscreenCamera = new THREE.OrthographicCamera(
-    cx - halfH * aspect, cx + halfH * aspect,
-    cy + halfH, cy - halfH,
-    -100000, 100000
-);
-offscreenCamera.position.set(cx, cy, 1000);
-offscreenCamera.lookAt(cx, cy, 0);
-
-// ── Bước 4: Setup VideoEncoder ────────────────────────────────
-const muxer = new Muxer({
-    target: new ArrayBufferTarget(),
-    video: { codec: 'V_VP8', width: W, height: H, frameRate: RENDER_FPS }
-});
-
-const encConfig = {
-    codec: 'vp8',
-    width: W,
-    height: H,
-    bitrate: 4_000_000,
-    framerate: RENDER_FPS
-};
-const encSupport = await (window as any).VideoEncoder.isConfigSupported(encConfig);
-
-if (encSupport.supported) {
-    const encoder = new (window as any).VideoEncoder({
-        output: (chunk: any, meta: any) => muxer.addVideoChunk(chunk, meta),
-        error: (e: any) => console.error('[VideoShare] encode error', e)
-    });
-    encoder.configure(encConfig);
-
-    // ── Bước 5: Frame loop với interpolation mượt ─────────────
-    let vidCmdIdx = 0;
-    let vidSegProgress = 0;
-
-    for (let frameIdx = 0; frameIdx < totalFrames; frameIdx++) {
-        let remainingTime = frameDeltaS;
-
-        while (remainingTime > 0 && vidCmdIdx < commands.length - 1) {
-            const c1 = commands[vidCmdIdx];
-            const c2 = commands[vidCmdIdx + 1];
-            const segLen = Math.sqrt(
-                Math.pow(c2.x - c1.x, 2) +
-                Math.pow(c2.y - c1.y, 2) +
-                Math.pow(c2.z - c1.z, 2)
-            );
-            const feed = c1.f || 1000;
-            const speedMmPerSec = (feed / 60) * playbackSpeed;
-
-            if (segLen < 0.0001 || speedMmPerSec <= 0) {
-                vidCmdIdx++;
-                vidSegProgress = 0;
-                continue;
-            }
-
-            const segDuration = segLen / speedMmPerSec;
-            const remainingOnSeg = segDuration * (1 - vidSegProgress);
-
-            if (remainingTime >= remainingOnSeg) {
-                remainingTime -= remainingOnSeg;
-                vidCmdIdx++;
-                vidSegProgress = 0;
-            } else {
-                vidSegProgress += remainingTime / segDuration;
-                remainingTime = 0;
-            }
-        }
-
-        // Lerp tool head position
-        const safeCmdIdx = Math.min(vidCmdIdx, commands.length - 2);
-        const pc1 = commands[safeCmdIdx];
-        const pc2 = commands[safeCmdIdx + 1] || pc1;
-        toolSphere.position.set(
-            pc1.x + (pc2.x - pc1.x) * vidSegProgress,
-            pc1.y + (pc2.y - pc1.y) * vidSegProgress,
-            pc1.z + (pc2.z - pc1.z) * vidSegProgress
-        );
-
-        // Update active line draw range
-        const drawVerts = cmdToVert[Math.min(vidCmdIdx, commands.length - 1)];
-        activeGeo.setDrawRange(0, drawVerts % 2 === 0 ? drawVerts : drawVerts - 1);
-
-        // Render frame (synchronous GPU)
-        offscreenRenderer.render(offscreenScene, offscreenCamera);
-
-        // Capture + encode
-        const timestampUs = Math.round((frameIdx * 1_000_000) / RENDER_FPS);
-        try {
-            const frame = new (window as any).VideoFrame(offscreen, { timestamp: timestampUs });
-            encoder.encode(frame, { keyFrame: frameIdx % (RENDER_FPS * 3) === 0 });
-            frame.close();
-        } catch (e) {
-            console.error('[VideoShare] Frame encode error', e);
-        }
-
-        // Yield every 10 frames (no delay, just event loop yield)
-        if (frameIdx % 10 === 0) {
-            setRecordingProgress(Math.round((frameIdx / totalFrames) * 100));
-            await new Promise(r => setTimeout(r, 0));
-        }
-    }
-
-    await encoder.flush();
-    encoder.close();
-    muxer.finalize();
-    videoBlob = new Blob([(muxer.target as ArrayBufferTarget).buffer], { type: 'video/webm' });
-}
-
-// ── Cleanup ───────────────────────────────────────────────────
-ghostGeo.dispose(); ghostMat.dispose();
-activeGeo.dispose(); activeMat.dispose();
-sphereGeo.dispose(); sphereMat.dispose();
-offscreenRenderer.dispose();
-// ══════════════════════════════════════════════════════════════
-      } catch (e) {
-          console.error("Video recording failed", e);
-      }
-      
-      try {
-          const formData = new FormData();
-          
-          const embedData = { 
-              content: `📊 **G-CODE ANALYSIS REPORT**\n${aiAnalysis.substring(0, 1500)}`, 
-              embeds: [{ 
-                  title: file ? file.name : "Unknown File", 
-                  color: 0x8b5cf6, 
-                  fields: [
-                      { name: "Thời gian gia công", value: analysis.totalTime, inline: true }, 
-                      { name: "Kích thước (mm)", value: `${(analysis.maxX - analysis.minX).toFixed(1)} x ${(analysis.maxY - analysis.minY).toFixed(1)} x ${(analysis.maxZ - analysis.minZ).toFixed(1)}`, inline: true }, 
-                      { name: "Thay dao", value: analysis.toolChanges.toString(), inline: true }, 
-                      { name: "Cảnh báo", value: analysis.collisionWarnings.length > 0 ? "⚠️ CÓ VA CHẠM" : "✅ AN TOÀN", inline: true }
-                  ], 
-                  timestamp: new Date().toISOString() 
-              }] 
-          };
-          
-          formData.append('payload_json', JSON.stringify(embedData));
-          
-          if (videoBlob) {
-              formData.append('file', videoBlob, 'simulation.webm');
-          }
-          
-          await fetch(DISCORD_REPORT_WEBHOOK, { method: 'POST', body: formData });
-          alert("Đã gửi báo cáo!");
-      } catch (e) { alert("Lỗi gửi báo cáo"); } finally { setIsReporting(false); setRecordingProgress(0); }
   };
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value; setTempContent(newText);
@@ -1896,13 +1643,7 @@ offscreenRenderer.dispose();
         {is3DFullScreen && createPortal(<div className="fixed inset-0 z-[9999] bg-black flex flex-col">{ThreeDViewContent}</div>, document.body)}
         {!isLiteMode && (
             <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col gap-4 border-white/5 p-4 overflow-hidden z-0 order-3 h-auto lg:h-full">
-               <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div>
-               <div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div><button onClick={handleSendReport} disabled={isReporting || !analysis} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-1.5 rounded-lg border border-blue-500/30 flex items-center gap-1 transition-all">
-    {isReporting ? <Activity size={12} className="animate-spin" /> : <Share2 size={12} />}
-    <span className="text-[10px] font-bold uppercase">{isReporting
-    ? (recordingProgress > 0 ? `Render ${recordingProgress}%` : 'Chuẩn bị...')
-    : 'Chia sẻ & Video'}</span>
-</button></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
+               <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div><div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
 {isAnalyzing ? (
     <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
         <Activity className="animate-spin text-purple-500" size={24} />
@@ -1928,22 +1669,6 @@ offscreenRenderer.dispose();
                 </div>
             )}
             <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden">
-                <Canvas 
-                    onCreated={({ gl }) => {
-                        // Lưu ref của canvas để có thể record video
-                        (miniCanvasRef as any).current = gl.domElement;
-                    }}
-                    camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} dpr={1} gl={{ preserveDrawingBuffer: true }}>
-                    <color attach="background" args={['#000000']} />
-                    <SceneContent 
-                        commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} theme={{...theme, background: '#000000'}} toolConfig={toolConfig} showGrid={false} snapMode={false} measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={true} 
-                        viewCubeControllerRef={{current: null}}
-                    />
-                </Canvas>
-            </div>
-            
-            {/* Minimal line progress bar at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800">
                 <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${(currentIndex / Math.max(1, commands.length)) * 100}%` }}></div>
             </div>
         </div>
