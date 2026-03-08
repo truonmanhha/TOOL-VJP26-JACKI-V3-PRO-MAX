@@ -1135,28 +1135,26 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                   recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
               });
               
-              const originalSpeed = speedSliderVal;
               setCurrentIndex(0);
               simState.current.index = 0;
               simState.current.progress = 0;
-              setSpeedSliderVal(100);
               
-              // Wait a bit for state to flush and camera to settle
+              // Chờ UI reset về điểm xuất phát
               await new Promise(r => setTimeout(r, 500));
               
               recorder.start();
               setIsPlaying(true);
               
-              // Record until it reaches the end or max 8 seconds
+              // Ghi hình cho đến khi chạy đến dòng lệnh cuối cùng (giữ đúng tốc độ hiện tại của người dùng)
+              // Capping thời gian ghi hình tối đa là 3 phút (180000ms) để đề phòng video quá nặng không gửi được lên Discord
               let timeElapsed = 0;
-              while(simState.current.index < commands.length - 2 && timeElapsed < 8000) {
-                  await new Promise(r => setTimeout(r, 200));
-                  timeElapsed += 200;
+              while(simState.current.index < commands.length - 2 && timeElapsed < 180000) {
+                  await new Promise(r => setTimeout(r, 500));
+                  timeElapsed += 500;
               }
               
               recorder.stop();
               setIsPlaying(false);
-              setSpeedSliderVal(originalSpeed);
               
               videoBlob = await recordPromise;
           }
