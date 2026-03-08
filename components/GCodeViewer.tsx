@@ -1431,13 +1431,7 @@ const encConfig = {
     bitrate: 4_000_000,
     framerate: RENDER_FPS
 };
-let encSupport = await (window as any).VideoEncoder.isConfigSupported(encConfig);
-
-// Fallback to software encoding if hardware fails
-if (!encSupport.supported) {
-    (encConfig as any).hardwareAcceleration = 'prefer-software';
-    encSupport = await (window as any).VideoEncoder.isConfigSupported(encConfig);
-}
+const encSupport = await (window as any).VideoEncoder.isConfigSupported(encConfig);
 
 if (encSupport.supported) {
     const encoder = new (window as any).VideoEncoder({
@@ -1850,17 +1844,16 @@ offscreenRenderer.dispose();
   );
 
   return (
-    <div ref={workspaceRef} className={`flex flex-col gap-0 w-full  ${isWorkspaceLocked ? 'fixed inset-0 z-[9999] bg-[#0f1419] h-screen' : 'relative h-[calc(100vh-140px)] min-h-[900px]'}`}>
+    <div ref={workspaceRef} className={`flex flex-col gap-0 w-full  ${isWorkspaceLocked ? 'fixed inset-0 z-[9999] bg-[#0f1419] h-screen' : 'h-[calc(100vh-140px)] min-h-[900px]'}`}>
       <AnimatePresence>
-        {showBorderFlash && createPortal(
+        {showBorderFlash && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.15, 0.1, 0] }} transition={{ duration: 2.5, times: [0, 0.2, 0.6, 1], ease: "easeInOut" }} className="fixed inset-0 bg-cyan-500/10 z-[10000] pointer-events-none" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 2.5, times: [0, 0.3, 1], ease: "circOut" }} className="fixed left-0 right-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent z-[10001] shadow-[0_0_20px_#22d3ee] pointer-events-none" style={{ transformOrigin: 'left' }} />
-            <motion.div initial={{ height: 0, top: 0, opacity: 0 }} animate={{ height: ['0%', '100%', '100%', '100%'], opacity: [0, 1, 1, 0], boxShadow: ['0 0 8px #22d3ee', '0 0 20px #22d3ee', '0 0 20px #22d3ee', '0 0 0px #22d3ee'] }} transition={{ duration: 2.5, times: [0, 0.3, 0.6, 1], ease: "circOut", delay: 0.15 }} className="fixed left-0 w-[2px] bg-gradient-to-b from-cyan-400 via-white to-transparent z-[10001] mix-blend-screen pointer-events-none" />
-            <motion.div initial={{ height: 0, top: 0, opacity: 0 }} animate={{ height: ['0%', '100%', '100%', '100%'], opacity: [0, 1, 1, 0], boxShadow: ['0 0 8px #22d3ee', '0 0 20px #22d3ee', '0 0 20px #22d3ee', '0 0 0px #22d3ee'] }} transition={{ duration: 2.5, times: [0, 0.3, 0.6, 1], ease: "circOut", delay: 0.15 }} className="fixed right-0 w-[2px] bg-gradient-to-b from-cyan-400 via-white to-transparent z-[10001] mix-blend-screen pointer-events-none" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 2.5, times: [0, 0.3, 1], ease: "circOut", delay: 0.3 }} className="fixed left-0 right-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent z-[10001] shadow-[0_0_20px_#22d3ee] pointer-events-none" style={{ transformOrigin: 'left' }} />
-          </>,
-          document.body
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.15, 0.1, 0] }} transition={{ duration: 2.5, times: [0, 0.2, 0.6, 1], ease: "easeInOut" }} className="fixed inset-0 bg-cyan-500/10 z-[9998] pointer-events-none" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 2.5, times: [0, 0.3, 1], ease: "circOut" }} className="fixed left-0 right-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent z-[10000] shadow-[0_0_20px_#22d3ee] pointer-events-none" style={{ transformOrigin: 'left' }} />
+            <motion.div initial={{ height: 0, top: 0, opacity: 0 }} animate={{ height: ['0%', '100%', '100%', '100%'], opacity: [0, 1, 1, 0], boxShadow: ['0 0 8px #22d3ee', '0 0 20px #22d3ee', '0 0 20px #22d3ee', '0 0 0px #22d3ee'] }} transition={{ duration: 2.5, times: [0, 0.3, 0.6, 1], ease: "circOut", delay: 0.15 }} className="fixed left-0 w-[2px] bg-gradient-to-b from-cyan-400 via-white to-transparent z-[10000] mix-blend-screen pointer-events-none" />
+            <motion.div initial={{ height: 0, top: 0, opacity: 0 }} animate={{ height: ['0%', '100%', '100%', '100%'], opacity: [0, 1, 1, 0], boxShadow: ['0 0 8px #22d3ee', '0 0 20px #22d3ee', '0 0 20px #22d3ee', '0 0 0px #22d3ee'] }} transition={{ duration: 2.5, times: [0, 0.3, 0.6, 1], ease: "circOut", delay: 0.15 }} className="fixed right-0 w-[2px] bg-gradient-to-b from-cyan-400 via-white to-transparent z-[10000] mix-blend-screen pointer-events-none" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 2.5, times: [0, 0.3, 1], ease: "circOut", delay: 0.3 }} className="fixed left-0 right-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent z-[10000] shadow-[0_0_20px_#22d3ee] pointer-events-none" style={{ transformOrigin: 'left' }} />
+          </>
         )}
       </AnimatePresence>
       {!is3DFullScreen && (
