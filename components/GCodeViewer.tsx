@@ -981,6 +981,31 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [speedSliderVal, setSpeedSliderVal] = useState(() => loadSetting('vjp26_gc_speed', 15));
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const [videoExportState, setVideoExportState] = useState<'idle' | 'rendering' | 'uploading' | 'done' | 'error'>('idle');
+  const [videoExportProgress, setVideoExportProgress] = useState(0);
+
+  const handleDummyVideoExport = () => {
+    if (videoExportState !== 'idle' && videoExportState !== 'error') return;
+    
+    setVideoExportState('rendering');
+    setVideoExportProgress(0);
+    
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 10;
+      setVideoExportProgress(p / 100);
+      if (p >= 100) {
+        clearInterval(interval);
+        setVideoExportState('uploading');
+        setTimeout(() => {
+          setVideoExportState('done');
+          setTimeout(() => setVideoExportState('idle'), 3000);
+        }, 1500);
+      }
+    }, 200);
+  };
+
   const [showGrid, setShowGrid] = useState(() => loadSetting('vjp26_gc_grid', true));
   const [snapMode, setSnapMode] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<THREE.Vector3[]>([]);
@@ -1643,7 +1668,19 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         {is3DFullScreen && createPortal(<div className="fixed inset-0 z-[9999] bg-black flex flex-col">{ThreeDViewContent}</div>, document.body)}
         {!isLiteMode && (
             <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col gap-4 border-white/5 p-4 overflow-hidden z-0 order-3 h-auto lg:h-full">
-               <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div><div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
+               <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div><div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div>
+<button 
+    onClick={handleDummyVideoExport} 
+    disabled={videoExportState === 'rendering' || videoExportState === 'uploading' || !analysis} 
+    className={`${videoExportState === 'error' ? 'bg-red-600/20 border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white' : videoExportState === 'done' ? 'bg-emerald-600/20 border-emerald-500/30 text-emerald-400' : 'bg-blue-600/20 border-blue-500/30 text-blue-400 hover:bg-blue-600 hover:text-white'} px-2 py-1.5 rounded-lg border flex items-center gap-1 transition-all`}
+>
+    {videoExportState === 'idle' && <><Share2 size={12} /> <span className="text-[10px] font-bold uppercase">Gửi Video</span></>}
+    {videoExportState === 'rendering' && <><Activity size={12} className="animate-spin" /> <span className="text-[10px] font-bold uppercase">Đang tạo video ({Math.round(videoExportProgress * 100)}%)</span></>}
+    {videoExportState === 'uploading' && <><Upload size={12} className="animate-pulse" /> <span className="text-[10px] font-bold uppercase">Đang tải lên Discord...</span></>}
+    {videoExportState === 'done' && <><Check size={12} /> <span className="text-[10px] font-bold uppercase">Gửi thành công!</span></>}
+    {videoExportState === 'error' && <><AlertCircle size={12} /> <span className="text-[10px] font-bold uppercase">Lỗi gửi báo cáo</span></>}
+</button>
+</div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
 {isAnalyzing ? (
     <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
         <Activity className="animate-spin text-purple-500" size={24} />
