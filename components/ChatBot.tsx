@@ -1190,7 +1190,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
                     <span className="text-[15px]">Cài đặt</span>
                   </button>
                   <h1 className="text-[15px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Chi tiết hồ sơ</h1>
-                  <button onClick={() => setCurrentView("chat")} className="text-primary text-[15px] font-semibold">Lưu</button>
+                  <button onClick={() => { setShowSettings(false); setCurrentView("settings-main"); }} className="text-primary text-[15px] font-semibold">Lưu</button>
                 </nav>
                 <main className="flex-1 overflow-y-auto scrollbar-hide px-0">
                   <div className="flex flex-col items-center pt-4 pb-6">
@@ -1278,7 +1278,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
                     <span className="text-[17px]">Cài đặt</span>
                   </button>
                   <h1 className="text-[17px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Khóa API</h1>
-                  <button onClick={() => setCurrentView("chat")} className="text-primary text-[17px] font-normal">Xong</button>
+                  <button onClick={() => { setShowSettings(false); setCurrentView("settings-main"); }} className="text-primary text-[17px] font-normal">Xong</button>
                 </nav>
                 <main className="flex-1 overflow-y-auto pt-6 scrollbar-hide">
                   <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">GEMINI API KEY</div>
