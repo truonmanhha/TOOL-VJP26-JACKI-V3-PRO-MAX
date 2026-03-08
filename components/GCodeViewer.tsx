@@ -1248,7 +1248,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                    </div>
                    <div className="flex flex-col min-w-[120px] text-center sm:text-left">
                        <h2 className="text-white font-black uppercase tracking-widest text-xs truncate max-w-[200px]" title={file ? file.name : t.gcodeUpload}>{file ? file.name : t.gcodeUpload}</h2>
-                       <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{t.gcodeSub}</p>
+                       
                    </div>
                </div>
                
