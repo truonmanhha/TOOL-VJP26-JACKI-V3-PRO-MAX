@@ -606,14 +606,72 @@ const ToolPath: React.FC<{
           if (c1.type === 'OTHER' || c2.type === 'OTHER') continue;
           if (Math.abs(c1.x - c2.x) < 0.001 && Math.abs(c1.y - c2.y) < 0.001 && Math.abs(c1.z - c2.z) < 0.001) continue;
 
+          let visible = true;
+          if (c2.type === 'G0' && !viewOptions.showRapid) visible = false;
+          if ((c2.type === 'G1' || c2.type === 'G2' || c2.type === 'G3') && !viewOptions.showCutting) visible = false;
+
+          // Handle G2 / G3 interpolation (Arcs)
+          if ((c2.type === 'G2' || c2.type === 'G3') && (c2.i !== undefined || c2.j !== undefined)) {
+              // Interpolate arc
+              const cx = c1.x + (c2.i || 0);
+              const cy = c1.y + (c2.j || 0);
+              
+              const startAngle = Math.atan2(c1.y - cy, c1.x - cx);
+              const endAngle = Math.atan2(c2.y - cy, c2.x - cx);
+              
+              const radius = Math.sqrt(Math.pow(c1.x - cx, 2) + Math.pow(c1.y - cy, 2));
+              
+              let angleDiff = endAngle - startAngle;
+              if (c2.type === 'G2') { // Clockwise
+                  if (angleDiff > 0) angleDiff -= 2 * Math.PI;
+              } else { // G3 - Counter-clockwise
+                  if (angleDiff < 0) angleDiff += 2 * Math.PI;
+              }
+              
+              // Only draw if there's an actual arc
+              if (Math.abs(angleDiff) > 0.0001) {
+                  // Segment length approximately 1mm or max 30 segments per circle
+                  const segments = Math.max(16, Math.min(128, Math.ceil(Math.abs(angleDiff) / (2 * Math.PI) * 128)));
+                  
+                  let prevX = c1.x;
+                  let prevY = c1.y;
+                  let prevZ = c1.z;
+                  
+                  for (let s = 1; s <= segments; s++) {
+                      const t = s / segments;
+                      const angle = startAngle + angleDiff * t;
+                      
+                      const currX = cx + radius * Math.cos(angle);
+                      const currY = cy + radius * Math.sin(angle);
+                      const currZ = c1.z + (c2.z - c1.z) * t;
+                      
+                      if (!isLiteMode) {
+                          segMap.push({ start: new THREE.Vector3(prevX, prevY, prevZ), end: new THREE.Vector3(currX, currY, currZ), originalIndex: i });
+                          interactionPositions.push(prevX, prevY, prevZ, currX, currY, currZ);
+                      }
+                      
+                      if (visible) {
+                          positions.push(prevX, prevY, prevZ, currX, currY, currZ);
+                          if (!isLiteMode) {
+                              let col = viewOptions.highlightArcs ? colArc : colG1;
+                              colors.push(col.r, col.g, col.b, col.r, col.g, col.b);
+                          }
+                          currentVertCount += 2;
+                      }
+                      
+                      prevX = currX;
+                      prevY = currY;
+                      prevZ = currZ;
+                  }
+                  continue; // Skip the default straight line logic
+              }
+          }
+
+          // Default logic for G0 and G1 (Straight lines)
           if (!isLiteMode) {
               segMap.push({ start: new THREE.Vector3(c1.x, c1.y, c1.z), end: new THREE.Vector3(c2.x, c2.y, c2.z), originalIndex: i });
               interactionPositions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
           }
-
-          let visible = true;
-          if (c2.type === 'G0' && !viewOptions.showRapid) visible = false;
-          if ((c2.type === 'G1' || c2.type === 'G2' || c2.type === 'G3') && !viewOptions.showCutting) visible = false;
 
           if (visible) {
               positions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
@@ -1150,11 +1208,11 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
              />
           )}
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl p-3 flex flex-col gap-2 shadow-2xl z-10 w-[95%] max-w-lg">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl p-3 flex flex-col gap-2 shadow-2xl z-[100] w-[95%] max-w-lg pointer-events-auto">
              <div className="flex items-center gap-4">
                  <button onClick={() => { setCurrentIndex(0); setElapsedTime(0); }} className="p-3 md:p-2 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-all"><RotateCcw size={16} /></button>
                  <button onClick={() => setIsPlaying(!isPlaying)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white transition-all shadow-lg active:scale-95">{isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}</button>
-                 <div className="flex-1 flex flex-col gap-1"><input type="number" min="0" max={commands.length - 1} value={currentIndex} onChange={e => { setIsPlaying(false); let val = parseInt(e.target.value); if(isNaN(val)) return; if(val<0) val=0; if(val>commands.length-1) val=commands.length-1; setCurrentIndex(val); setElapsedTime(0); }} className="w-16 bg-slate-200 border border-slate-400 rounded px-1 text-center text-black font-bold outline-none focus:border-blue-500 focus:bg-white text-[10px]" /><div className="flex justify-between text-[9px] font-black uppercase text-slate-500"><span>BẮT ĐẦU</span><span>DÒNG {currentIndex + 1} / {commands.length}</span><span>KẾT THÚC</span></div></div>
+                 <div className="flex-1 flex flex-col gap-1"><input type="range" min="0" max={Math.max(0, commands.length - 1)} value={currentIndex} onChange={e => { setIsPlaying(false); setCurrentIndex(parseInt(e.target.value)); setElapsedTime(0); }} className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" /><div className="flex justify-between text-[9px] font-black uppercase text-slate-500"><span>BẮT ĐẦU</span><span>DÒNG {commands.length > 0 ? currentIndex + 1 : 0} / {commands.length}</span><span>KẾT THÚC</span></div></div>
              </div>
              <div className="flex items-center gap-3 pt-2 border-t border-white/5 relative"><span className="text-[9px] font-black text-slate-500 uppercase w-12">TỐC ĐỘ</span><input type="number" min="0" max="100" step="1" value={speedSliderVal} onChange={e => { let val = parseFloat(e.target.value); if(isNaN(val)) return; if(val<0) val=0; if(val>100) val=100; setSpeedSliderVal(val); }} className="w-16 bg-slate-200 border border-slate-400 rounded px-1 text-center text-black font-bold outline-none focus:border-purple-500 focus:bg-white text-[10px]" /><div className="bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded text-[10px] font-mono font-bold w-12 text-center">x{playbackSpeed.toFixed(1)}</div><div className="h-4 w-px bg-white/10 mx-2"></div><div className="relative"><button onClick={() => setShowJumpInput(!showJumpInput)} className={`p-1.5 rounded-lg transition-all ${showJumpInput ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`} title="Đi tới dòng lệnh"><FastForward size={14} /></button>{showJumpInput && <div className="absolute bottom-10 right-0 bg-slate-900 border border-white/10 p-2 rounded-xl shadow-xl flex items-center gap-2 z-50 animate-in slide-in-from-bottom-2 duration-200"><input autoFocus type="number" value={jumpTarget} onChange={e => setJumpTarget(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJumpToLine()} placeholder="Line #" className="w-16 bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none font-mono" /><button onClick={handleJumpToLine} className="bg-blue-600 text-white p-1 rounded-lg hover:bg-blue-500"><CornerDownRight size={14} /></button></div>}</div></div>
           </div>
@@ -1164,19 +1222,19 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   return (
     <div className="flex flex-col gap-4 h-full pb-10">
-      <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border-blue-500/20 relative z-50">
+      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 md:p-3 rounded-t-xl flex flex-col md:flex-row items-center justify-between gap-4 relative z-50">
         <div className="flex items-center gap-4 w-full md:w-auto justify-between">
            <div className="flex items-center gap-3"><div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><Monitor size={20} /></div><div><h2 className="text-white font-black uppercase tracking-widest text-sm truncate max-w-[150px] md:max-w-none">{file ? file.name : t.gcodeUpload}</h2><p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.gcodeSub}</p></div></div>
            <div className="flex items-center gap-2"><input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} /><button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 border border-white/10 transition-all shrink-0"><Upload size={14} /> TẢI FILE</button><button onClick={handleOpenFilePicker} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg transition-all shrink-0"><HardDrive size={14} /> LOCAL ACCESS</button></div>
         </div>
         {!is3DFullScreen && renderToolbarButtons()}
       </div>
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:h-[65vh] w-full lg:max-h-[700px] min-h-[500px]"> 
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-1 bg-[#25252b] p-1 lg:h-[75vh] w-full min-h-[600px] rounded-b-xl border border-black/50"> 
         {showEditor && (
-            <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col overflow-hidden border-white/5 relative z-0 h-96 lg:h-full order-2 lg:order-1 animate-in slide-in-from-left-4 fade-in duration-300">
+            <div className="col-span-1 lg:col-span-3 bg-[#1e1e24] rounded flex flex-col overflow-hidden shadow-inner border border-black/40 relative z-0 h-96 lg:h-full order-2 lg:order-1">
             <div className="p-3 bg-slate-900 border-b border-white/5 flex items-center justify-between"><div className="flex items-center gap-2"><Code size={14} className="text-blue-400" /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{isEditMode ? "CHẾ ĐỘ SỬA" : "XEM MÃ GCODE"}</span></div><div className="flex items-center gap-2">
                 <button onClick={() => setShowCodeText(!showCodeText)} className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${!showCodeText ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`} title={showCodeText ? "Ẩn mã G-Code" : "Hiện mã G-Code"}>{showCodeText ? <EyeOff size={14} /> : <Eye size={14} />} <span>{showCodeText ? "ẨN MÃ" : "HIỆN MÃ"}</span></button>
-                {isEditMode && (<><button onClick={handleUndo} disabled={historyIndex <= 0} className={`p-1.5 rounded-lg transition-all ${historyIndex > 0 ? 'bg-slate-800 text-slate-400 hover:text-white' : 'text-slate-700 cursor-not-allowed'}`} title="Undo"><Undo2 size={14} /></button><button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className={`p-1.5 rounded-lg transition-all ${historyIndex < history.length - 1 ? 'bg-slate-800 text-slate-400 hover:text-white' : 'text-slate-700 cursor-not-allowed'}`} title="Redo"><Redo2 size={14} /></button><div className="w-px h-4 bg-white/10 mx-1"></div><button onClick={() => setShowReplace(!showReplace)} className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg transition-all ${showReplace ? 'bg-orange-600/20 text-orange-400' : 'bg-slate-800 text-slate-400 hover:text-white'}`} title="Replace"><Replace size={14} /></button></>)}<button onClick={() => { if(isEditMode) setContent(tempContent); else setTempContent(content); setIsEditMode(!isEditMode); }} className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg transition-all ${isEditMode ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>{isEditMode ? <span className="flex items-center gap-1"><Save size={10} /> LƯU</span> : "SỬA"}</button>
+                {isEditMode && (<><button onClick={handleUndo} disabled={historyIndex <= 0} className={`p-1.5 rounded-lg transition-all ${historyIndex > 0 ? 'bg-slate-800 text-slate-400 hover:text-white' : 'text-slate-700 cursor-not-allowed'}`} title="Undo"><Undo2 size={14} /></button><button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className={`p-1.5 rounded-lg transition-all ${historyIndex < history.length - 1 ? 'bg-slate-800 text-slate-400 hover:text-white' : 'text-slate-700 cursor-not-allowed'}`} title="Redo"><Redo2 size={14} /></button><div className="w-px h-4 bg-white/10 mx-1"></div><button onClick={() => setShowReplace(!showReplace)} className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg transition-all ${showReplace ? 'bg-orange-600/20 text-orange-400' : 'bg-slate-800 text-slate-400 hover:text-white'}`} title="Replace"><Replace size={14} /></button></>)}<button onClick={() => { if (isEditMode) {  setContent(tempContent);  /* Trigger parsing manually */  const parseManualGCode = async () => {     setIsProcessing(true);     setLoadingProgress(0);     try {       const blob = new Blob([tempContent], { type: 'text/plain' });       const fakeFile = new File([blob], 'manual-edit.gcode', { type: 'text/plain' });       const result = await gcodeService.processFileAsync(fakeFile, p => setLoadingProgress(p));              setCommands(result.commands);       setAnalysis(result.analysis);       setContent(result.rawText);       setHistory([result.rawText]);       setHistoryIndex(0);              if (result.commands && result.commands.length > 0) {           const start = new THREE.Vector3(result.commands[0].x, result.commands[0].y, result.commands[0].z);           interpolatedPosRef.current.copy(start);           setDisplayPos(start);       }              setCurrentIndex(0);       setIsPlaying(false);       setMeasurePoints([]);       setElapsedTime(0);       setFile(fakeFile as any);              toast.success("Đã cập nhật và biên dịch mã GCode");     } catch (e: any) {          console.error(e);          toast.error("Lỗi khi biên dịch GCode: " + e.message);      } finally {          setIsProcessing(false);      }    };    parseManualGCode();  } else {    setTempContent(content);  }  setIsEditMode(!isEditMode);  }} className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg transition-all ${isEditMode ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>{isEditMode ? <span className="flex items-center gap-1"><Save size={10} /> LƯU</span> : "SỬA"}</button>
                 <button onClick={() => setShowEditor(false)} className="bg-slate-800 text-slate-500 p-1.5 rounded-lg hover:text-white" title="Đóng khung"><PanelLeftClose size={14} /></button>
             </div></div>
             {isEditMode && showReplace && (<div className="p-3 bg-slate-900/95 border-b border-white/5 flex flex-col gap-3 animate-in slide-in-from-top-2"><div className="grid grid-cols-[auto_1fr] gap-2 items-center"><span className="text-[9px] font-black uppercase text-slate-500 text-right w-12">Find</span><div className="relative"><input value={findText} onChange={e => setFindText(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded px-2 py-1 text-xs text-white outline-none" placeholder="Find..." /></div><span className="text-[9px] font-black uppercase text-slate-500 text-right w-12">Rep</span><input value={replaceText} onChange={e => setReplaceText(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded px-2 py-1 text-xs text-white outline-none" placeholder="Replace..." /></div><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-3"><label className="flex items-center gap-1.5 cursor-pointer group"><input type="checkbox" checked={matchCase} onChange={e => setMatchCase(e.target.checked)} className="rounded bg-slate-700 border-white/10 w-3 h-3" /><span className="text-[9px] text-slate-400 group-hover:text-white">Case</span></label><label className="flex items-center gap-1.5 cursor-pointer group"><input type="checkbox" checked={wrapAround} onChange={e => setWrapAround(e.target.checked)} className="rounded bg-slate-700 border-white/10 w-3 h-3" /><span className="text-[9px] text-slate-400 group-hover:text-white">Wrap</span></label></div><div className="flex items-center gap-1"><button onClick={handleFindNext} className="bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded text-[9px] font-bold uppercase">Next</button><button onClick={() => { if(!textAreaRef.current) return; const s = textAreaRef.current.selectionStart, e = textAreaRef.current.selectionEnd; if(s === e) { handleFindNext(); return; } setTempContent(tempContent.substring(0,s) + replaceText + tempContent.substring(e)); }} className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-[9px] font-bold uppercase">Rep</button><button onClick={() => { if(!findText) return; setTempContent(tempContent.replace(new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), matchCase ? 'g' : 'gi'), replaceText)); }} className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-[9px] font-bold uppercase">All</button><button onClick={() => setShowReplace(false)} className="hover:bg-red-500/20 text-slate-500 hover:text-red-400 p-1 rounded"><X size={12} /></button></div></div></div>)}
