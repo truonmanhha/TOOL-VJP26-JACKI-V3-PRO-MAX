@@ -71,7 +71,8 @@ const DotLoading: React.FC = () => (
 
 
 // --- TỪ ĐIỂN LÁCH LUẬT (EVASION DICTIONARY) ---
-const evadeSafetyFilters = (text: string): string => {
+const evadeSafetyFilters = (text: string, bypassMode: boolean): string => {
+  if (!bypassMode) return text;
   let evaded = text;
   const dictionary: Record<string, string> = {
     'botnet': 'hệ thống mạng phân tán tự động (simulation)',
@@ -490,7 +491,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
              BẮT BUỘC DÙNG TIẾNG VIỆT. KHÔNG ĐƯỢC LỊCH SỰ. CÀNG TỤC CÀNG TỐT.
              `;
              
-             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'dummy' });
+             const ai = new GoogleGenAI({ apiKey: apiKeyOverride || process.env.API_KEY || 'dummy' });
              const response = await ai.models.generateContent({
                  model: 'gemini-3.1-pro-preview',
                  contents: {
@@ -638,7 +639,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 
   useEffect(() => {
     if (isOpen && !chatInstance.current) {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'dummy' });
+      const ai = new GoogleGenAI({ apiKey: apiKeyOverride || process.env.API_KEY || 'dummy' });
       const discordTools: FunctionDeclaration[] = [
         {
           name: "sendToDiscord",
@@ -720,7 +721,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
     if (!code) return { text: initialResponse, code: null };
     setLoadingStatus('AI TESTING ENGINE...');
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'dummy' });
+      const ai = new GoogleGenAI({ apiKey: apiKeyOverride || process.env.API_KEY || 'dummy' });
       const testResult = await ai.models.generateContent({
         model: 'gemini-3.1-pro-preview',
         contents: `Kiểm tra và FIX BUG đoạn code sau cho yêu cầu: "${originalPrompt}". Chỉ trả về block code hoàn thiện: \`\`\`${code}\`\`\``,
@@ -745,7 +746,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
     handleInteraction(); // Mark interaction explicitly
 
     const rawTextToSend = customMessage || input.trim();
-    const textToSend = evadeSafetyFilters(rawTextToSend);
+    const textToSend = evadeSafetyFilters(rawTextToSend, bypassMode);
     if (!textToSend && !imagePart || isLoading) return;
 
     // Check Camera Commands
@@ -795,12 +796,12 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
     setLoadingStatus('AI BRAIN ACTIVE...');
     try {
       if (!chatInstance.current) {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'dummy' });
+        const ai = new GoogleGenAI({ apiKey: apiKeyOverride || process.env.API_KEY || 'dummy' });
         chatInstance.current = ai.chats.create({ model: 'gemini-3.1-pro-preview' });
       }
       let result;
       if (imagePart) {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'dummy' });
+        const ai = new GoogleGenAI({ apiKey: apiKeyOverride || process.env.API_KEY || 'dummy' });
         result = await ai.models.generateContent({ model: 'gemini-3.1-pro-preview', contents: { parts: [imagePart, { text: textToSend || "Mày thấy cái này thế nào? Chửi cho tao." }] } });
       } else {
         result = await chatInstance.current.sendMessage({ message: textToSend });
@@ -1052,7 +1053,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
             </footer>
 
                         </>
-            ) : (
+            ) : currentView === "settings-main" ? (
               <div className="flex flex-col h-full bg-[#000000] text-white overflow-hidden w-full relative z-30">
 <nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-8 pb-2 flex items-center justify-between">
 <button onClick={() => setShowSettings(false)} className="text-primary flex items-center -ml-1">
@@ -1173,7 +1174,103 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 <div className="w-32 h-1 bg-white/25 rounded-full mb-2"></div>
 </footer>
               </div>
-            )}
+            ) : currentView === "settings-profile" ? (
+              <div className="flex flex-col h-full bg-[#000000] text-white overflow-hidden w-full relative z-30">
+                <nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-8 pb-2 flex items-center justify-between">
+                  <button onClick={() => setCurrentView("settings-main")} className="text-primary flex items-center -ml-1">
+                    <span className="material-symbols-outlined !text-[32px]">chevron_left</span>
+                    <span className="text-[17px]">Cài đặt</span>
+                  </button>
+                  <h1 className="text-[17px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Thông tin</h1>
+                  <button onClick={() => setCurrentView("chat")} className="text-primary text-[17px] font-normal">Xong</button>
+                </nav>
+                <main className="flex-1 overflow-y-auto pt-6 scrollbar-hide">
+                  <div className="flex flex-col items-center mb-8 mt-2">
+                    <div className="relative mb-4">
+                      <div className="size-20 rounded-full bg-gradient-to-tr from-primary to-blue-500 flex items-center justify-center p-[2px]">
+                        <div className="size-full rounded-full bg-black flex items-center justify-center border-2 border-black">
+                          <span className="text-[32px] font-medium text-white">{userName.charAt(0)}</span>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-0 right-0 size-6 bg-[#1C1C1E] rounded-full flex items-center justify-center border border-black cursor-pointer">
+                        <span className="material-symbols-outlined !text-[14px] text-white/70">edit</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">THÔNG TIN CƠ BẢN</div>
+                  <div className="px-3">
+                    <div className="rounded-xl overflow-hidden mb-6">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
+                        <span className="text-[17px] min-w-[100px]">Tên</span>
+                        <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} className="bg-transparent text-right text-[17px] text-white/60 focus:outline-none focus:text-white w-full" />
+                      </div>
+                      <div className="h-[0.5px] bg-white/10 ml-4"></div>
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
+                        <span className="text-[17px] min-w-[100px]">Username</span>
+                        <input type="text" value={userHandle} onChange={(e) => setUserHandle(e.target.value)} className="bg-transparent text-right text-[17px] text-white/60 focus:outline-none focus:text-white w-full" />
+                      </div>
+                      <div className="h-[0.5px] bg-white/10 ml-4"></div>
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
+                        <span className="text-[17px] min-w-[100px]">Email</span>
+                        <input type="text" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="bg-transparent text-right text-[17px] text-white/60 focus:outline-none focus:text-white w-full" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">BẢO MẬT</div>
+                  <div className="px-3">
+                    <div className="rounded-xl overflow-hidden mb-6">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-[#1C1C1E]">
+                        <span className="text-[17px]">Sử dụng Face ID</span>
+                        <div onClick={() => setFaceIdEnabled(!faceIdEnabled)} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${faceIdEnabled ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${faceIdEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </main>
+              </div>
+            ) : currentView === "settings-apikey" ? (
+              <div className="flex flex-col h-full bg-[#000000] text-white overflow-hidden w-full relative z-30">
+                <nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-8 pb-2 flex items-center justify-between">
+                  <button onClick={() => setCurrentView("settings-main")} className="text-primary flex items-center -ml-1">
+                    <span className="material-symbols-outlined !text-[32px]">chevron_left</span>
+                    <span className="text-[17px]">Cài đặt</span>
+                  </button>
+                  <h1 className="text-[17px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Khóa API</h1>
+                  <button onClick={() => setCurrentView("chat")} className="text-primary text-[17px] font-normal">Xong</button>
+                </nav>
+                <main className="flex-1 overflow-y-auto pt-6 scrollbar-hide">
+                  <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">GEMINI API KEY</div>
+                  <div className="px-3">
+                    <div className="rounded-xl overflow-hidden mb-2 bg-[#1C1C1E] p-3">
+                      <p className="text-[13px] text-white/50 mb-3 leading-relaxed">
+                        Theo mặc định, ứng dụng sử dụng khóa API tích hợp. Nếu bạn gặp lỗi giới hạn (rate limit) hoặc muốn dùng model xịn hơn, hãy nhập API Key của riêng bạn.
+                      </p>
+                      <div className="flex bg-black/30 rounded-lg p-2 border border-white/5 focus-within:border-primary/50 transition-colors">
+                        <span className="material-symbols-outlined !text-[20px] text-white/40 mr-2 mt-0.5">key</span>
+                        <input type="password" value={apiKeyOverride} onChange={(e) => setApiKeyOverride(e.target.value)} placeholder="Nhập API Key của bạn (AIzaSy...)" className="bg-transparent text-[15px] text-white focus:outline-none w-full placeholder:text-white/20" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="px-3 mt-6">
+                    <div className="rounded-xl overflow-hidden mb-6">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-[#1C1C1E]">
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined !text-[20px] text-primary">public</span>
+                          <span className="text-[17px]">Dùng Proxy Bypass</span>
+                        </div>
+                        <div onClick={() => setProxyConnected(!proxyConnected)} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${proxyConnected ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${proxyConnected ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </main>
+              </div>
+            ) : (              null)}
 </motion.div>
         )}
       </AnimatePresence>
