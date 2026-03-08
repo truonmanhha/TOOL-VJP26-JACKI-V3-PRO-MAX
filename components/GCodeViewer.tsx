@@ -1239,10 +1239,26 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   return (
     <div className="flex flex-col gap-4 h-full pb-10">
-      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 md:p-3 rounded-t-xl flex flex-col md:flex-row items-center justify-between gap-4 relative z-50">
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-           <div className="flex items-center gap-3"><div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><Monitor size={20} /></div><div><h2 className="text-white font-black uppercase tracking-widest text-sm truncate max-w-[150px] md:max-w-none">{file ? file.name : t.gcodeUpload}</h2><p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.gcodeSub}</p></div></div>
-           <div className="flex items-center gap-2"><input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} /><button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 border border-white/10 transition-all shrink-0"><Upload size={14} /> TẢI FILE</button><button onClick={handleOpenFilePicker} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg transition-all shrink-0"><HardDrive size={14} /> LOCAL ACCESS</button></div>
+      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-3 md:p-4 rounded-t-xl flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 relative z-50">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full xl:w-auto flex-shrink-0">
+           <div className="flex items-center gap-3">
+               <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-400 shadow-inner">
+                   <Monitor size={20} />
+               </div>
+               <div className="flex flex-col">
+                   <h2 className="text-white font-black uppercase tracking-widest text-sm truncate max-w-[200px] xl:max-w-[300px]" title={file ? file.name : t.gcodeUpload}>{file ? file.name : t.gcodeUpload}</h2>
+                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.gcodeSub}</p>
+               </div>
+           </div>
+           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
+               <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+               <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 border border-white/10 transition-all shadow-sm flex-1 md:flex-auto whitespace-nowrap active:scale-95">
+                   <Upload size={16} /> <span className="hidden sm:inline">TẢI FILE</span><span className="sm:hidden">TẢI LÊN</span>
+               </button>
+               <button onClick={handleOpenFilePicker} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(37,99,235,0.3)] transition-all flex-1 md:flex-auto whitespace-nowrap active:scale-95">
+                   <HardDrive size={16} /> <span className="hidden sm:inline">LOCAL ACCESS</span><span className="sm:hidden">LOCAL</span>
+               </button>
+           </div>
         </div>
         {!is3DFullScreen && renderToolbarButtons()}
       </div>
