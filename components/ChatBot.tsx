@@ -387,6 +387,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
   const [userEmail, setUserEmail] = useState(() => localStorage.getItem("vjp26_user_email") || "user@example.com");
   const [faceIdEnabled, setFaceIdEnabled] = useState(true);
   const [currentView, setCurrentView] = useState("settings-main");
+  const [allowNotifications, setAllowNotifications] = useState(true);
+  const [personalization, setPersonalization] = useState(true);
   const [knowledgeBase, setKnowledgeBase] = useState<string[]>(() => {
     const saved = localStorage.getItem('vjp26_ai_knowledge');
     return saved ? JSON.parse(saved) : [];
@@ -1090,15 +1092,15 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">TÙY CHỌN TRỢ LÝ</div>
 <div className="px-3">
 <div className="rounded-xl overflow-hidden mb-6">
-<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setPersonalization(!personalization)}>
 <div className="flex items-center gap-3">
 <div className="size-7 rounded-full bg-purple-500 flex items-center justify-center">
 <span className="material-symbols-outlined !text-[18px] text-white">psychology</span>
 </div>
-<span className="text-[17px]">Thông tin cá nhân</span>
+<span className="text-[17px]">Cá nhân hóa</span>
 </div>
-<div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#34C759]">
-<span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[20px]"></span>
+<div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${personalization ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+<span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${personalization ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
 </div>
 </div>
 <div className="h-[0.5px] bg-white/10 ml-12"></div>
@@ -1131,15 +1133,15 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">THÔNG BÁO</div>
 <div className="px-3">
 <div className="rounded-xl overflow-hidden mb-6">
-<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setAllowNotifications(!allowNotifications)}>
 <div className="flex items-center gap-3">
 <div className="size-7 rounded-full bg-red-500 flex items-center justify-center">
 <span className="material-symbols-outlined !text-[18px] text-white">notifications</span>
 </div>
-<span className="text-[17px]">Thông tin cá nhân</span>
+<span className="text-[17px]">Cho phép thông báo</span>
 </div>
-<div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none bg-[#34C759]">
-<span className="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform translate-x-[20px]"></span>
+<div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${allowNotifications ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+<span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${allowNotifications ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
 </div>
 </div>
 <div className="h-[0.5px] bg-white/10 ml-12"></div>
