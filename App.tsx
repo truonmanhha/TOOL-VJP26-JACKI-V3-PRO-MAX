@@ -114,7 +114,7 @@ const App: React.FC = () => {
 
   return (
     <div 
-      className={`min-h-screen ${isLiteMode ? 'bg-[#0a0e14]' : 'bg-[#0f1419]'} text-slate-200 transition-colors duration-500`}
+      className={`min-h-screen flex flex-col ${isLiteMode ? 'bg-[#0a0e14]' : 'bg-[#0f1419]'} text-slate-200 transition-colors duration-500`}
       onContextMenu={handleContextMenu}
     >
       {/* RadialMenu removed - only nesting AX has its own menu */}
@@ -143,7 +143,7 @@ const App: React.FC = () => {
       {/* MATRIX BACKGROUND - DISABLED IN LITE MODE */}
       {!isLiteMode && <MatrixBackground />}
 
-      <div className={`relative z-20 ${isLiteMode ? 'w-full h-screen px-2 py-2' : activeTab === 'nest' ? 'w-full px-0 py-0' : activeTab === 'gcode' ? 'w-full px-2 md:px-4 py-4' : 'max-w-[1400px] mx-auto px-4 py-8 md:py-8'}`}>
+      <div className={`relative z-20 flex-1 flex flex-col ${isLiteMode ? 'w-full h-screen px-2 py-2' : activeTab === 'nest' ? 'w-full px-0 py-0' : activeTab === 'gcode' ? 'w-full px-2 md:px-4 py-4 pb-0' : 'max-w-[1400px] mx-auto px-4 py-8 md:py-8'}`}>
         
         {/* HEADER & TABS - HIDDEN IN LITE MODE */}
         {!isLiteMode && (
@@ -194,7 +194,7 @@ const App: React.FC = () => {
             </div>
         )}
 
-        <main className={`relative ${isLiteMode ? 'h-full' : 'min-h-[600px]'}`}>
+        <main className={`relative ${isLiteMode ? 'h-full' : 'min-h-[600px] flex-1 flex flex-col'}`}>
           <AnimatePresence mode="wait">
             {activeTab === 'calc' && !isLiteMode && (
               <motion.div key="calc-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -207,7 +207,7 @@ const App: React.FC = () => {
               </motion.div>
             )}
             {activeTab === 'gcode' && (
-               <motion.div key="gcode-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={isLiteMode ? 'h-full' : ''}>
+               <motion.div key="gcode-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 h-full w-full">
                 <GCodeViewer lang={lang} isLiteMode={isLiteMode} setIsLiteMode={setIsLiteMode} />
               </motion.div>
             )}

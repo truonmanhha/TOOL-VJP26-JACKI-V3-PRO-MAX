@@ -1238,7 +1238,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   );
 
   return (
-    <div className="flex flex-col gap-4 h-full pb-10">
+    <div className="flex flex-col gap-0 h-full min-h-[calc(100vh-250px)] pb-4 w-full">
       <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
            
            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0">
@@ -1271,7 +1271,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                </div>
            )}
       </div>
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-1 bg-[#25252b] p-1 lg:h-[75vh] w-full min-h-[600px] rounded-b-xl border border-black/50"> 
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-1 bg-[#25252b] p-1 w-full h-full min-h-[600px] rounded-b-xl border border-t-0 border-black/50"> 
         {showEditor && (
             <div className="col-span-1 lg:col-span-3 bg-[#1e1e24] rounded flex flex-col overflow-hidden shadow-inner border border-black/40 relative z-0 h-96 lg:h-full order-2 lg:order-1">
             <div className="p-3 bg-slate-900 border-b border-white/5 flex items-center justify-between"><div className="flex items-center gap-2"><Code size={14} className="text-blue-400" /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{isEditMode ? "CHẾ ĐỘ SỬA" : "XEM MÃ GCODE"}</span></div><div className="flex items-center gap-2">
