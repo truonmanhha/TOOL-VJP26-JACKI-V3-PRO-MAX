@@ -1182,62 +1182,94 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 </footer>
               </div>
             ) : currentView === "settings-profile" ? (
-              <div className="flex flex-col h-full bg-[#000000] text-white overflow-hidden w-full relative z-30">
-                <nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-8 pb-2 flex items-center justify-between">
+
+              <div className="absolute inset-0 z-50 transform translate-y-0 transition-transform duration-300 ease-out bg-[#000000] flex flex-col w-[320px] h-[568px]">
+                <nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-6 pb-2 flex items-center justify-between">
                   <button onClick={() => setCurrentView("settings-main")} className="text-primary flex items-center -ml-1">
-                    <span className="material-symbols-outlined !text-[32px]">chevron_left</span>
-                    <span className="text-[17px]">Cài đặt</span>
+                    <span className="material-symbols-outlined !text-[24px]">chevron_left</span>
+                    <span className="text-[15px]">Cài đặt</span>
                   </button>
-                  <h1 className="text-[17px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Thông tin</h1>
-                  <button onClick={() => setCurrentView("chat")} className="text-primary text-[17px] font-normal">Xong</button>
+                  <h1 className="text-[15px] font-semibold tracking-tight absolute left-1/2 -translate-x-1/2">Chi tiết hồ sơ</h1>
+                  <button onClick={() => setCurrentView("chat")} className="text-primary text-[15px] font-semibold">Lưu</button>
                 </nav>
-                <main className="flex-1 overflow-y-auto pt-6 scrollbar-hide">
-                  <div className="flex flex-col items-center mb-8 mt-2">
-                    <div className="relative mb-4">
-                      <div className="size-20 rounded-full bg-gradient-to-tr from-primary to-blue-500 flex items-center justify-center p-[2px]">
-                        <div className="size-full rounded-full bg-black flex items-center justify-center border-2 border-black">
-                          <span className="text-[32px] font-medium text-white">{userName.charAt(0)}</span>
+                <main className="flex-1 overflow-y-auto scrollbar-hide px-0">
+                  <div className="flex flex-col items-center pt-4 pb-6">
+                    <div className="relative group">
+                      <div className="size-20 rounded-full bg-[#1C1C1E] flex items-center justify-center overflow-hidden border-2 border-white/10">
+                        <span className="material-symbols-outlined text-white/40" style={{ fontSize: '48px' }}>person</span>
+                      </div>
+                      <div className="absolute bottom-0 right-0 size-8 bg-[#007AFF] rounded-full flex items-center justify-center border-2 border-[#000000]">
+                        <span className="material-symbols-outlined !text-[18px] text-white">camera_alt</span>
+                      </div>
+                    </div>
+                    <button className="mt-4 text-[#007AFF] text-[15px] font-normal">Sửa ảnh</button>
+                  </div>
+                  
+                  <div className="px-4 pb-2 text-[13px] uppercase text-white/40 tracking-tight">Thông tin cá nhân</div>
+                  <div className="px-4">
+                    <div className="rounded-xl overflow-hidden mb-8">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
+                        <span className="text-[17px]">Họ và tên</span>
+                        <input className="bg-transparent text-[17px] text-white/40 text-right focus:outline-none focus:text-white w-[140px]" placeholder="Tên Là gì ?" type="text" value={userName} onChange={(e) => setUserName(e.target.value)} />
+                      </div>
+                      <div className="h-[0.5px] bg-[rgba(255,255,255,0.12)] ml-4"></div>
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
+                        <span className="text-[17px]">Địa chỉ Email</span>
+                        <input className="bg-transparent text-[17px] text-white/40 text-right focus:outline-none focus:text-white w-[140px]" placeholder="Email mày là gì ?" type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} />
+                      </div>
+                      <div className="h-[0.5px] bg-[rgba(255,255,255,0.12)] ml-4"></div>
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
+                        <span className="text-[17px]">Tên người dùng</span>
+                        <input className="bg-transparent text-[17px] text-white/40 text-right focus:outline-none focus:text-white w-[140px]" placeholder="Đừng nói đéo biết" type="text" value={userHandle} onChange={(e) => setUserHandle(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-2 text-[13px] uppercase text-white/40 tracking-tight">Bảo mật</div>
+                  <div className="px-4">
+                    <div className="rounded-xl overflow-hidden mb-8">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="size-7 rounded-full bg-neutral-600 flex items-center justify-center">
+                            <span className="material-symbols-outlined !text-[18px] text-white">lock</span>
+                          </div>
+                          <span className="text-[17px]">Đổi mật khẩu</span>
                         </div>
+                        <span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span>
                       </div>
-                      <div className="absolute bottom-0 right-0 size-6 bg-[#1C1C1E] rounded-full flex items-center justify-center border border-black cursor-pointer">
-                        <span className="material-symbols-outlined !text-[14px] text-white/70">edit</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">THÔNG TIN CƠ BẢN</div>
-                  <div className="px-3">
-                    <div className="rounded-xl overflow-hidden mb-6">
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
-                        <span className="text-[17px] min-w-[100px]">Tên</span>
-                        <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} className="bg-transparent text-right text-[17px] text-white/60 focus:outline-none focus:text-white w-full" />
-                      </div>
-                      <div className="h-[0.5px] bg-white/10 ml-4"></div>
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
-                        <span className="text-[17px] min-w-[100px]">Username</span>
-                        <input type="text" value={userHandle} onChange={(e) => setUserHandle(e.target.value)} className="bg-transparent text-right text-[17px] text-white/60 focus:outline-none focus:text-white w-full" />
-                      </div>
-                      <div className="h-[0.5px] bg-white/10 ml-4"></div>
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E]">
-                        <span className="text-[17px] min-w-[100px]">Email</span>
-                        <input type="text" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="bg-transparent text-right text-[17px] text-white/60 focus:outline-none focus:text-white w-full" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">BẢO MẬT</div>
-                  <div className="px-3">
-                    <div className="rounded-xl overflow-hidden mb-6">
-                      <div className="flex items-center justify-between px-4 py-2.5 bg-[#1C1C1E]">
-                        <span className="text-[17px]">Sử dụng Face ID</span>
-                        <div onClick={() => setFaceIdEnabled(!faceIdEnabled)} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${faceIdEnabled ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+                      <div className="h-[0.5px] bg-[rgba(255,255,255,0.12)] ml-14"></div>
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="size-7 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span className="material-symbols-outlined !text-[18px] text-white">fingerprint</span>
+                          </div>
+                          <span className="text-[17px]">Face ID / Vân tay</span>
+                        </div>
+                        <div onClick={() => setFaceIdEnabled(!faceIdEnabled)} className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${faceIdEnabled ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
                           <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${faceIdEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  <div className="px-4 pb-2 text-[13px] uppercase text-white/40 tracking-tight">Tác vụ tài khoản</div>
+                  <div className="px-4 pb-20">
+                    <div className="rounded-xl overflow-hidden mb-8">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+                        <div className="flex items-center gap-3 text-[#FF453A]">
+                          <div className="size-7 rounded-full bg-[#FF453A]/10 flex items-center justify-center">
+                            <span className="material-symbols-outlined !text-[18px] text-[#FF453A]">delete</span>
+                          </div>
+                          <span className="text-[17px] font-medium">Xóa tài khoản</span>
+                        </div>
+                        <span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span>
+                      </div>
+                    </div>
+                    <p className="px-4 text-[13px] text-white/30 text-center">Xóa tài khoản sẽ loại bỏ vĩnh viễn tất cả dữ liệu và lịch sử API của bạn.</p>
+                  </div>
                 </main>
               </div>
+
             ) : currentView === "settings-apikey" ? (
               <div className="flex flex-col h-full bg-[#000000] text-white overflow-hidden w-full relative z-30">
                 <nav className="sticky top-0 z-30 ios-nav-glass px-3 pt-8 pb-2 flex items-center justify-between">
