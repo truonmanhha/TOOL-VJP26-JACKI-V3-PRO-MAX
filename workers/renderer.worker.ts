@@ -4,6 +4,7 @@ let renderer: THREE.WebGLRenderer;
 let scene: THREE.Scene;
 let camera: THREE.OrthographicCamera;
 let batchMesh: any; // BatchedMesh
+let targetCameraPos = { x: 0, y: 0, zoom: 1 };
 let partMap = new Map();
 
 self.onmessage = (e) => {
@@ -75,7 +76,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-let targetCameraPos = { x: 0, y: 0, zoom: 1 };
+ 
 
     // Grid
     const grid = new THREE.GridHelper(10000, 100, 0x1e293b, 0x0f172a);
@@ -145,33 +146,6 @@ function updateObjects(objects: any[]) {
 let currentObjects: any[] = [];
 let lastUseProxy = false;
 
-function animate() {
-    requestAnimationFrame(animate);
-    
-    // 🚀 ADAPTIVE LERP & LOD SWAP
-    if (camera && targetCameraPos) {
-        camera.position.x += (targetCameraPos.x - camera.position.x) * 0.15;
-        camera.position.y += (targetCameraPos.y - camera.position.y) * 0.15;
-        camera.zoom += (targetCameraPos.zoom - camera.zoom) * 0.15;
-        camera.updateProjectionMatrix();
-
-        // 🚀 LOD LOGIC: Clear/Detail threshold
-        const useProxy = camera.zoom < 0.25; 
-        
-        if (batchMesh && useProxy !== lastUseProxy) {
-            currentObjects.forEach(obj => {
-                const rId = partMap.get(`${obj.id}_real`);
-                const pId = partMap.get(`${obj.id}_proxy`);
-                if (rId !== undefined) batchMesh.setVisibleAt(rId, !useProxy);
-                if (pId !== undefined) batchMesh.setVisibleAt(pId, useProxy);
-            });
-            batchMesh.material.opacity = useProxy ? 0.4 : 0.8;
-            lastUseProxy = useProxy;
-        }
-    }
-    
-    renderer.render(scene, camera);
-}
 
 
 function updateCamera(payload: any) {
@@ -190,7 +164,3 @@ function resize(width: number, height: number) {
     camera.updateProjectionMatrix();
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-}
