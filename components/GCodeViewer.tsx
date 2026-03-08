@@ -1210,7 +1210,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     if (!isWorkspaceLocked) {
       if (workspaceRef.current) {
         const rect = workspaceRef.current.getBoundingClientRect();
-        const yOffset = -65;
+        const yOffset = 0;
         const targetY = rect.top + window.pageYOffset + yOffset;
         
         fluidScroll(targetY, 1200);
@@ -1218,7 +1218,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         setTimeout(() => {
           setIsWorkspaceLocked(true);
           setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
-        }, 1300);
+        }, 1250); 
       }
     } else {
       document.body.style.overflow = 'auto';
