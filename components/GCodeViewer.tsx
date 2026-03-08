@@ -995,6 +995,25 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [gpuName, setGpuName] = useState<string>('Unknown GPU');
   const [cpuThreads, setCpuThreads] = useState<number>(window.navigator.hardwareConcurrency || 4);
   const [gpuPreference, setGpuPreference] = useState<'high-performance' | 'low-power' | 'default'>(() => loadSetting('vjp26_gc_gpu_pref', 'high-performance'));
+
+  const [showGpuWarning, setShowGpuWarning] = useState(false);
+
+  useEffect(() => {
+    // If user prefers high-performance, but we detect an integrated GPU, warn them ONCE
+    if (gpuPreference === 'high-performance' && gpuName) {
+        const isIntel = gpuName.toLowerCase().includes('intel');
+        const isAMDOnboard = gpuName.toLowerCase().includes('radeon graphics');
+        const isAngle = gpuName.toLowerCase().includes('angle') || gpuName.toLowerCase().includes('swiftshader');
+        
+        const hasWarned = sessionStorage.getItem('vjp26_gpu_warned');
+        
+        if ((isIntel || isAMDOnboard || isAngle) && !hasWarned && gpuName !== 'Unknown GPU') {
+            setShowGpuWarning(true);
+            sessionStorage.setItem('vjp26_gpu_warned', 'true');
+        }
+    }
+  }, [gpuName, gpuPreference]);
+
   const [showGpuMenu, setShowGpuMenu] = useState(false);
   const [detectedGpus, setDetectedGpus] = useState<{high: string, low: string}>({ high: 'Đang quét...', low: 'Đang quét...' });
   
@@ -1591,6 +1610,36 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
           
           <div className={`absolute left-4 z-10 pointer-events-none hidden sm:block ${is3DFullScreen ? 'top-[83px]' : 'top-4'}`}><div className="bg-black/80 backdrop-blur-sm border border-white/10 rounded-2xl p-4 shadow-2xl"><div className="flex flex-col gap-1">{[{l:'X',c:'text-red-500',v:displayPos.x},{l:'Y',c:'text-green-500',v:displayPos.y},{l:'Z',c:'text-blue-500',v:displayPos.z}].map(a=>(<div key={a.l} className="flex items-baseline gap-4"><span className={`text-xl font-black ${a.c} w-6`}>{a.l}</span><span className="text-3xl font-mono font-bold tracking-wider" style={{ color: theme.text }}>{a.v.toFixed(3)}</span></div>))}<div className="h-px bg-white/10 my-3" /><div className="flex justify-between items-center text-xs font-mono text-slate-400"><div className="flex gap-2">LỆNH: <span className="font-bold" style={{ color: theme.text }}>{currentCmd.code.split(' ')[0]}</span></div><div className="flex gap-2 text-orange-400">F: <span className="font-bold">{currentCmd.f || 0}</span></div></div></div></div></div>
           {!isLiteMode && <div className="absolute bottom-4 left-4 z-10 pointer-events-none"><div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-lg"><div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><HardDrive size={10} /><span>PHẦN CỨNG ({cpuThreads} THREADS)</span></div><div className="text-[10px] font-mono text-emerald-400 truncate max-w-[200px]" title={gpuName}>{gpuName.replace(/ANGLE \((.*)\)/, '$1')}</div></div></div>}
+          
+          {/* Cảnh báo Windows chặn GPU */}
+          <AnimatePresence>
+            {showGpuWarning && (
+                <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div initial={{scale: 0.9, y: 20}} animate={{scale: 1, y: 0}} className="bg-slate-900 border border-red-500/50 rounded-2xl p-6 max-w-lg shadow-2xl relative">
+                        <button onClick={() => setShowGpuWarning(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={20} /></button>
+                        <div className="flex items-start gap-4">
+                            <div className="p-3 bg-red-500/20 text-red-500 rounded-full"><AlertCircle size={32} /></div>
+                            <div>
+                                <h3 className="text-xl font-black text-white mb-2 uppercase tracking-wide">Trình duyệt đang bị Windows khóa Card Rời!</h3>
+                                <p className="text-sm text-slate-300 mb-4 leading-relaxed">
+                                    Ứng dụng đã yêu cầu sử dụng Card Rời, nhưng Windows hiện đang ép trình duyệt chạy bằng Card Onboard <strong>({gpuName})</strong> để tiết kiệm pin. Khung hình 3D có thể sẽ bị giật lag.
+                                </p>
+                                <div className="bg-black/50 rounded-xl p-4 border border-white/10 mb-4 text-xs text-slate-400 font-mono">
+                                    <strong>Cách khắc phục vĩnh viễn:</strong><br/>
+                                    1. Mở thư mục chứa code Tool này.<br/>
+                                    2. Tìm và chạy file <span className="text-yellow-400 font-bold">Auto_Fix_GPU.bat</span><br/>
+                                    3. Khởi động lại trình duyệt Edge/Chrome.
+                                </div>
+                                <div className="flex gap-3 justify-end">
+                                    <button onClick={() => setShowGpuWarning(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold transition-all">Đã hiểu, bỏ qua</button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>{isProcessing && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center"><Loader2 size={48} className="text-blue-500 animate-spin mb-4" /><h3 className="text-white font-black uppercase tracking-widest text-lg">ĐANG XỬ LÝ DỮ LIỆU</h3><div className="w-64 h-2 bg-slate-800 rounded-full mt-4 overflow-hidden border border-white/10"><motion.div className="h-full bg-blue-500" initial={{width:0}} animate={{width:`${loadingProgress}%`}} /></div><span className="text-blue-400 font-mono text-sm mt-2">{loadingProgress.toFixed(1)}%</span></motion.div>}</AnimatePresence>
           
           <Canvas key={gpuPreference} camera={{ position: [100, -100, 100], fov: 45, far: 100000, near: 0.1 }} dpr={isLiteMode ? 1 : [1, 2]} gl={{ powerPreference: gpuPreference, antialias: !isLiteMode, stencil: false, depth: true }}><color attach="background" args={[theme.background]} />
