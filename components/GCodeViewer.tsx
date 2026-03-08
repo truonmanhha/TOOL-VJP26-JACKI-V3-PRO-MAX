@@ -1497,9 +1497,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         <div className="whitespace-pre-wrap">{aiAnalysis}</div>
         <div className="bg-black/50 rounded-lg border border-white/10 p-2 overflow-hidden aspect-video relative flex items-center justify-center group mt-4">
             {!isPlaying ? (
-                <button onClick={() => { setCurrentIndex(0);
-              setSpeedSliderVal(100);
-              setIsPlaying(true); setCurrentIndex(0); }} className="absolute z-10 w-12 h-12 bg-blue-600/80 hover:bg-blue-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all group-hover:scale-110">
+                <button onClick={() => { simState.current.index = 0; simState.current.progress = 0; setCurrentIndex(0); setIsPlaying(true); }} className="absolute z-10 w-12 h-12 bg-blue-600/80 hover:bg-blue-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all group-hover:scale-110">
                     <Play size={20} className="ml-1" fill="currentColor" />
                 </button>
             ) : (
