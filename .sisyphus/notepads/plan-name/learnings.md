@@ -1,4 +1,0 @@
-- Use specific color codes like `from-violet-600 to-indigo-600` for user message bubbles, and `bg-black/40 backdrop-blur-md` with `border-l-2 border-blue-400` for AI message bubbles.
-- Glow effects are achieved effectively by leveraging standard Tailwind CSS shadow definitions such as `shadow-[0_0_20px_rgba(124,58,237,0.3)]`.
-- The 'pure glass' effect is enhanced by employing `bg-black/40 backdrop-blur-md`.
-- Ensure main dimensions of container iPhone 5 sizing (`320x568`).
