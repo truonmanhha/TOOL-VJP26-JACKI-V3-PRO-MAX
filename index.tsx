@@ -2,6 +2,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { runRenderBenchmark } from './services/benchmark';
+
+declare global {
+  interface Window {
+    runRenderBenchmark?: typeof runRenderBenchmark;
+  }
+}
+
+window.runRenderBenchmark = runRenderBenchmark;
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

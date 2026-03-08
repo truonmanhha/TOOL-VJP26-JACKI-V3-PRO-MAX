@@ -15,7 +15,7 @@ export interface OfflineRendererProgress {
 export interface RenderVideoOfflineParams<TState = unknown> {
   commands: GCodeCommand[];
   initialSpeed: number;
-  canvas: HTMLCanvasElement;
+  canvas: OffscreenCanvas | HTMLCanvasElement;
   onProgress?: (progress: OfflineRendererProgress) => void;
 
   fps?: number;
@@ -31,9 +31,13 @@ export interface RenderVideoOfflineParams<TState = unknown> {
 
   yieldEveryFrames?: number;
   yieldDelayMs?: number;
+
+  forceYieldOnBackpressure?: boolean;
+  backpressureYieldThreshold?: number;
 }
 
 const MICROS_PER_SECOND = 1_000_000;
+const DEFAULT_YIELD_EVERY_FRAMES = 8;
 
 export async function renderVideoOffline<TState = unknown>(params: RenderVideoOfflineParams<TState>): Promise<Blob> {
   const {
@@ -47,8 +51,10 @@ export async function renderVideoOffline<TState = unknown>(params: RenderVideoOf
     applyFrameState,
     renderScene,
     restoreState,
-    yieldEveryFrames = 12,
-    yieldDelayMs = 0
+    yieldEveryFrames = DEFAULT_YIELD_EVERY_FRAMES,
+    yieldDelayMs = 0,
+    forceYieldOnBackpressure = true,
+    backpressureYieldThreshold
   } = params;
 
   const frameRate = fps && fps > 0 ? fps : DEFAULT_WEBM_ENCODER_CONFIG.frameRate;
@@ -64,6 +70,8 @@ export async function renderVideoOffline<TState = unknown>(params: RenderVideoOf
     frameRate,
     ...encoderConfig
   });
+  const effectiveMaxEncodeQueueSize = encoderConfig?.maxEncodeQueueSize ?? DEFAULT_WEBM_ENCODER_CONFIG.maxEncodeQueueSize;
+  const resolvedBackpressureThreshold = backpressureYieldThreshold ?? Math.max(1, effectiveMaxEncodeQueueSize - 1);
 
   let encodedFrames = 0;
   let resultBlob: Blob | null = null;
@@ -105,7 +113,11 @@ export async function renderVideoOffline<TState = unknown>(params: RenderVideoOf
         break;
       }
 
-      if (yieldEveryFrames > 0 && encodedFrames % yieldEveryFrames === 0) {
+      const shouldYieldByFrameCount = yieldEveryFrames > 0 && encodedFrames % yieldEveryFrames === 0;
+      const shouldYieldByQueueFull = encoder.encodeQueueSize >= effectiveMaxEncodeQueueSize;
+      const shouldYieldByBackpressure = forceYieldOnBackpressure && encoder.encodeQueueSize >= resolvedBackpressureThreshold;
+
+      if (shouldYieldByFrameCount || shouldYieldByBackpressure || shouldYieldByQueueFull) {
         await delay(yieldDelayMs);
       }
     }
