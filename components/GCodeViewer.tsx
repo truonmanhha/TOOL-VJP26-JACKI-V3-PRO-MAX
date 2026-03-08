@@ -1090,7 +1090,10 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
             setCurrentIndex(0); setIsPlaying(false); setMeasurePoints([]); setElapsedTime(0);
         } catch (error) { alert("Lỗi xử lý file: " + error); } finally { setIsProcessing(false); }
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    // Fixed: Reset value so same file can be uploaded again
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
   };
   const handleOpenFilePicker = async () => {
      try {

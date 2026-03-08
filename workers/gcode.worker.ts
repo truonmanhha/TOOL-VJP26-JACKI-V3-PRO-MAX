@@ -149,15 +149,13 @@ _self.onmessage = async (e: MessageEvent) => {
                 const nextZ = zMatch ? parseFloat(zMatch[1]) : currentZ;
                 const iVal = iMatch ? parseFloat(iMatch[1]) : undefined;
                 const jVal = jMatch ? parseFloat(jMatch[1]) : undefined;
-                const iVal = iMatch ? parseFloat(iMatch[1]) : 0;
-                const jVal = jMatch ? parseFloat(jMatch[1]) : 0;
+            const rMatch = trimmed.match(/R([-+]?[0-9]*\.?[0-9]+)/);
             const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
 
                 cmds.push({
                     line: lineCount,
                     type,
                     x: nextX, y: nextY, z: nextZ, i: iVal, j: jVal,
-                    i: iVal, j: jVal,
                     f: activeF, s: activeS,
                     code: lineStr
                 });

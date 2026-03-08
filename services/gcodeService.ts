@@ -73,6 +73,7 @@ export class GCodeService {
                 const nextZ = zMatch ? parseFloat(zMatch[1]) : currentZ;
                 const iVal = iMatch ? parseFloat(iMatch[1]) : 0;
                 const jVal = jMatch ? parseFloat(jMatch[1]) : 0;
+        const rMatch = trimmed.match(/R([-+]?[0-9]*\.?[0-9]+)/);
         const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
 
                 cmds.push({ line: lineCount, type, x: nextX, y: nextY, z: nextZ, i: iVal, j: jVal, r: rVal, f: activeF, s: activeS, code: lineStr });
@@ -193,6 +194,7 @@ export class GCodeService {
         const nextZ = zMatch ? parseFloat(zMatch[1]) : currentZ;
                 const iVal = iMatch ? parseFloat(iMatch[1]) : 0;
                 const jVal = jMatch ? parseFloat(jMatch[1]) : 0;
+        const rMatch = trimmed.match(/R([-+]?[0-9]*\.?[0-9]+)/);
         const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
 
         commands.push({ line: index + 1, type: type as any, x: nextX, y: nextY, z: nextZ, i: iVal, j: jVal, r: rVal, f: activeF, s: activeS, code: line });
