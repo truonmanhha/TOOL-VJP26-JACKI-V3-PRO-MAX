@@ -1111,7 +1111,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     if (!content || isAnalyzing) return;
     setIsAnalyzing(true); setAiAnalysis('');
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: localStorage.getItem('vjp26_api_key') || process.env.API_KEY || 'dummy' });
         const report = analysis || gcodeService.analyze(commands);
         const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: `Phân tích đoạn mã G-Code CNC này và đưa ra nhận xét chuyên môn ngắn gọn (dưới 100 từ) về độ an toàn và hiệu quả.\n\nThông số kỹ thuật:\n- Tổng thời gian: ${report.totalTime}\n- Kích thước phôi: ${report.maxX - report.minX}x${report.maxY - report.minY}x${report.maxZ - report.minZ} mm\n- Số lần thay dao: ${report.toolChanges}\n- Cảnh báo va chạm: ${report.collisionWarnings.length}\n\nMã G-Code (50 dòng đầu):\n${content.substring(0, 1000)}...` });
         setAiAnalysis(response.text || "Không có phản hồi");
@@ -1503,11 +1503,11 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                         // Lưu ref của canvas để có thể record video
                         (miniCanvasRef as any).current = gl.domElement;
                     }}
-                    camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} dpr={1} gl={{ powerPreference: "low-power", antialias: false, stencil: false, depth: true, preserveDrawingBuffer: true }}>
+                    camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} dpr={1} gl={{ preserveDrawingBuffer: true }}>
                     <color attach="background" args={['#000000']} />
                     <SceneContent 
                         commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} theme={{...theme, background: '#000000'}} toolConfig={toolConfig} showGrid={false} snapMode={false} measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={true} 
-                        viewCubeControllerRef={useRef<any>(null)}
+                        viewCubeControllerRef={{current: null}}
                     />
                 </Canvas>
             </div>
