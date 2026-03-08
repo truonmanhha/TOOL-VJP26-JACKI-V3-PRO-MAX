@@ -263,7 +263,7 @@ export default OptimizedGCodeViewer;
 /**
  * ===== ADVANCED USAGE: WITH LOD SYSTEM =====
  * 
- * For extremely large geometries (>500k lines), integrate the ClusteredLODManager:
+ * For extremely large geometries (&gt; 500k lines), integrate the ClusteredLODManager:
  */
 
 export interface AdvancedOptimizationProps {
@@ -293,7 +293,7 @@ export const AdvancedOptimizedGCodeViewer: React.FC<AdvancedOptimizationProps> =
   return (
     <div>
       <h2>Advanced GCode Optimizer (Clustered LOD)</h2>
-      <p>Enable this for GCode files with >500k lines</p>
+      <p>Enable this for GCode files with &gt; 500k lines</p>
       {/* Component implementation here */}
     </div>
   );

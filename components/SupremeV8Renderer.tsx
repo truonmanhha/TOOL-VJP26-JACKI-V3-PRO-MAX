@@ -115,11 +115,11 @@ const SupremeV8Renderer: React.FC<SupremeV8Props> = ({ objects, sheetWidth, shee
     }, [objects]);
 
     return (
-        <div className=\"w-full h-full relative bg-black overscroll-none touch-none\">
-            <div className=\"absolute top-2 left-2 z-10 bg-red-500/20 backdrop-blur px-2 py-1 rounded text-[10px] text-red-400 font-mono border border-red-500/30 select-none pointer-events-none\">
+        <div className="w-full h-full relative bg-black overscroll-none touch-none">
+            <div className="absolute top-2 left-2 z-10 bg-red-500/20 backdrop-blur px-2 py-1 rounded text-[10px] text-red-400 font-mono border border-red-500/30 select-none pointer-events-none">
                 SUPREME V8: NUCLEAR MULTI-THREADED CORE (OFFSCREEN)
             </div>
-            <canvas ref={canvasRef} className=\"w-full h-full block\" />
+            <canvas ref={canvasRef} className="w-full h-full block" />
         </div>
     );
 };

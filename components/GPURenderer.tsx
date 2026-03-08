@@ -162,7 +162,7 @@ const SelectedPart: React.FC<{ object: GPUObject; onMove?: any, onSelect: any }>
             }}
         >
             <lineSegments geometry={geo}>
-                <lineBasicMaterial color=\"#ffffff\" linewidth={2} />
+                <lineBasicMaterial color="#ffffff" linewidth={2} />
             </lineSegments>
             <mesh>
                 <planeGeometry args={[500, 500]} />
@@ -191,13 +191,13 @@ const Scene: React.FC<{
 
   return (
     <>
-      <color attach=\"background\" args={['#020205']} />
+      <color attach="background" args={['#020205']} />
       <Grid 
         infiniteGrid 
         cellSize={100} 
         sectionSize={1000} 
-        sectionColor=\"#1e293b\" 
-        cellColor=\"#0f172a\" 
+        sectionColor="#1e293b" 
+        cellColor="#0f172a" 
         rotation={[Math.PI / 2, 0, 0]} 
       />
       <GlobalBatchRenderer objects={objects} onSelect={onSelect} onMove={onMove} />
@@ -215,8 +215,8 @@ const GPURenderer: React.FC<{
   onObjectMove?: (id: string, x: number, y: number) => void;
 }> = (props) => {
   return (
-    <div className=\"w-full h-full relative group\">
-      <div className=\"absolute top-2 left-2 z-10 bg-emerald-500/20 backdrop-blur px-2 py-1 rounded text-[10px] text-emerald-400 font-mono border border-emerald-500/30\">
+    <div className="w-full h-full relative group">
+      <div className="absolute top-2 left-2 z-10 bg-emerald-500/20 backdrop-blur px-2 py-1 rounded text-[10px] text-emerald-400 font-mono border border-emerald-500/30">
         GOD-MODE ENGINE: GLOBAL BATCHING (60FPS PAN)
       </div>
       <Canvas 
@@ -392,13 +392,13 @@ const Scene: React.FC<{
 
   return (
     <>
-      <color attach=\"background\" args={['#050510']} />
+      <color attach="background" args={['#050510']} />
       <Grid 
         infiniteGrid 
         cellSize={100} 
         sectionSize={1000} 
-        sectionColor=\"#1e293b\" 
-        cellColor=\"#0f172a\" 
+        sectionColor="#1e293b" 
+        cellColor="#0f172a" 
         rotation={[Math.PI / 2, 0, 0]} 
       />
       {objects.map(obj => (
@@ -422,8 +422,8 @@ const GPURenderer: React.FC<{
   onObjectMove?: (id: string, x: number, y: number) => void;
 }> = (props) => {
   return (
-    <div className=\"w-full h-full relative group\">
-      <div className=\"absolute top-2 left-2 z-10 bg-black/50 backdrop-blur px-2 py-1 rounded text-[10px] text-cyan-400 font-mono border border-cyan-500/30\">
+    <div className="w-full h-full relative group">
+      <div className="absolute top-2 left-2 z-10 bg-black/50 backdrop-blur px-2 py-1 rounded text-[10px] text-cyan-400 font-mono border border-cyan-500/30">
         AUTOCAD TURBO ENGINE ACTIVE (ZERO-COPY BINARY)
       </div>
       <Canvas 

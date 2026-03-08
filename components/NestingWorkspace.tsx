@@ -15,10 +15,9 @@ import {
     SheetInput,
     NestingStrategy,
     fileParser
+} from '@/services/nesting';
 import { SpatialIndexService, SpatialItem } from '@/services/SpatialIndexService';
 import { getBounds } from '@/services/nesting/geometry';
-
-} from '@/services/nesting';
 import CADCrosshair from '@/components/CADCrosshair';
 
 import DrawingWorkspace from '@/components/nesting/DrawingWorkspace';
@@ -318,7 +317,6 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
         
         setImportLoading(false);
         e.target.value = '';
-    }, [parts.length]);
 
     // Chuyển đổi sang đối tượng cho GPU Renderer
     const gpuObjects = useMemo(() => {
@@ -597,12 +595,9 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
                 </div>
 
                 {/* Right Panel - Canvas Area */}
-                {/* Right Panel - Canvas Area */}
-                <div ref={workspaceContainerRef} className=\"flex-1 flex flex-col bg-black relative overflow-hidden\">
-                    <CADCrosshair containerRef={workspaceContainerRef} color=\"#00ffff\" />
+                <div ref={workspaceContainerRef} className="flex-1 flex flex-col bg-black relative overflow-hidden">
+                    <CADCrosshair containerRef={workspaceContainerRef} color="#00ffff" />
                     
-                    <div className=\"absolute top-4 left-4 z-20 flex gap-2\">
-
                     <div className="absolute top-4 left-4 z-20 flex gap-2">
                         <button 
                             onClick={() => setRenderMode('standard')}
@@ -625,12 +620,6 @@ const NestingWorkspace: React.FC<NestingWorkspaceProps> = ({ onClose }) => {
                             sheetHeight={sheets[0].height}
                             onObjectSelect={handleObjectSelect}
                             onObjectMove={handleObjectMove}
-                        />
-
-                            objects={gpuObjects}
-                            sheetWidth={sheets[0].width}
-                            sheetHeight={sheets[0].height}
-                            selectedIds={selectedPartIds}
                             onObjectSelect={handleObjectSelect}
                         />
                     ) : (

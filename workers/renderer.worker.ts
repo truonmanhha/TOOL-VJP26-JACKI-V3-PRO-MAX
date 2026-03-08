@@ -173,52 +173,12 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-    // 🚀 BATCH LOADING LOGIC (Similar to Supreme V6 but in Worker)
-    // For now, clear and rebuild if count changes
-    if (batchMesh) {
-        scene.remove(batchMesh);
-        batchMesh.dispose();
-    }
-
-    let totalVertices = 0;
-    objects.forEach(obj => { if (obj.packedBuffer) totalVertices += (obj.packedBuffer.byteLength / 12); });
-
-    const material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 });
-    
-    // @ts-ignore
-    batchMesh = new THREE.BatchedMesh(objects.length * 2, totalVertices, totalVertices * 2, material);
-    batchMesh.frustumCulled = false;
-
-    objects.forEach((obj, i) => {
-        if (!obj.packedBuffer) return;
-        const geom = new THREE.BufferGeometry();
-        geom.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(obj.packedBuffer), 3));
-        
-        const color = new THREE.Color(obj.color || "#00ff00");
-        const colors = new Float32Array((obj.packedBuffer.byteLength / 12) * 3);
-        for(let j=0; j<colors.length; j+=3) { colors[j]=color.r; colors[j+1]=color.g; colors[j+2]=color.b; }
-        geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-        const id = batchMesh.addGeometry(geom);
-        const matrix = new THREE.Matrix4().makeRotationZ((obj.rotation * Math.PI) / 180).setPosition(obj.x, obj.y, 0);
-        batchMesh.setMatrixAt(id, matrix);
-    });
-
-    scene.add(batchMesh);
-}
 
 function updateCamera(payload: any) {
     if (!camera) return;
     targetCameraPos.x = payload.x;
     targetCameraPos.y = payload.y;
     targetCameraPos.zoom = payload.zoom;
-}
-
-    if (!camera) return;
-    camera.position.x = payload.x;
-    camera.position.y = payload.y;
-    camera.zoom = payload.zoom;
-    camera.updateProjectionMatrix();
 }
 
 function resize(width: number, height: number) {

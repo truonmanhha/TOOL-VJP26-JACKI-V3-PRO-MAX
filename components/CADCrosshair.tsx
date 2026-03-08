@@ -81,7 +81,7 @@ const CADCrosshair: React.FC<CADCrosshairProps> = ({ containerRef, color = '#00f
     return (
         <canvas
             ref={canvasRef}
-            className=\"absolute inset-0 pointer-events-none z-[100]\"
+            className="absolute inset-0 pointer-events-none z-[100]"
             style={{ mixBlendMode: 'difference' }} // Makes it visible on any background
         />
     );
