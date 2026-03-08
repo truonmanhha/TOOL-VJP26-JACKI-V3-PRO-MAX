@@ -994,6 +994,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [zoomFitTrigger, setZoomFitTrigger] = useState(0);
   const [gpuName, setGpuName] = useState<string>('Unknown GPU');
   const [cpuThreads, setCpuThreads] = useState<number>(window.navigator.hardwareConcurrency || 4);
+  const [gpuPreference, setGpuPreference] = useState<'high-performance' | 'low-power' | 'default'>(() => loadSetting('vjp26_gc_gpu_pref', 'high-performance'));
+  const [showGpuMenu, setShowGpuMenu] = useState(false);
+  useEffect(() => localStorage.setItem('vjp26_gc_gpu_pref', JSON.stringify(gpuPreference)), [gpuPreference]);
   const [toolConfig, setToolConfig] = useState<ToolConfig>(() => loadSetting('vjp26_gc_tool', { diameter: 6, length: 20, holderDiameter: 25, holderLength: 20 }));
   const [showToolConfig, setShowToolConfig] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => loadSetting('vjp26_gc_viewmode', ViewMode.REMAINING_DIMMED));
@@ -1425,6 +1428,16 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         <div className="flex flex-col h-full border-r border-slate-600 px-1">
             <div className="flex space-x-0.5 flex-1">
                 <ToolbarButton icon={isLiteMode ? <Zap size={18} className="fill-amber-400" /> : <Gauge size={18} />} label={`Lite\nMode`} color={isLiteMode ? "text-amber-400" : "text-gray-400"} active={isLiteMode} onClick={() => setIsLiteMode(!isLiteMode)} />
+                <div className="relative">
+                    <ToolbarButton icon={<Monitor size={18} />} label={`GPU\nMode`} color={showGpuMenu ? "text-red-400" : "text-gray-400"} active={showGpuMenu} onClick={() => setShowGpuMenu(!showGpuMenu)} />
+                    {showGpuMenu && <div className="absolute top-[56px] left-0 bg-slate-900 border border-white/10 rounded p-2 w-48 shadow-2xl z-[100] flex flex-col gap-1">
+                        <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Cấu hình Card đồ họa</div>
+                        <button onClick={() => { setGpuPreference('high-performance'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'high-performance' ? 'bg-red-500/20 text-red-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>NVIDIA / AMD (Mạnh mẽ)</button>
+                        <button onClick={() => { setGpuPreference('low-power'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'low-power' ? 'bg-green-500/20 text-green-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Intel UHD (Tiết kiệm điện)</button>
+                        <button onClick={() => { setGpuPreference('default'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'default' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Mặc định của máy</button>
+                        <div className="text-[8px] text-slate-500 mt-1 italic">* Ứng dụng sẽ tự tải lại để áp dụng GPU mới</div>
+                    </div>}
+                </div>
                 <ToolbarButton icon={showGrid ? <Eye size={18} /> : <EyeOff size={18} />} label={`Show\nGrid`} color={showGrid ? "text-blue-400" : "text-gray-400"} active={showGrid} onClick={() => setShowGrid(!showGrid)} />
                 <ToolbarButton icon={<Focus size={18} />} label={`Auto\nFit`} onClick={() => setZoomFitTrigger(p => p + 1)} />
                 <ToolbarButton icon={isWorkspaceLocked ? <Minimize size={18} /> : <Maximize size={18} />} label={`Full\nScreen(1)`} color={isWorkspaceLocked ? "text-blue-400" : "text-gray-400"} onClick={handleWorkspaceLock} />
@@ -1492,7 +1505,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
           {!isLiteMode && <div className="absolute bottom-4 left-4 z-10 pointer-events-none"><div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-lg"><div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><HardDrive size={10} /><span>PHẦN CỨNG ({cpuThreads} THREADS)</span></div><div className="text-[10px] font-mono text-emerald-400 truncate max-w-[200px]" title={gpuName}>{gpuName.replace(/ANGLE \((.*)\)/, '$1')}</div></div></div>}
           <AnimatePresence>{isProcessing && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center"><Loader2 size={48} className="text-blue-500 animate-spin mb-4" /><h3 className="text-white font-black uppercase tracking-widest text-lg">ĐANG XỬ LÝ DỮ LIỆU</h3><div className="w-64 h-2 bg-slate-800 rounded-full mt-4 overflow-hidden border border-white/10"><motion.div className="h-full bg-blue-500" initial={{width:0}} animate={{width:`${loadingProgress}%`}} /></div><span className="text-blue-400 font-mono text-sm mt-2">{loadingProgress.toFixed(1)}%</span></motion.div>}</AnimatePresence>
           
-          <Canvas camera={{ position: [100, -100, 100], fov: 45, far: 100000, near: 0.1 }} dpr={isLiteMode ? 1 : [1, 2]} gl={{ powerPreference: "high-performance", antialias: !isLiteMode, stencil: false, depth: true }}><color attach="background" args={[theme.background]} />
+          <Canvas camera={{ position: [100, -100, 100], fov: 45, far: 100000, near: 0.1 }} dpr={isLiteMode ? 1 : [1, 2]} gl={{ powerPreference: gpuPreference, antialias: !isLiteMode, stencil: false, depth: true }}><color attach="background" args={[theme.background]} />
             <SceneContent 
                 commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} theme={theme} toolConfig={toolConfig} showGrid={showGrid} snapMode={snapMode} measurePoints={measurePoints} setMeasurePoints={setMeasurePoints} currentIndex={currentIndex} viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} zoomFitTrigger={zoomFitTrigger} onSegmentClick={handleSegmentClick} isLiteMode={isLiteMode} 
                 viewCubeControllerRef={viewCubeControllerRef}
