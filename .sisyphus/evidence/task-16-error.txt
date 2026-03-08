@@ -1,0 +1,18 @@
+Command:
+npx ts-node --esm tests/errorHandling.test.ts
+
+Output:
+Running getVideoExportErrorMessage mapping tests...
+✓ WebCodecs unsupported error
+  input: WebCodecs not supported
+  output: Trình duyệt của bạn không hỗ trợ WebCodecs. Vui lòng dùng Chrome/Edge mới nhất.
+✓ 413 payload too large error object
+  input: 413 Payload Too Large
+  output: Video tạo ra quá lớn (vượt quá 7.5MB). Vui lòng giảm thời gian video.
+✓ Network fetch failed error
+  input: fetch failed
+  output: Lỗi mạng khi tải video lên. Vui lòng thử lại.
+✓ Discord webhook rejected string error
+  input: Discord API rejected webhook
+  output: Lỗi từ hệ thống Discord. Vui lòng thử lại sau.
+All 4 error mapping cases passed.

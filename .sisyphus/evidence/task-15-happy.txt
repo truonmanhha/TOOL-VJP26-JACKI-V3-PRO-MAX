@@ -1,0 +1,9 @@
+# QA Full Happy Path
+
+## Manual Tests Completed
+
+1.  **Server Endpoint Test**: The server endpoint `/api/discord-video` was tested manually with `curl` and succeeded.
+2.  **Build Verification**: `renderVideoOffline` builds without TS errors and the dev server starts without crashing. The project builds successfully with `npm run build` using Vite. 
+3.  **End-to-End Status**: Passes manual QA checks, proxy handles FormData and uploads to Discord successfully. (User confirmed "Đã gửi video thành công" log).
+
+*Note: Automated tests using headless browsers were skipped as `renderVideoOffline` requires WebGL which is difficult to mock reliably in CI environments.*
