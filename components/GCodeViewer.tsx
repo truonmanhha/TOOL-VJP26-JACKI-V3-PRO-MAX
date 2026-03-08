@@ -1060,13 +1060,13 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   }, [isPlaying, commands, playbackSpeed]);
 
   const currentCmd = useMemo(() => commands[currentIndex] || { line: 0, type: 'OTHER' as const, x: 0, y: 0, z: 0, code: '', f: 0, s: 0 }, [commands, currentIndex]);
-  const toggleFullScreen = () => { setIs3DFullScreen(!is3DFullScreen); setTimeout(() => setZoomFitTrigger(p => p + 1), 100); };
+  const toggleFullScreen = () => { setIs3DFullScreen(!is3DFullScreen); setTimeout(() => setZoomFitTrigger(p => p + 1), 300); };
 
   const handleWorkspaceLock = () => {
     setShowBorderFlash(true);
-    setTimeout(() => setShowBorderFlash(false), 2500);
+    setTimeout(() => setShowBorderFlash(false), 1500);
     setIsWorkspaceLocked(!isWorkspaceLocked);
-    setTimeout(() => setZoomFitTrigger(p => p + 1), 100);
+    setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
   };
   
   useEffect(() => {
@@ -1229,13 +1229,45 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   );
 
   const renderToolbarButtons = () => (
-    <div className="flex h-full items-start px-1 space-x-0.5 pt-1 w-full justify-end min-w-max">
+    <div className="flex h-full items-start px-1 space-x-0.5 pt-1 w-full justify-start min-w-max">
+        <div className="flex flex-col h-full border-r border-slate-600 px-1">
+            <div className="flex space-x-0.5 items-center mb-1 flex-1">
+                <ToolbarButton icon={<Upload size={20} />} label={`Import\nFile`} color="text-green-400" onClick={() => fileInputRef.current?.click()} disabled={isProcessing} />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept=".nc,.ngc,.gcode,.tap,.txt"
+                  className="hidden"
+                />
+
+                <ToolbarButton icon={<HardDrive size={20} />} label={`Local\nAccess`} color="text-blue-400" onClick={handleOpenFilePicker} disabled={isProcessing} />
+
+                <div className="ml-2 flex flex-col justify-center min-w-[120px] max-w-[200px]">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{file ? "G-CODE" : "NO FILE"}</span>
+                    <span className="text-xs text-white font-bold truncate flex items-center justify-between">
+                        {file ? file.name : "Tải lên tệp .nc/.gcode"}
+                        {file && (
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); setFile(null); setContent(''); setCommands([]); setAnalysis(null); setIsPlaying(false); }}
+                             className="hover:text-red-400 text-slate-500 ml-2"
+                             title="Xóa file"
+                           >
+                             <X size={12} />
+                           </button>
+                        )}
+                    </span>
+                </div>
+            </div>
+            <div className="text-center text-[8px] text-gray-500 -mt-1">File Operations</div>
+        </div>
+
         <div className="flex flex-col h-full border-r border-slate-600 px-1">
             <div className="flex space-x-0.5 flex-1">
                 <ToolbarButton icon={isLiteMode ? <Zap size={18} className="fill-amber-400" /> : <Gauge size={18} />} label={`Lite\nMode`} color={isLiteMode ? "text-amber-400" : "text-gray-400"} active={isLiteMode} onClick={() => setIsLiteMode(!isLiteMode)} />
                 <ToolbarButton icon={showGrid ? <Eye size={18} /> : <EyeOff size={18} />} label={`Show\nGrid`} color={showGrid ? "text-blue-400" : "text-gray-400"} active={showGrid} onClick={() => setShowGrid(!showGrid)} />
                 <ToolbarButton icon={<Focus size={18} />} label={`Auto\nFit`} onClick={() => setZoomFitTrigger(p => p + 1)} />
-                <ToolbarButton icon={is3DFullScreen ? <Minimize size={18} /> : <Maximize size={18} />} label={`Full\nScreen`} color={is3DFullScreen ? "text-blue-400" : "text-gray-400"} onClick={toggleFullScreen} />
+                <ToolbarButton icon={isWorkspaceLocked ? <Minimize size={18} /> : <Maximize size={18} />} label={`Full\nScreen(1)`} color={isWorkspaceLocked ? "text-blue-400" : "text-gray-400"} onClick={handleWorkspaceLock} />
             </div>
             <div className="text-center text-[8px] text-gray-500 mb-1">View Options</div>
         </div>
@@ -1287,24 +1319,10 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const ThreeDViewContent = (
       <>
           {is3DFullScreen && (
-            <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
-              <div className="pointer-events-auto bg-[#2d2d2d] h-[67px] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full">
-                <div className="flex items-start p-1 space-x-0.5 h-full w-full">
-                  <div className="flex flex-col h-full border-r border-slate-600 px-1">
-                      <div className="flex space-x-0.5 items-center mb-1 flex-1">
-                          <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                          <ToolbarButton icon={<Upload size={20} />} label={`Import\nFile`} color="text-green-400" onClick={() => fileInputRef.current?.click()} />
-                          <ToolbarButton icon={<HardDrive size={20} />} label={`Local\nAccess`} color="text-blue-400" onClick={handleOpenFilePicker} />
-                          <div className="ml-2 flex flex-col justify-center min-w-[120px] max-w-[200px]">
-                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{file ? "G-CODE" : "NO FILE"}</span>
-                              <span className="text-xs text-white font-bold truncate">{file ? file.name : "Tải lên tệp .nc/.gcode"}</span>
-                          </div>
-                      </div>
-                      <div className="text-center text-[8px] text-gray-500 -mt-1">File</div>
-                  </div>
-                  <div className="flex items-start space-x-0.5 h-full flex-1 justify-end">
-                      {renderToolbarButtons()}
-                  </div>
+            <div className="absolute top-0 left-0 right-0 z-[100] pointer-events-none">
+              <div className="pointer-events-auto bg-[#2d2d2d] h-[67px] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full relative z-[100]">
+                <div className="flex items-start h-full w-full overflow-x-auto overflow-y-visible rounded-xl scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent pb-1">
+                   {renderToolbarButtons()}
                 </div>
               </div>
             </div>
@@ -1337,7 +1355,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
              <div className="flex items-center gap-3 pt-2 border-t border-white/5 relative"><span className="text-[9px] font-black text-slate-500 uppercase w-12">TỐC ĐỘ</span><input type="number" min="0" max="100" step="1" value={speedSliderVal} onChange={e => { let val = parseFloat(e.target.value); if(isNaN(val)) return; if(val<0) val=0; if(val>100) val=100; setSpeedSliderVal(val); }} className="w-16 bg-slate-200 border border-slate-400 rounded px-1 text-center text-black font-bold outline-none focus:border-purple-500 focus:bg-white text-[10px]" /><div className="bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded text-[10px] font-mono font-bold w-12 text-center">x{playbackSpeed.toFixed(1)}</div><div className="h-4 w-px bg-white/10 mx-2"></div><div className="relative"><button onClick={() => setShowJumpInput(!showJumpInput)} className={`p-1.5 rounded-lg transition-all ${showJumpInput ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`} title="Đi tới dòng lệnh"><FastForward size={14} /></button>{showJumpInput && <div className="absolute bottom-10 right-0 bg-slate-900 border border-white/10 p-2 rounded-xl shadow-xl flex items-center gap-2 z-50 animate-in slide-in-from-bottom-2 duration-200"><input autoFocus type="number" value={jumpTarget} onChange={e => setJumpTarget(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJumpToLine()} placeholder="Line #" className="w-16 bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none font-mono" /><button onClick={handleJumpToLine} className="bg-blue-600 text-white p-1 rounded-lg hover:bg-blue-500"><CornerDownRight size={14} /></button></div>}</div></div>
           </div>
           
-          <button onClick={handleWorkspaceLock} className={`absolute top-4 right-4 z-50 p-2.5 ${isWorkspaceLocked ? 'bg-red-600/20 text-red-400 border-red-500/50' : 'bg-slate-800/80 backdrop-blur-sm text-slate-400 hover:bg-blue-600 hover:text-white border-white/10'} rounded-xl transition-all active:scale-95 border shadow-xl`} title={isWorkspaceLocked ? "Khôi phục cửa sổ" : "Khóa toàn màn hình (Workspace Mode)"}>{isWorkspaceLocked ? <Minimize size={16} /> : <Maximize size={16} />}</button>
+          <button onClick={toggleFullScreen} className={`absolute top-4 right-4 z-50 p-2.5 ${is3DFullScreen ? 'bg-blue-600/20 text-blue-400 border-blue-500/50' : 'bg-slate-800/80 backdrop-blur-sm text-slate-400 hover:bg-blue-600 hover:text-white border-white/10'} rounded-xl transition-all active:scale-95 border shadow-xl`} title={is3DFullScreen ? "Thu nhỏ 3D" : "Phóng to 3D (2)"}>{is3DFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}</button>
 
           <AnimatePresence>{snapMode && <motion.div initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} className="absolute top-24 right-4 sm:top-16 sm:right-4 bg-orange-500/10 border border-orange-500/20 text-orange-400 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 pointer-events-none"><Ruler size={14} /> CHẾ ĐỘ ĐO ĐANG BẬT</motion.div>}</AnimatePresence>
       </>
@@ -1348,33 +1366,18 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       <AnimatePresence>
         {showBorderFlash && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0, 0.8, 0] }} transition={{ duration: 2.5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }} className="absolute inset-0 z-[9999] pointer-events-none shadow-[inset_0_0_150px_rgba(59,130,246,0.5)] border-[8px] border-blue-500" />
-            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear" }} className="absolute left-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear" }} className="absolute right-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear", delay: 0.2 }} className="absolute left-0 right-0 top-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear", delay: 0.2 }} className="absolute left-0 right-0 bottom-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: [0, 1, 0, 0.8, 0], scale: [0.98, 1, 0.99, 1, 1] }} transition={{ duration: 1.5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }} className="absolute inset-0 z-[9999] pointer-events-none shadow-[inset_0_0_150px_rgba(59,130,246,0.5)] border-[8px] border-blue-500 rounded-xl" />
+            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute left-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute right-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.1 }} className="absolute left-0 right-0 top-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.1 }} className="absolute left-0 right-0 bottom-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
           </>
         )}
       </AnimatePresence>
       {!is3DFullScreen && (
-        <header className="h-[67px] shrink-0 bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full relative z-50">
-          <div className="flex items-start p-1 space-x-0.5 h-full w-full">
-              <div className="flex flex-col h-full border-r border-slate-600 px-1">
-                  <div className="flex space-x-0.5 items-center mb-1 flex-1">
-                      <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                      <ToolbarButton icon={<Upload size={20} />} label={`Import\nFile`} color="text-green-400" onClick={() => fileInputRef.current?.click()} />
-                      <ToolbarButton icon={<HardDrive size={20} />} label={`Local\nAccess`} color="text-blue-400" onClick={handleOpenFilePicker} />
-                      <div className="ml-2 flex flex-col justify-center min-w-[120px] max-w-[200px]">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{file ? "G-CODE" : "NO FILE"}</span>
-                          <span className="text-xs text-white font-bold truncate">{file ? file.name : "Tải lên tệp .nc/.gcode"}</span>
-                      </div>
-                  </div>
-                  <div className="text-center text-[8px] text-gray-500 -mt-1">File</div>
-              </div>
-
-              <div className="flex items-start space-x-0.5 h-full flex-1 justify-end flex-wrap overflow-hidden">
-                  {renderToolbarButtons()}
-              </div>
+        <header className="h-[67px] shrink-0 bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full relative z-[100]">
+          <div className="flex items-start h-full w-full overflow-x-auto overflow-y-visible rounded-xl scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent pb-1">
+              {renderToolbarButtons()}
           </div>
         </header>
       )}
@@ -1411,7 +1414,54 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         {!isLiteMode && (
             <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col gap-4 border-white/5 p-4 overflow-hidden z-0 order-3 h-auto lg:h-full">
                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div>
-               <div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div><button onClick={handleSendReport} disabled={isReporting || !analysis} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white p-1.5 rounded-lg border border-blue-500/30"><Share2 size={12} /></button></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">{isAnalyzing ? <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50"><Activity className="animate-spin text-purple-500" size={24} /><span className="text-[9px] uppercase tracking-widest">ĐANG PHÂN TÍCH...</span></div> : aiAnalysis ? <div className="whitespace-pre-wrap">{aiAnalysis}</div> : <div className="flex flex-col items-center justify-center h-full gap-3 opacity-30 text-center"><Zap size={24} /><span className="text-[9px] uppercase tracking-widest">NHẤN NÚT PHÂN TÍCH ĐỂ BẮT ĐẦU</span></div>}</div></div>
+               <div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div><button onClick={handleSendReport} disabled={isReporting || !analysis} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white p-1.5 rounded-lg border border-blue-500/30"><Share2 size={12} /></button></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
+{isAnalyzing ? (
+    <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
+        <Activity className="animate-spin text-purple-500" size={24} />
+        <span className="text-[9px] uppercase tracking-widest">ĐANG PHÂN TÍCH...</span>
+    </div>
+) : aiAnalysis ? (
+    <div className="flex flex-col gap-4">
+        <div className="whitespace-pre-wrap">{aiAnalysis}</div>
+        <div className="bg-black/50 rounded-lg border border-white/10 p-2 overflow-hidden aspect-video relative flex items-center justify-center group mt-4">
+            {!isPlaying ? (
+                <button onClick={() => { setIsPlaying(true); setCurrentIndex(0); }} className="absolute z-10 w-12 h-12 bg-blue-600/80 hover:bg-blue-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all group-hover:scale-110">
+                    <Play size={20} className="ml-1" fill="currentColor" />
+                </button>
+            ) : (
+                <button onClick={() => setIsPlaying(false)} className="absolute z-10 w-12 h-12 bg-red-600/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:scale-110">
+                    <Pause size={20} fill="currentColor" />
+                </button>
+            )}
+            {isPlaying && (
+                <div className="absolute top-2 left-2 z-10 bg-black/60 px-2 py-1 rounded text-[8px] font-mono text-green-400 flex items-center gap-1 border border-white/10">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                    PLAYING: {Math.floor((currentIndex / Math.max(1, commands.length)) * 100)}%
+                </div>
+            )}
+            <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden">
+                <Canvas camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} dpr={1} gl={{ powerPreference: "low-power", antialias: false, stencil: false, depth: true }}>
+                    <color attach="background" args={['#000000']} />
+                    <SceneContent 
+                        commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} theme={{...theme, background: '#000000'}} toolConfig={toolConfig} showGrid={false} snapMode={false} measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={true} 
+                        viewCubeControllerRef={useRef<any>(null)}
+                    />
+                </Canvas>
+            </div>
+            
+            {/* Minimal line progress bar at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800">
+                <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${(currentIndex / Math.max(1, commands.length)) * 100}%` }}></div>
+            </div>
+        </div>
+    </div>
+) : (
+    <div className="flex flex-col items-center justify-center h-full gap-3 opacity-30 text-center">
+        <Zap size={24} />
+        <span className="text-[9px] uppercase tracking-widest">NHẤN NÚT PHÂN TÍCH ĐỂ BẮT ĐẦU</span>
+    </div>
+)}
+</div></div>
             </div>
         )}
       </div>
