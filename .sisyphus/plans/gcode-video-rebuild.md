@@ -396,7 +396,7 @@ Wave FINAL (independent parallel review):
 
   **Commit**: NO
 
-- [ ] 6. Implement timeline/frame sampler module
+- [x] 6. Implement timeline/frame sampler module
   **What to do**: hiện thực engine fixed-step 1/60 dựa trên spec T1+T2
   **Must NOT do**: không dùng `setTimeout` realtime pacing
   **Recommended Agent Profile**: `deep`
@@ -406,7 +406,7 @@ Wave FINAL (independent parallel review):
   **QA**: happy + zero-feed/error evidence `task-6-*.txt`
   **Commit**: NO
 
-- [ ] 7. Implement WebM encoder module + backpressure
+- [x] 7. Implement WebM encoder module + backpressure
   **What to do**: encode WebM 60fps, queue guard theo encoder pressure
   **Must NOT do**: không fallback MediaRecorder
   **Recommended Agent Profile**: `unspecified-high`
@@ -416,7 +416,7 @@ Wave FINAL (independent parallel review):
   **QA**: happy + forced queue stress evidence `task-7-*.txt`
   **Commit**: NO
 
-- [ ] 8. Implement offline renderer orchestration + restore state
+- [x] 8. Implement offline renderer orchestration + restore state
   **What to do**: render loop nhanh, giữ parity motion, restore UI/view state sau xong/fail
   **Must NOT do**: không để app kẹt isRendering=true khi fail
   **Recommended Agent Profile**: `deep`
@@ -426,7 +426,7 @@ Wave FINAL (independent parallel review):
   **QA**: happy + injected error evidence `task-8-*.png/txt`
   **Commit**: NO
 
-- [ ] 9. Implement backend proxy endpoint cho multipart WebM
+- [x] 9. Implement backend proxy endpoint cho multipart WebM
   **What to do**: nhận file từ client, forward webhook Discord 1 lần
   **Must NOT do**: không lưu file lâu dài
   **Recommended Agent Profile**: `quick`
@@ -436,7 +436,7 @@ Wave FINAL (independent parallel review):
   **QA**: curl happy + missing file/error evidence `task-9-*.json`
   **Commit**: NO
 
-- [ ] 10. Implement UI integration render/upload status
+- [x] 10. Implement UI integration render/upload status
   **What to do**: nối state machine vào nút thao tác
   **Must NOT do**: không thêm local download
   **Recommended Agent Profile**: `visual-engineering`
@@ -446,7 +446,7 @@ Wave FINAL (independent parallel review):
   **QA**: Playwright happy + fail evidence `task-10-*.png`
   **Commit**: NO
 
-- [ ] 11. End-to-end wiring trong GCodeViewer
+- [x] 11. End-to-end wiring trong GCodeViewer
   **What to do**: nối module timeline/encoder/renderer/upload thành luồng hoàn chỉnh
   **Must NOT do**: không đổi logic playback tool chính ngoài export flow
   **Recommended Agent Profile**: `deep`
@@ -456,7 +456,7 @@ Wave FINAL (independent parallel review):
   **QA**: full happy + webhook fail evidence `task-11-*.txt/png`
   **Commit**: YES (group with T12,T13)
 
-- [ ] 12. Error handling matrix
+- [x] 12. Error handling matrix
   **What to do**: map lỗi codec unsupported, oversize, proxy fail, webhook fail
   **Must NOT do**: không alert mơ hồ kiểu “Lỗi gửi báo cáo”
   **Recommended Agent Profile**: `unspecified-high`
@@ -466,7 +466,7 @@ Wave FINAL (independent parallel review):
   **QA**: simulate từng lỗi, evidence `task-12-*.txt`
   **Commit**: YES (group with T11,T13)
 
-- [ ] 13. Performance tuning adaptive acceleration
+- [x] 13. Performance tuning adaptive acceleration
   **What to do**: tối ưu batch render để nhanh nhưng giữ motion quality
   **Must NOT do**: không hy sinh continuity để lấy tốc độ
   **Recommended Agent Profile**: `deep`
@@ -476,7 +476,7 @@ Wave FINAL (independent parallel review):
   **QA**: benchmark evidence `task-13-benchmark.txt`
   **Commit**: YES (group with T11,T12)
 
-- [ ] 14. Regression checks (fullscreen + viewer)
+- [x] 14. Regression checks (fullscreen + viewer)
   **What to do**: xác nhận các fix fullscreen hiện có không bị ảnh hưởng
   **Must NOT do**: không đụng logic unrelated
   **Recommended Agent Profile**: `quick`
@@ -486,7 +486,7 @@ Wave FINAL (independent parallel review):
   **QA**: Playwright evidence `task-14-fullscreen.png`
   **Commit**: NO
 
-- [ ] 15. QA full happy path
+- [x] 15. QA full happy path
   **What to do**: chạy scenario đầy đủ từ upload GCode tới Discord nhận video
   **Must NOT do**: không skip bước capture evidence
   **Recommended Agent Profile**: `unspecified-high`
@@ -495,7 +495,7 @@ Wave FINAL (independent parallel review):
   **QA**: evidence `.sisyphus/evidence/task-15-happy.*`
   **Commit**: NO
 
-- [ ] 16. QA edge/error path
+- [x] 16. QA edge/error path
   **What to do**: test oversize, network fail, unsupported encode path
   **Must NOT do**: không bỏ qua negative case
   **Recommended Agent Profile**: `deep`
@@ -504,7 +504,7 @@ Wave FINAL (independent parallel review):
   **QA**: evidence `.sisyphus/evidence/task-16-error.*`
   **Commit**: NO
 
-- [ ] 17. Evidence audit + acceptance mapping
+- [x] 17. Evidence audit + acceptance mapping
   **What to do**: map từng acceptance criterion với evidence file tương ứng
   **Must NOT do**: không đánh dấu done nếu thiếu evidence
   **Recommended Agent Profile**: `writing`
@@ -517,16 +517,16 @@ Wave FINAL (independent parallel review):
 
 ## Final Verification Wave (MANDATORY)
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Output: `Must Have [N/N] | Must NOT Have [N/N] | VERDICT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   Output: `Build/Lint/Types status | Slop checks | VERDICT`
 
-- [ ] F3. **Real Manual QA (agent-executed)** — `unspecified-high`
+- [x] F3. **Real Manual QA (agent-executed)** — `unspecified-high`
   Output: `Scenarios pass count | Integration checks | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   Output: `No scope creep/no contamination | VERDICT`
 
 ---
