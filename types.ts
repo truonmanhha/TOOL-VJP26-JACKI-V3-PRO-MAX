@@ -67,6 +67,9 @@ export interface GCodeCommand {
   z: number;
   f?: number;
   s?: number;
+  i?: number;
+  j?: number;
+  r?: number;
   code: string;
 }
 

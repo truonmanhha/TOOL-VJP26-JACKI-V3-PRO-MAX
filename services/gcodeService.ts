@@ -71,7 +71,11 @@ export class GCodeService {
                 const nextX = xMatch ? parseFloat(xMatch[1]) : currentX;
                 const nextY = yMatch ? parseFloat(yMatch[1]) : currentY;
                 const nextZ = zMatch ? parseFloat(zMatch[1]) : currentZ;
-                cmds.push({ line: lineCount, type, x: nextX, y: nextY, z: nextZ, f: activeF, s: activeS, code: lineStr });
+                const iVal = iMatch ? parseFloat(iMatch[1]) : 0;
+                const jVal = jMatch ? parseFloat(jMatch[1]) : 0;
+        const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
+                const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
+                cmds.push({ line: lineCount, type, x: nextX, y: nextY, z: nextZ, i: iVal, j: jVal, r: rVal, f: activeF, s: activeS, code: lineStr });
                 currentX = nextX; currentY = nextY; currentZ = nextZ;
                 lastType = type;
               } else {
@@ -162,6 +166,8 @@ export class GCodeService {
       const xMatch = trimmed.match(/X([-+]?[0-9]*\.?[0-9]+)/);
       const yMatch = trimmed.match(/Y([-+]?[0-9]*\.?[0-9]+)/);
       const zMatch = trimmed.match(/Z([-+]?[0-9]*\.?[0-9]+)/);
+      const iMatch = trimmed.match(/I([-+]?[0-9]*\.?[0-9]+)/);
+      const jMatch = trimmed.match(/J([-+]?[0-9]*\.?[0-9]+)/);
       const fMatch = trimmed.match(/F([-+]?[0-9]*\.?[0-9]+)/);
       const sMatch = trimmed.match(/S([-+]?[0-9]*\.?[0-9]+)/);
       if (fMatch) activeF = parseFloat(fMatch[1]);
@@ -185,7 +191,11 @@ export class GCodeService {
         const nextX = xMatch ? parseFloat(xMatch[1]) : currentX;
         const nextY = yMatch ? parseFloat(yMatch[1]) : currentY;
         const nextZ = zMatch ? parseFloat(zMatch[1]) : currentZ;
-        commands.push({ line: index + 1, type: type as any, x: nextX, y: nextY, z: nextZ, f: activeF, s: activeS, code: line });
+                const iVal = iMatch ? parseFloat(iMatch[1]) : 0;
+                const jVal = jMatch ? parseFloat(jMatch[1]) : 0;
+        const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
+                const rVal = rMatch ? parseFloat(rMatch[1]) : undefined;
+        commands.push({ line: index + 1, type: type as any, x: nextX, y: nextY, z: nextZ, i: iVal, j: jVal, r: rVal, f: activeF, s: activeS, code: line });
         currentX = nextX; currentY = nextY; currentZ = nextZ; lastType = type;
       } else {
         commands.push({ line: index + 1, type: 'OTHER', x: currentX, y: currentY, z: currentZ, code: line, f: activeF, s: activeS });

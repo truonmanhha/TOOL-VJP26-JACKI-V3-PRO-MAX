@@ -611,10 +611,30 @@ const ToolPath: React.FC<{
           if ((c2.type === 'G1' || c2.type === 'G2' || c2.type === 'G3') && !viewOptions.showCutting) visible = false;
 
           // Handle G2 / G3 interpolation (Arcs)
-          if ((c2.type === 'G2' || c2.type === 'G3') && (c2.i !== undefined || c2.j !== undefined)) {
+          if ((c2.type === 'G2' || c2.type === 'G3') && (c2.i !== undefined || c2.j !== undefined || c2.r !== undefined)) {
               // Interpolate arc
-              const cx = c1.x + (c2.i || 0);
-              const cy = c1.y + (c2.j || 0);
+              let cx = c1.x, cy = c1.y;
+              if (c2.r !== undefined && c2.r !== 0) {
+                  const x1 = c1.x, y1 = c1.y, x2 = c2.x, y2 = c2.y;
+                  const d = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+                  let r = Math.abs(c2.r);
+                  if (d > 0 && d <= 2*r) {
+                      const h = Math.sqrt(r**2 - (d/2)**2);
+                      const mx = (x1+x2)/2, my = (y1+y2)/2;
+                      const dx = (y2-y1)/d, dy = -(x2-x1)/d;
+                      const isMajor = c2.r < 0;
+                      // G2 is CW, G3 is CCW
+                      let sign = (c2.type === 'G2') ? 1 : -1;
+                      if (isMajor) sign *= -1;
+                      cx = mx + sign * h * dx;
+                      cy = my + sign * h * dy;
+                  } else {
+                      cx = (x1+x2)/2; cy = (y1+y2)/2; // Fallback
+                  }
+              } else {
+                  cx = c1.x + (c2.i || 0);
+                  cy = c1.y + (c2.j || 0);
+              }
               
               const startAngle = Math.atan2(c1.y - cy, c1.x - cx);
               const endAngle = Math.atan2(c2.y - cy, c2.x - cx);
@@ -1180,6 +1200,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
             <button onClick={() => setShowGrid(!showGrid)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showGrid ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title="Bật/Tắt Lưới">{showGrid ? <Eye size={16} /> : <EyeOff size={16} />}</button>
             <button onClick={() => setZoomFitTrigger(p => p + 1)} className="p-2.5 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5 rounded-xl transition-all active:scale-95" title="Auto Fit"><Focus size={16} /></button>
             <div className="w-px h-6 bg-white/10 mx-1"></div>
+            <button onClick={toggleFullScreen} className="p-2.5 bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white border border-white/5 rounded-xl transition-all active:scale-95" title={is3DFullScreen ? "Thu nhỏ" : "Phóng to"}>{is3DFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}</button>
+
+            <div className="w-px h-6 bg-white/10 mx-1"></div>
             <div className="relative">
                 <button onClick={() => setShowStarMenu(!showStarMenu)} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${showStarMenu ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Chế độ Sao"><Sparkles size={16} /> <ChevronDown size={14} /></button>
                 {showStarMenu && <div className="absolute top-14 right-0 bg-slate-900 border border-white/10 rounded-xl p-2 w-64 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 px-2 py-1 mb-1">CÔNG CỤ QUẢ CẦU</div>{Object.entries(StarMode).map(([key, label]) => { const mode = StarMode[key as keyof typeof StarMode]; return (<button key={key} onClick={() => { setStarMode(mode); setShowStarMenu(false); }} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${starMode === mode ? 'bg-purple-600/20 text-purple-400' : 'hover:bg-white/5 text-slate-300'}`}>{mode === StarMode.OFF ? <X size={14} /> : mode === StarMode.STAR_WARS ? <Swords size={14} /> : mode === StarMode.NORMAL ? <Globe size={14} /> : <Sparkles size={14} />}{label}</button>); })}</div>}
@@ -1206,7 +1229,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const ThreeDViewContent = (
       <>
           {is3DFullScreen && <div className="absolute top-4 left-4 right-16 z-50 flex justify-end pointer-events-none"><div className="pointer-events-auto bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl">{renderToolbarButtons()}</div></div>}
-          <div className="absolute top-4 right-4 z-50"><button onClick={toggleFullScreen} className="p-3 md:p-2.5 bg-slate-900/80 hover:bg-blue-600 text-white rounded-xl border border-white/10 shadow-lg backdrop-blur transition-all active:scale-95" title={is3DFullScreen ? "Thu nhỏ" : "Phóng to"}>{is3DFullScreen ? <Minimize size={20} /> : <Maximize size={20} />}</button></div>
+          
           <div className="absolute top-4 left-4 z-10 pointer-events-none hidden sm:block"><div className="bg-black/80 backdrop-blur-sm border border-white/10 rounded-2xl p-4 shadow-2xl"><div className="flex flex-col gap-1">{[{l:'X',c:'text-red-500',v:displayPos.x},{l:'Y',c:'text-green-500',v:displayPos.y},{l:'Z',c:'text-blue-500',v:displayPos.z}].map(a=>(<div key={a.l} className="flex items-baseline gap-4"><span className={`text-xl font-black ${a.c} w-6`}>{a.l}</span><span className="text-3xl font-mono font-bold tracking-wider" style={{ color: theme.text }}>{a.v.toFixed(3)}</span></div>))}<div className="h-px bg-white/10 my-3" /><div className="flex justify-between items-center text-xs font-mono text-slate-400"><div className="flex gap-2">LỆNH: <span className="font-bold" style={{ color: theme.text }}>{currentCmd.code.split(' ')[0]}</span></div><div className="flex gap-2 text-orange-400">F: <span className="font-bold">{currentCmd.f || 0}</span></div></div></div></div></div>
           {!isLiteMode && <div className="absolute bottom-4 left-4 z-10 pointer-events-none"><div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-lg"><div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><HardDrive size={10} /><span>PHẦN CỨNG ({cpuThreads} THREADS)</span></div><div className="text-[10px] font-mono text-emerald-400 truncate max-w-[200px]" title={gpuName}>{gpuName.replace(/ANGLE \((.*)\)/, '$1')}</div></div></div>}
           <AnimatePresence>{isProcessing && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center"><Loader2 size={48} className="text-blue-500 animate-spin mb-4" /><h3 className="text-white font-black uppercase tracking-widest text-lg">ĐANG XỬ LÝ DỮ LIỆU</h3><div className="w-64 h-2 bg-slate-800 rounded-full mt-4 overflow-hidden border border-white/10"><motion.div className="h-full bg-blue-500" initial={{width:0}} animate={{width:`${loadingProgress}%`}} /></div><span className="text-blue-400 font-mono text-sm mt-2">{loadingProgress.toFixed(1)}%</span></motion.div>}</AnimatePresence>
@@ -1247,7 +1270,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                        <Monitor size={18} />
                    </div>
                    <div className="flex flex-col min-w-[120px] text-center sm:text-left">
-                       <h2 className="text-white font-black uppercase tracking-widest text-xs truncate max-w-[200px]" title={file ? file.name : "G-CODE MÔ PHỎNG"}>{file ? file.name : "G-CODE MÔ PHỎNG"}</h2>
+                       <h2 className="text-white font-black uppercase tracking-widest text-xs truncate max-w-[200px]" title={file ? file.name : ""}>{file ? file.name : ""}</h2>
                        
                    </div>
                </div>
