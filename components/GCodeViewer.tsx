@@ -1174,7 +1174,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   };
 
   const renderToolbarButtons = () => (
-    <div className="flex items-center gap-2 flex-wrap justify-center bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl z-50">
+    <div className="flex items-center gap-1.5 md:gap-2 justify-center z-50 flex-nowrap shrink-0">
             <button onClick={() => setIsLiteMode(!isLiteMode)} className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-bold text-xs shadow-sm active:scale-95 ${isLiteMode ? 'bg-amber-500 text-black shadow-amber-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title={isLiteMode ? "Chế độ tối ưu (Lite Mode): ĐANG BẬT" : "Chế độ tối ưu (Lite Mode): ĐANG TẮT"}>{isLiteMode ? <Zap size={16} className="fill-black" /> : <Gauge size={16} />}<span className="uppercase hidden md:inline">{isLiteMode ? "LITE MODE" : "FULL MODE"}</span></button>
             <div className="w-px h-6 bg-white/10 mx-1 hidden md:block"></div>
             <button onClick={() => setShowGrid(!showGrid)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showGrid ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title="Bật/Tắt Lưới">{showGrid ? <Eye size={16} /> : <EyeOff size={16} />}</button>
@@ -1205,7 +1205,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   );
   const ThreeDViewContent = (
       <>
-          {is3DFullScreen && <div className="absolute top-4 left-4 right-16 z-50 flex justify-end pointer-events-none"><div className="pointer-events-auto">{renderToolbarButtons()}</div></div>}
+          {is3DFullScreen && <div className="absolute top-4 left-4 right-16 z-50 flex justify-end pointer-events-none"><div className="pointer-events-auto bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl">{renderToolbarButtons()}</div></div>}
           <div className="absolute top-4 right-4 z-50"><button onClick={toggleFullScreen} className="p-3 md:p-2.5 bg-slate-900/80 hover:bg-blue-600 text-white rounded-xl border border-white/10 shadow-lg backdrop-blur transition-all active:scale-95" title={is3DFullScreen ? "Thu nhỏ" : "Phóng to"}>{is3DFullScreen ? <Minimize size={20} /> : <Maximize size={20} />}</button></div>
           <div className="absolute top-4 left-4 z-10 pointer-events-none hidden sm:block"><div className="bg-black/80 backdrop-blur-sm border border-white/10 rounded-2xl p-4 shadow-2xl"><div className="flex flex-col gap-1">{[{l:'X',c:'text-red-500',v:displayPos.x},{l:'Y',c:'text-green-500',v:displayPos.y},{l:'Z',c:'text-blue-500',v:displayPos.z}].map(a=>(<div key={a.l} className="flex items-baseline gap-4"><span className={`text-xl font-black ${a.c} w-6`}>{a.l}</span><span className="text-3xl font-mono font-bold tracking-wider" style={{ color: theme.text }}>{a.v.toFixed(3)}</span></div>))}<div className="h-px bg-white/10 my-3" /><div className="flex justify-between items-center text-xs font-mono text-slate-400"><div className="flex gap-2">LỆNH: <span className="font-bold" style={{ color: theme.text }}>{currentCmd.code.split(' ')[0]}</span></div><div className="flex gap-2 text-orange-400">F: <span className="font-bold">{currentCmd.f || 0}</span></div></div></div></div></div>
           {!isLiteMode && <div className="absolute bottom-4 left-4 z-10 pointer-events-none"><div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-lg"><div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><HardDrive size={10} /><span>PHẦN CỨNG ({cpuThreads} THREADS)</span></div><div className="text-[10px] font-mono text-emerald-400 truncate max-w-[200px]" title={gpuName}>{gpuName.replace(/ANGLE \((.*)\)/, '$1')}</div></div></div>}
@@ -1239,28 +1239,39 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   return (
     <div className="flex flex-col gap-4 h-full pb-10">
-      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-3 md:p-4 rounded-t-xl flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 relative z-50">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full xl:w-auto flex-shrink-0">
-           <div className="flex items-center gap-3">
-               <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-400 shadow-inner">
-                   <Monitor size={20} />
+      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 md:p-3 rounded-t-xl relative z-50">
+        <div className="flex flex-col xl:flex-row items-center justify-between bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl gap-3 w-full">
+           
+           <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0 bg-black/40 p-1.5 rounded-xl border border-white/5">
+               <div className="flex items-center gap-3 px-2 w-full sm:w-auto justify-center sm:justify-start">
+                   <div className="p-2 bg-purple-500/20 rounded-xl text-purple-400 shadow-inner shrink-0">
+                       <Monitor size={18} />
+                   </div>
+                   <div className="flex flex-col min-w-[120px] text-center sm:text-left">
+                       <h2 className="text-white font-black uppercase tracking-widest text-xs truncate max-w-[200px]" title={file ? file.name : t.gcodeUpload}>{file ? file.name : t.gcodeUpload}</h2>
+                       <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{t.gcodeSub}</p>
+                   </div>
                </div>
-               <div className="flex flex-col">
-                   <h2 className="text-white font-black uppercase tracking-widest text-sm truncate max-w-[200px] xl:max-w-[300px]" title={file ? file.name : t.gcodeUpload}>{file ? file.name : t.gcodeUpload}</h2>
-                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.gcodeSub}</p>
+               
+               <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                   <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                   <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-[10px] font-black flex items-center justify-center gap-2 border border-white/10 transition-all shadow-sm flex-1 sm:flex-auto whitespace-nowrap active:scale-95">
+                       <Upload size={14} /> <span className="hidden sm:inline">TẢI FILE</span><span className="sm:hidden">TẢI LÊN</span>
+                   </button>
+                   <button onClick={handleOpenFilePicker} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-[10px] font-black flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(37,99,235,0.3)] transition-all flex-1 sm:flex-auto whitespace-nowrap active:scale-95">
+                       <HardDrive size={14} /> <span className="hidden sm:inline">LOCAL ACCESS</span><span className="sm:hidden">LOCAL</span>
+                   </button>
                </div>
            </div>
-           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
-               <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-               <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 border border-white/10 transition-all shadow-sm flex-1 md:flex-auto whitespace-nowrap active:scale-95">
-                   <Upload size={16} /> <span className="hidden sm:inline">TẢI FILE</span><span className="sm:hidden">TẢI LÊN</span>
-               </button>
-               <button onClick={handleOpenFilePicker} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(37,99,235,0.3)] transition-all flex-1 md:flex-auto whitespace-nowrap active:scale-95">
-                   <HardDrive size={16} /> <span className="hidden sm:inline">LOCAL ACCESS</span><span className="sm:hidden">LOCAL</span>
-               </button>
-           </div>
+
+           <div className="hidden xl:block w-px h-8 bg-white/10 mx-1 shrink-0"></div>
+
+           {!is3DFullScreen && (
+               <div className="w-full xl:w-auto overflow-x-auto hide-scrollbar pb-1 xl:pb-0 flex justify-center">
+                   {renderToolbarButtons()}
+               </div>
+           )}
         </div>
-        {!is3DFullScreen && renderToolbarButtons()}
       </div>
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-1 bg-[#25252b] p-1 lg:h-[75vh] w-full min-h-[600px] rounded-b-xl border border-black/50"> 
         {showEditor && (
