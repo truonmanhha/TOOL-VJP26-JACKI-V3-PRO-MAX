@@ -1178,11 +1178,45 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const currentCmd = useMemo(() => commands[currentIndex] || { line: 0, type: 'OTHER' as const, x: 0, y: 0, z: 0, code: '', f: 0, s: 0 }, [commands, currentIndex]);
   const toggleFullScreen = () => { setIs3DFullScreen(!is3DFullScreen); setTimeout(() => setZoomFitTrigger(p => p + 1), 300); };
 
+  const fluidScroll = (targetY: number, duration: number = 1000) => {
+    const startY = window.pageYOffset;
+    const difference = targetY - startY;
+    let startTime: number | null = null;
+
+    const animation = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+
+      const easing = progress < 0.5 
+        ? 8 * progress * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 4) / 2;
+
+      window.scrollTo(0, startY + difference * easing);
+
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    };
+
+    requestAnimationFrame(animation);
+  };
+
   const handleWorkspaceLock = () => {
     setShowBorderFlash(true);
-    setTimeout(() => setShowBorderFlash(false), 1500);
-    setIsWorkspaceLocked(!isWorkspaceLocked);
-    setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+    setTimeout(() => setShowBorderFlash(false), 2500); 
+
+    if (!isWorkspaceLocked) {
+      fluidScroll(0, 1200);
+
+      setTimeout(() => {
+        setIsWorkspaceLocked(true);
+        setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+      }, 1300);
+    } else {
+      setIsWorkspaceLocked(false);
+      setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+    }
   };
   
   useEffect(() => {
@@ -1719,11 +1753,42 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       <AnimatePresence>
         {showBorderFlash && (
           <>
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: [0, 1, 0, 0.8, 0], scale: [0.98, 1, 0.99, 1, 1] }} transition={{ duration: 1.5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }} className="absolute inset-0 z-[9999] pointer-events-none shadow-[inset_0_0_150px_rgba(59,130,246,0.5)] border-[8px] border-blue-500 rounded-xl" />
-            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute left-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut" }} className="absolute right-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.1 }} className="absolute left-0 right-0 top-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
-            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 0.8, ease: "circOut", delay: 0.1 }} className="absolute left-0 right-0 bottom-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div 
+              initial={{ height: 0, top: 0, opacity: 0 }}
+              animate={{ 
+                height: ['0%', '100%', '100%', '100%'],
+                opacity: [0, 1, 1, 0],
+                boxShadow: [
+                  '0 0 0px #fff',
+                  '0 0 20px #22d3ee',
+                  '0 0 40px #fff',
+                  '0 0 0px transparent'
+                ]
+              }}
+              transition={{ duration: 2.5, times: [0, 0.3, 0.6, 1], ease: "circOut" }}
+              className="fixed left-0 w-[2px] bg-gradient-to-b from-cyan-400 via-white to-transparent z-[10000] mix-blend-screen"
+            />
+            <motion.div 
+              initial={{ height: 0, top: 0, opacity: 0 }}
+              animate={{ 
+                height: ['0%', '100%', '100%', '100%'],
+                opacity: [0, 1, 1, 0],
+                boxShadow: [
+                  '0 0 0px #fff',
+                  '0 0 20px #22d3ee',
+                  '0 0 40px #fff',
+                  '0 0 0px transparent'
+                ]
+              }}
+              transition={{ duration: 2.5, times: [0, 0.3, 0.6, 1], ease: "circOut" }}
+              className="fixed right-0 w-[2px] bg-gradient-to-b from-cyan-400 via-white to-transparent z-[10000] mix-blend-screen"
+            />
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.15, 0] }}
+              transition={{ duration: 1.5, delay: 0.5 }}
+              className="fixed inset-0 bg-cyan-500/10 pointer-events-none z-[9999] mix-blend-overlay"
+            />
           </>
         )}
       </AnimatePresence>
