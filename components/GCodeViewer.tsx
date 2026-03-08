@@ -1239,8 +1239,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   return (
     <div className="flex flex-col gap-4 h-full pb-10">
-      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 md:p-3 rounded-t-xl relative z-50">
-        <div className="flex flex-col xl:flex-row items-center justify-between bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl gap-3 w-full">
+      <div className="bg-slate-900/90 backdrop-blur-xl shadow-2xl border-b border-white/10 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
            
            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0 bg-black/40 p-1.5 rounded-xl border border-white/5">
                <div className="flex items-center gap-3 px-2 w-full sm:w-auto justify-center sm:justify-start">
@@ -1271,7 +1270,6 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                    {renderToolbarButtons()}
                </div>
            )}
-        </div>
       </div>
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-1 bg-[#25252b] p-1 lg:h-[75vh] w-full min-h-[600px] rounded-b-xl border border-black/50"> 
         {showEditor && (
