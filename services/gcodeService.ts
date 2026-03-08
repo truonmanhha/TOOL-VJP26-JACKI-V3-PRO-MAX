@@ -49,6 +49,8 @@ export class GCodeService {
               const xMatch = trimmed.match(/X([-+]?[0-9]*\\.?[0-9]+)/);
               const yMatch = trimmed.match(/Y([-+]?[0-9]*\\.?[0-9]+)/);
               const zMatch = trimmed.match(/Z([-+]?[0-9]*\\.?[0-9]+)/);
+              const iMatch = trimmed.match(/I([-+]?[0-9]*\\.?[0-9]+)/);
+              const jMatch = trimmed.match(/J([-+]?[0-9]*\\.?[0-9]+)/);
               const fMatch = trimmed.match(/F([-+]?[0-9]*\\.?[0-9]+)/);
               const sMatch = trimmed.match(/S([-+]?[0-9]*\\.?[0-9]+)/);
               if (fMatch) activeF = parseFloat(fMatch[1]);
