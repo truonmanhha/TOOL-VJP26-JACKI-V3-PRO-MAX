@@ -1238,7 +1238,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   );
 
   return (
-    <div className="flex flex-col gap-0 h-[calc(100vh-250px)] lg:h-[calc(100vh-160px)] w-full">
+    <div className="flex flex-col gap-0 h-[calc(100vh-140px)] min-h-[900px] w-full">
       <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
            
            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0">
