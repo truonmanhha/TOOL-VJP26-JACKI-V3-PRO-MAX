@@ -1174,7 +1174,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   };
 
   const renderToolbarButtons = () => (
-    <div className="flex items-center gap-1.5 md:gap-2 justify-center z-50 flex-nowrap shrink-0">
+    <div className="flex items-center gap-1.5 md:gap-2 justify-center z-50 flex-wrap w-full xl:w-auto">
             <button onClick={() => setIsLiteMode(!isLiteMode)} className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-bold text-xs shadow-sm active:scale-95 ${isLiteMode ? 'bg-amber-500 text-black shadow-amber-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title={isLiteMode ? "Chế độ tối ưu (Lite Mode): ĐANG BẬT" : "Chế độ tối ưu (Lite Mode): ĐANG TẮT"}>{isLiteMode ? <Zap size={16} className="fill-black" /> : <Gauge size={16} />}<span className="uppercase hidden md:inline">{isLiteMode ? "LITE MODE" : "FULL MODE"}</span></button>
             <div className="w-px h-6 bg-white/10 mx-1 hidden md:block"></div>
             <button onClick={() => setShowGrid(!showGrid)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showGrid ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title="Bật/Tắt Lưới">{showGrid ? <Eye size={16} /> : <EyeOff size={16} />}</button>
@@ -1239,7 +1239,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   return (
     <div className="flex flex-col gap-4 h-full pb-10">
-      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-2 w-full">
+      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
            
            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0">
                <div className="flex items-center gap-3 px-2 w-full sm:w-auto justify-center sm:justify-start">
@@ -1252,7 +1252,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                    </div>
                </div>
                
-               <div className="flex items-center gap-1.5 w-full sm:w-auto">
+               <div className="flex items-center gap-1.5 w-full sm:w-auto flex-wrap sm:flex-nowrap">
                    <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                    <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-[10px] font-black flex items-center justify-center gap-2 border border-white/10 transition-all shadow-sm flex-1 sm:flex-auto whitespace-nowrap active:scale-95">
                        <Upload size={14} /> <span className="hidden sm:inline">TẢI FILE</span><span className="sm:hidden">TẢI LÊN</span>
@@ -1266,7 +1266,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
            <div className="hidden xl:block w-px h-8 bg-white/10 mx-1 shrink-0"></div>
 
            {!is3DFullScreen && (
-               <div className="w-full xl:w-auto overflow-x-auto hide-scrollbar pb-1 xl:pb-0 flex justify-center">
+               <div className="w-full xl:flex-1 flex justify-center xl:justify-end xl:pl-4">
                    {renderToolbarButtons()}
                </div>
            )}
