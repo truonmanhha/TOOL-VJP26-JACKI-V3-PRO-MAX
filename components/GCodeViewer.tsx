@@ -988,6 +988,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [showThemeSettings, setShowThemeSettings] = useState(false);
   const [theme, setTheme] = useState<ThemeConfig>(() => loadSetting('vjp26_gc_theme', DEFAULT_THEME));
   const [is3DFullScreen, setIs3DFullScreen] = useState(false);
+  const [isWorkspaceLocked, setIsWorkspaceLocked] = useState(false);
+  const [showBorderFlash, setShowBorderFlash] = useState(false);
   const [zoomFitTrigger, setZoomFitTrigger] = useState(0);
   const [gpuName, setGpuName] = useState<string>('Unknown GPU');
   const [cpuThreads, setCpuThreads] = useState<number>(window.navigator.hardwareConcurrency || 4);
@@ -1059,6 +1061,22 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   const currentCmd = useMemo(() => commands[currentIndex] || { line: 0, type: 'OTHER' as const, x: 0, y: 0, z: 0, code: '', f: 0, s: 0 }, [commands, currentIndex]);
   const toggleFullScreen = () => { setIs3DFullScreen(!is3DFullScreen); setTimeout(() => setZoomFitTrigger(p => p + 1), 100); };
+
+  const handleWorkspaceLock = () => {
+    setShowBorderFlash(true);
+    setTimeout(() => setShowBorderFlash(false), 2500);
+    setIsWorkspaceLocked(!isWorkspaceLocked);
+    setTimeout(() => setZoomFitTrigger(p => p + 1), 100);
+  };
+  
+  useEffect(() => {
+    if (isWorkspaceLocked) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => { document.body.style.overflow = 'auto'; };
+  }, [isWorkspaceLocked]);
   const handleJumpToLine = () => { const line = parseInt(jumpTarget); if (!isNaN(line) && line >= 1 && line <= commands.length) { setCurrentIndex(line - 1); setShowJumpInput(false); setJumpTarget(''); } };
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -1200,7 +1218,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
             <button onClick={() => setShowGrid(!showGrid)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showGrid ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title="Bật/Tắt Lưới">{showGrid ? <Eye size={16} /> : <EyeOff size={16} />}</button>
             <button onClick={() => setZoomFitTrigger(p => p + 1)} className="p-2.5 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5 rounded-xl transition-all active:scale-95" title="Auto Fit"><Focus size={16} /></button>
             <div className="w-px h-6 bg-white/10 mx-1"></div>
-            <button onClick={toggleFullScreen} className="p-2.5 bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white border border-white/5 rounded-xl transition-all active:scale-95" title={is3DFullScreen ? "Thu nhỏ" : "Phóng to"}>{is3DFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}</button>
+            <button onClick={handleWorkspaceLock} className={`p-2.5 ${isWorkspaceLocked ? 'bg-red-600/20 text-red-400 border-red-500/50' : 'bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white border-white/5'} rounded-xl transition-all active:scale-95 border`} title={isWorkspaceLocked ? "Khôi phục cửa sổ" : "Khóa toàn màn hình (Workspace Mode)"}>{isWorkspaceLocked ? <Minimize size={16} /> : <Maximize size={16} />}</button>
 
             <div className="w-px h-6 bg-white/10 mx-1"></div>
             <div className="relative">
@@ -1261,7 +1279,18 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   );
 
   return (
-    <div className="flex flex-col gap-0 h-[calc(100vh-140px)] min-h-[900px] w-full">
+    <div className={`flex flex-col gap-0 w-full transition-all duration-500 ${isWorkspaceLocked ? 'fixed inset-0 z-[9999] bg-[#0f1419] h-screen' : 'h-[calc(100vh-140px)] min-h-[900px]'}`}>
+      <AnimatePresence>
+        {showBorderFlash && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0, 0.8, 0] }} transition={{ duration: 2.5, times: [0, 0.1, 0.2, 0.5, 1], ease: "easeInOut" }} className="absolute inset-0 z-[9999] pointer-events-none shadow-[inset_0_0_150px_rgba(59,130,246,0.5)] border-[8px] border-blue-500" />
+            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear" }} className="absolute left-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear" }} className="absolute right-0 top-0 bottom-0 w-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear", delay: 0.2 }} className="absolute left-0 right-0 top-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 1.5, ease: "linear", delay: 0.2 }} className="absolute left-0 right-0 bottom-0 h-1 bg-white z-[10000] shadow-[0_0_20px_#fff]" />
+          </>
+        )}
+      </AnimatePresence>
       <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
            
            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0">
