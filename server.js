@@ -107,6 +107,56 @@ function convertDwgToDxfCli(inputPath, outputPath) {
 }
 
 // Proxy cho việc Xuất dữ liệu Discord để tránh lỗi CORS từ Browser
+
+// ============ Discord Video Upload Endpoint ============
+const memoryUpload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/discord-video', memoryUpload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'Không có file video được tải lên' });
+  }
+
+  // Check file size (7.5MB limit)
+  const maxSize = 7.5 * 1024 * 1024;
+  if (req.file.size > maxSize) {
+    return res.status(413).json({ ok: false, message: 'File video quá lớn. Giới hạn là 7.5MB' });
+  }
+
+  const webhookUrl = process.env.VIDEO_WEBHOOK_URL || 'https://discord.com/api/webhooks/1462471174201151724/K_-DjmjGGTvAjc49oXJmYwf_IvfD6FBFiAeWO9I9yFvx4qN2xcSoJ8PuJs2Z055WrLS1';
+
+  try {
+    const formData = new FormData();
+    
+    // Add JSON payload if present
+    if (req.body.payload_json) {
+      formData.append('payload_json', req.body.payload_json);
+    }
+    
+    // Convert Buffer to Blob for fetch API
+    const fileBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
+    formData.append('file', fileBlob, req.file.originalname || 'video.webm');
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'User-Agent': 'VJP26-Server/1.0'
+      }
+    });
+
+    if (response.ok) {
+      res.json({ ok: true, message: 'Đã gửi video thành công' });
+    } else {
+      const errorText = await response.text();
+      console.error('[Discord Video Error]', errorText);
+      res.status(response.status).json({ ok: false, message: `Lỗi từ Discord: ${response.status}` });
+    }
+  } catch (error) {
+    console.error('[Discord Video Exception]', error);
+    res.status(500).json({ ok: false, message: `Lỗi máy chủ: ${error.message}` });
+  }
+});
+
 app.post('/api/discord', async (req, res) => {
   const webhookUrl = process.env.REPORT_WEBHOOK_URL || 'https://discord.com/api/webhooks/1462471174201151724/K_-DjmjGGTvAjc49oXJmYwf_IvfD6FBFiAeWO9I9yFvx4qN2xcSoJ8PuJs2Z055WrLS1';
   try {
