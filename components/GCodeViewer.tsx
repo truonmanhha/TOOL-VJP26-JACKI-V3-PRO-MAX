@@ -1259,7 +1259,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
               if (estimatedPlayTimeSeconds > 30) estimatedPlayTimeSeconds = 30; // Cap video at 30 seconds to prevent massive file sizes and OOM
               
               // 30 FPS video
-              const numFrames = Math.floor(estimatedPlayTimeSeconds * 30);
+              
               
               const width = canvas.width;
               const height = canvas.height;
@@ -1271,7 +1271,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                       codec: 'V_VP8',
                       width: width,
                       height: height,
-                      frameRate: 30
+                      frameRate: 60
                   }
               });
               
@@ -1282,7 +1282,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                       width: width,
                       height: height,
                       bitrate: 2_500_000,
-                      framerate: 30
+                      framerate: 60
                   };
                   
                   const support = await (window as any).VideoEncoder.isConfigSupported(config);
@@ -1301,26 +1301,57 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                   const originalIsPlaying = isPlaying;
                   setIsPlaying(false);
                   
-                  for (let i = 0; i < numFrames; i++) {
-                      // Map frame to command index
-                      // Since GCode moves at different speeds, linearly interpolating index isn't 100% accurate, 
-                      // but for offline rendering this creates a smooth 0-100% path timeline without skipping edges.
-                      const cmdIndex = Math.min(commands.length - 1, Math.floor((i / numFrames) * commands.length));
+                  const renderFps = 60;
+                  const durationS = estimatedPlayTimeSeconds;
+                  const totalFrames = Math.floor(durationS * renderFps);
+                  const totalDistance = commands.reduce((acc, cmd, i) => {
+                      if (i === 0 || cmd.type === 'OTHER') return acc;
+                      const prev = commands[i-1];
+                      return acc + Math.sqrt(Math.pow(cmd.x - prev.x, 2) + Math.pow(cmd.y - prev.y, 2) + Math.pow(cmd.z - prev.z, 2));
+                  }, 0);
+
+                  let currentDist = 0;
+                  let cmdIdx = 0;
+
+                  for (let i = 0; i < totalFrames; i++) {
+                      // Interpolate based on distance to make speed uniform
+                      const targetDist = (i / totalFrames) * totalDistance;
                       
-                      // Advance state synchronously (React might need time to re-render, so we mock advance the UI,
-                      // or better yet, we just capture what is on canvas by manually requesting it if possible).
-                      // Since we can't easily force R3F to render synchronously in a loop without requestAnimationFrame,
-                      // we'll step through using a fast timeout to allow R3F to paint.
+                      while (cmdIdx < commands.length - 1) {
+                          const c1 = commands[cmdIdx];
+                          const c2 = commands[cmdIdx + 1];
+                          const d = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2) + Math.pow(c2.z - c1.z, 2));
+                          if (currentDist + d >= targetDist || d === 0) {
+                              const progress = d === 0 ? 1 : (targetDist - currentDist) / d;
+                              
+                              // Force update tool head
+                              interpolatedPosRef.current.set(
+                                  c1.x + (c2.x - c1.x) * progress,
+                                  c1.y + (c2.y - c1.y) * progress,
+                                  c1.z + (c2.z - c1.z) * progress
+                              );
+                              
+                              // We only update React state occasionally to avoid slowing down rendering
+                              if (i % 5 === 0) {
+                                  setCurrentIndex(cmdIdx);
+                              }
+                              break;
+                          }
+                          currentDist += d;
+                          cmdIdx++;
+                      }
                       
-                      setCurrentIndex(cmdIndex);
+                      // Wait for R3F to paint the updated ref
+                      await new Promise(r => setTimeout(r, 10)); // ~100fps paint speed to ensure next frame is caught
                       
-                      // Wait just a tiny bit for the canvas to update (1 frame at 60fps)
-                      await new Promise(r => setTimeout(r, 16));
-                      
-                      const timestampUs = Math.round((i * 1000000) / 30);
-                      const frame = new (window as any).VideoFrame(canvas, { timestamp: timestampUs });
-                      encoder.encode(frame, { keyFrame: i % 30 === 0 });
-                      frame.close();
+                      const timestampUs = Math.round((i * 1000000) / renderFps);
+                      try {
+                          const frame = new (window as any).VideoFrame(canvas, { timestamp: timestampUs });
+                          encoder.encode(frame, { keyFrame: i % 60 === 0 });
+                          frame.close();
+                      } catch (e) {
+                          console.error("Frame encode error", e);
+                      }
                   }
                   
                   await encoder.flush();
