@@ -1222,9 +1222,12 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       }
     } else {
       document.body.style.overflow = 'auto';
-      fluidScroll(0, 1000);
       setIsWorkspaceLocked(false);
-      setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+      
+      setTimeout(() => {
+        fluidScroll(0, 1000);
+        setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+      }, 50);
     }
   };
   
