@@ -1180,9 +1180,19 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   const handleWorkspaceLock = () => {
     setShowBorderFlash(true);
-    setTimeout(() => setShowBorderFlash(false), 1500);
-    setIsWorkspaceLocked(!isWorkspaceLocked);
-    setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+    setTimeout(() => setShowBorderFlash(false), 2500); 
+
+    if (!isWorkspaceLocked) {
+      setTimeout(() => {
+        setIsWorkspaceLocked(true);
+        setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+      }, 1300);
+    } else {
+      setTimeout(() => {
+        setIsWorkspaceLocked(false);
+        setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+      }, 1300);
+    }
   };
   
   useEffect(() => {
