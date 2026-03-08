@@ -1100,6 +1100,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const viewCubeControllerRef = useRef<any>(null);
   const miniCanvasRef = useRef<HTMLCanvasElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => localStorage.setItem('vjp26_gc_speed', JSON.stringify(speedSliderVal)), [speedSliderVal]);
   useEffect(() => localStorage.setItem('vjp26_gc_grid', JSON.stringify(showGrid)), [showGrid]);
@@ -1178,20 +1179,51 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const currentCmd = useMemo(() => commands[currentIndex] || { line: 0, type: 'OTHER' as const, x: 0, y: 0, z: 0, code: '', f: 0, s: 0 }, [commands, currentIndex]);
   const toggleFullScreen = () => { setIs3DFullScreen(!is3DFullScreen); setTimeout(() => setZoomFitTrigger(p => p + 1), 300); };
 
+  const fluidScroll = (targetY: number, duration: number = 1000) => {
+    const startY = window.pageYOffset;
+    const difference = targetY - startY;
+    let startTime: number | null = null;
+
+    const animation = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+
+      const easing = progress < 0.5 
+        ? 8 * progress * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 4) / 2;
+
+      window.scrollTo(0, startY + difference * easing);
+
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    };
+
+    requestAnimationFrame(animation);
+  };
+
   const handleWorkspaceLock = () => {
     setShowBorderFlash(true);
     setTimeout(() => setShowBorderFlash(false), 2500); 
 
     if (!isWorkspaceLocked) {
-      setTimeout(() => {
-        setIsWorkspaceLocked(true);
-        setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
-      }, 1300);
+      if (workspaceRef.current) {
+        const rect = workspaceRef.current.getBoundingClientRect();
+        const y = rect.top + window.pageYOffset;
+        const yOffset = -65;
+        
+        fluidScroll(y + yOffset, 1200);
+
+        setTimeout(() => {
+          setIsWorkspaceLocked(true);
+          setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+        }, 1300);
+      }
     } else {
-      setTimeout(() => {
-        setIsWorkspaceLocked(false);
-        setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
-      }, 1300);
+      fluidScroll(0, 1000);
+      setIsWorkspaceLocked(false);
+      setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
     }
   };
   
@@ -1725,7 +1757,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   );
 
   return (
-    <div className={`flex flex-col gap-0 w-full transition-all duration-500 ${isWorkspaceLocked ? 'fixed inset-0 z-[9999] bg-[#0f1419] h-screen' : 'h-[calc(100vh-140px)] min-h-[900px]'}`}>
+    <div ref={workspaceRef} className={`flex flex-col gap-0 w-full transition-all duration-500 ${isWorkspaceLocked ? 'fixed inset-0 z-[9999] bg-[#0f1419] h-screen' : 'h-[calc(100vh-140px)] min-h-[900px]'}`}>
       <AnimatePresence>
         {showBorderFlash && (
           <>
