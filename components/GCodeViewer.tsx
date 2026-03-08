@@ -1129,9 +1129,23 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
               
               // We will render it offline at 30 FPS.
               // Calculate how many frames needed based on original speed setting and simulation time.
-              const totalDistance = commands.length > 0 ? analysis.totalCutDistance + analysis.totalRapidDistance : 0;
-              // Just a rough estimate for demo - let's render 120 frames minimum or max 300 frames to keep file size small
-              const numFrames = Math.min(300, Math.max(60, Math.floor(commands.length / 5))); 
+              // Determine duration in real seconds based on the simulation playback logic
+              // playbackSpeed represents the multiplier against standard feed rate.
+              // To accurately capture the intended speed setting, we calculate the estimated time it would take to play.
+              let estimatedPlayTimeSeconds = 0;
+              for (let i = 0; i < commands.length - 1; i++) {
+                  const c1 = commands[i], c2 = commands[i + 1];
+                  const segLen = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2) + Math.pow(c2.z - c1.z, 2));
+                  const feed = c1.f || 1000;
+                  const speed = (feed / 60) * playbackSpeed;
+                  if (speed > 0) estimatedPlayTimeSeconds += segLen / speed;
+              }
+              
+              if (estimatedPlayTimeSeconds < 1) estimatedPlayTimeSeconds = 1;
+              if (estimatedPlayTimeSeconds > 30) estimatedPlayTimeSeconds = 30; // Cap video at 30 seconds to prevent massive file sizes and OOM
+              
+              // 30 FPS video
+              const numFrames = Math.floor(estimatedPlayTimeSeconds * 30);
               
               const width = canvas.width;
               const height = canvas.height;
@@ -1175,7 +1189,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                   
                   for (let i = 0; i < numFrames; i++) {
                       // Map frame to command index
-                      const cmdIndex = Math.floor((i / numFrames) * commands.length);
+                      // Since GCode moves at different speeds, linearly interpolating index isn't 100% accurate, 
+                      // but for offline rendering this creates a smooth 0-100% path timeline without skipping edges.
+                      const cmdIndex = Math.min(commands.length - 1, Math.floor((i / numFrames) * commands.length));
                       
                       // Advance state synchronously (React might need time to re-render, so we mock advance the UI,
                       // or better yet, we just capture what is on canvas by manually requesting it if possible).
@@ -1212,25 +1228,24 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                       recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
                   });
                   
-                  const originalSpeed = speedSliderVal;
                   setCurrentIndex(0);
                   simState.current.index = 0;
                   simState.current.progress = 0;
-                  setSpeedSliderVal(100); // Need to speed up for fallback to not hang too long
+                  
                   await new Promise(r => setTimeout(r, 500));
                   
                   recorder.start();
                   setIsPlaying(true);
                   
+                  // Same 3 min cap
                   let timeElapsed = 0;
-                  while(simState.current.index < commands.length - 2 && timeElapsed < 8000) {
-                      await new Promise(r => setTimeout(r, 200));
-                      timeElapsed += 200;
+                  while(simState.current.index < commands.length - 2 && timeElapsed < 180000) {
+                      await new Promise(r => setTimeout(r, 500));
+                      timeElapsed += 500;
                   }
                   
                   recorder.stop();
                   setIsPlaying(false);
-                  setSpeedSliderVal(originalSpeed);
                   videoBlob = await recordPromise;
               }
           }
