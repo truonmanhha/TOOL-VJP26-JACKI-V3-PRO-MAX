@@ -1051,7 +1051,18 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   useEffect(() => localStorage.setItem('vjp26_gc_viewmode', JSON.stringify(viewMode)), [viewMode]);
   useEffect(() => localStorage.setItem('vjp26_gc_starmode', JSON.stringify(starMode)), [starMode]);
   useEffect(() => localStorage.setItem('vjp26_gc_options', JSON.stringify(viewOptions)), [viewOptions]);
-  useEffect(() => { const canvas = document.createElement('canvas'); const gl = canvas.getContext('webgl'); if (gl) { const debugInfo = gl.getExtension('WEBGL_debug_renderer_info'); if (debugInfo) { const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL); setGpuName(renderer); } } }, []);
+  useEffect(() => {
+    const canvas = document.createElement('canvas'); 
+    const options = gpuPreference === 'default' ? {} : { powerPreference: gpuPreference };
+    const gl = canvas.getContext('webgl', options); 
+    if (gl) { 
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info'); 
+        if (debugInfo) { 
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL); 
+            setGpuName(renderer); 
+        } 
+    } 
+}, [gpuPreference]);
   const playbackSpeed = useMemo(() => { if (speedSliderVal <= 40) return 0.1 + (speedSliderVal / 40) * 1.9; const t = (speedSliderVal - 40) / 60; return 2 + Math.pow(t, 3) * 500; }, [speedSliderVal]);
   useEffect(() => { const handleResize = () => setZoomFitTrigger(prev => prev + 1); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize); }, []);
   const simState = useRef({ index: 0, progress: 0, lastTime: 0 });
@@ -1455,15 +1466,15 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                 </div>
                     {showGpuMenu && <div className="absolute top-[56px] left-0 bg-slate-900 border border-white/10 rounded p-2 w-48 shadow-2xl z-[9999] flex flex-col gap-1">
                         <div className="text-[10px] font-black uppercase text-slate-400 mb-1 flex justify-between items-center"><span>Cấu hình Card đồ họa</span><button onClick={() => setShowGpuMenu(false)}><X size={12} className="text-slate-500 hover:text-white" /></button></div>
-                        <button onClick={() => { setGpuPreference('high-performance'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'high-performance' ? 'bg-red-500/20 text-red-400 font-bold' : 'hover:bg-white/5 text-slate-300'} flex flex-col`}>
+                        <button onClick={() => { setGpuPreference('high-performance'); setShowGpuMenu(false); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'high-performance' ? 'bg-red-500/20 text-red-400 font-bold' : 'hover:bg-white/5 text-slate-300'} flex flex-col`}>
                             <span>Hiệu năng cao (Card rời)</span>
                             <span className="text-[8px] opacity-70 font-mono mt-0.5">{detectedGpus.high}</span>
                         </button>
-                        <button onClick={() => { setGpuPreference('low-power'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'low-power' ? 'bg-green-500/20 text-green-400 font-bold' : 'hover:bg-white/5 text-slate-300'} flex flex-col`}>
+                        <button onClick={() => { setGpuPreference('low-power'); setShowGpuMenu(false); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'low-power' ? 'bg-green-500/20 text-green-400 font-bold' : 'hover:bg-white/5 text-slate-300'} flex flex-col`}>
                             <span>Tiết kiệm điện (Card Onboard)</span>
                             <span className="text-[8px] opacity-70 font-mono mt-0.5">{detectedGpus.low}</span>
                         </button>
-                        <button onClick={() => { setGpuPreference('default'); setShowGpuMenu(false); window.location.reload(); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'default' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Mặc định của hệ điều hành</button>
+                        <button onClick={() => { setGpuPreference('default'); setShowGpuMenu(false); }} className={`text-left px-2 py-1.5 rounded text-[10px] ${gpuPreference === 'default' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'hover:bg-white/5 text-slate-300'}`}>Mặc định của hệ điều hành</button>
                         <div className="text-[8px] text-slate-500 mt-1 italic">* Ứng dụng sẽ tải lại trang để áp dụng GPU mới. (Lưu ý: Một số trình duyệt tự ép dùng 1 card duy nhất)</div>
                     </div>}
                 </div>
@@ -1534,7 +1545,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
           {!isLiteMode && <div className="absolute bottom-4 left-4 z-10 pointer-events-none"><div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-lg"><div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><HardDrive size={10} /><span>PHẦN CỨNG ({cpuThreads} THREADS)</span></div><div className="text-[10px] font-mono text-emerald-400 truncate max-w-[200px]" title={gpuName}>{gpuName.replace(/ANGLE \((.*)\)/, '$1')}</div></div></div>}
           <AnimatePresence>{isProcessing && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center"><Loader2 size={48} className="text-blue-500 animate-spin mb-4" /><h3 className="text-white font-black uppercase tracking-widest text-lg">ĐANG XỬ LÝ DỮ LIỆU</h3><div className="w-64 h-2 bg-slate-800 rounded-full mt-4 overflow-hidden border border-white/10"><motion.div className="h-full bg-blue-500" initial={{width:0}} animate={{width:`${loadingProgress}%`}} /></div><span className="text-blue-400 font-mono text-sm mt-2">{loadingProgress.toFixed(1)}%</span></motion.div>}</AnimatePresence>
           
-          <Canvas camera={{ position: [100, -100, 100], fov: 45, far: 100000, near: 0.1 }} dpr={isLiteMode ? 1 : [1, 2]} gl={{ powerPreference: gpuPreference, antialias: !isLiteMode, stencil: false, depth: true }}><color attach="background" args={[theme.background]} />
+          <Canvas key={gpuPreference} camera={{ position: [100, -100, 100], fov: 45, far: 100000, near: 0.1 }} dpr={isLiteMode ? 1 : [1, 2]} gl={{ powerPreference: gpuPreference, antialias: !isLiteMode, stencil: false, depth: true }}><color attach="background" args={[theme.background]} />
             <SceneContent 
                 commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} theme={theme} toolConfig={toolConfig} showGrid={showGrid} snapMode={snapMode} measurePoints={measurePoints} setMeasurePoints={setMeasurePoints} currentIndex={currentIndex} viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} zoomFitTrigger={zoomFitTrigger} onSegmentClick={handleSegmentClick} isLiteMode={isLiteMode} 
                 viewCubeControllerRef={viewCubeControllerRef}
