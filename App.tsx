@@ -143,7 +143,7 @@ const App: React.FC = () => {
       {/* MATRIX BACKGROUND - DISABLED IN LITE MODE */}
       {!isLiteMode && <MatrixBackground />}
 
-      <div className={`relative z-20 ${isLiteMode ? 'w-full h-screen px-2 py-2' : activeTab === 'nest' ? 'w-full px-0 py-0' : 'max-w-[1400px] mx-auto px-4 py-8 md:py-8'}`}>
+      <div className={`relative z-20 ${isLiteMode ? 'w-full h-screen px-2 py-2' : activeTab === 'nest' ? 'w-full px-0 py-0' : activeTab === 'gcode' ? 'w-full px-2 md:px-4 py-4' : 'max-w-[1400px] mx-auto px-4 py-8 md:py-8'}`}>
         
         {/* HEADER & TABS - HIDDEN IN LITE MODE */}
         {!isLiteMode && (
