@@ -1211,44 +1211,106 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     }
   };
 
-  const renderToolbarButtons = () => (
-    <div className="flex items-center gap-1.5 md:gap-2 justify-center z-50 flex-wrap w-full xl:w-auto">
-            <button onClick={() => setIsLiteMode(!isLiteMode)} className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-bold text-xs shadow-sm active:scale-95 ${isLiteMode ? 'bg-amber-500 text-black shadow-amber-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title={isLiteMode ? "Chế độ tối ưu (Lite Mode): ĐANG BẬT" : "Chế độ tối ưu (Lite Mode): ĐANG TẮT"}>{isLiteMode ? <Zap size={16} className="fill-black" /> : <Gauge size={16} />}<span className="uppercase hidden md:inline">{isLiteMode ? "LITE MODE" : "FULL MODE"}</span></button>
-            <div className="w-px h-6 bg-white/10 mx-1 hidden md:block"></div>
-            <button onClick={() => setShowGrid(!showGrid)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showGrid ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'}`} title="Bật/Tắt Lưới">{showGrid ? <Eye size={16} /> : <EyeOff size={16} />}</button>
-            <button onClick={() => setZoomFitTrigger(p => p + 1)} className="p-2.5 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5 rounded-xl transition-all active:scale-95" title="Auto Fit"><Focus size={16} /></button>
-            <div className="w-px h-6 bg-white/10 mx-1"></div>
-            <button onClick={handleWorkspaceLock} className={`p-2.5 ${isWorkspaceLocked ? 'bg-red-600/20 text-red-400 border-red-500/50' : 'bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white border-white/5'} rounded-xl transition-all active:scale-95 border`} title={isWorkspaceLocked ? "Khôi phục cửa sổ" : "Khóa toàn màn hình (Workspace Mode)"}>{isWorkspaceLocked ? <Minimize size={16} /> : <Maximize size={16} />}</button>
+  
+  
+  const ToolbarButton = ({ icon, label, color = "text-gray-400", active, onClick, disabled }: any) => (
+    <button 
+      onClick={onClick}
+      disabled={disabled}
+      className={`toolbar-button flex flex-col items-center justify-center p-0.5 rounded border min-w-[38px] transition-all
+        ${disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}
+        ${active ? 'bg-slate-600 border-slate-400 shadow-inner' : 'border-transparent hover:bg-slate-600 hover:border-slate-500 active:bg-slate-700'}`}
+    >
+      <span className={`toolbar-button-icon text-2xl mb-0.5 ${color} w-6 h-6 flex items-center justify-center`}>
+        {icon}
+      </span>
+      <span className="text-[8px] text-center leading-tight whitespace-pre-line text-gray-300">{label}</span>
+    </button>
+  );
 
-            <div className="w-px h-6 bg-white/10 mx-1"></div>
-            <div className="relative">
-                <button onClick={() => setShowStarMenu(!showStarMenu)} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${showStarMenu ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Chế độ Sao"><Sparkles size={16} /> <ChevronDown size={14} /></button>
-                {showStarMenu && <div className="absolute top-14 right-0 bg-slate-900 border border-white/10 rounded-xl p-2 w-64 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 px-2 py-1 mb-1">CÔNG CỤ QUẢ CẦU</div>{Object.entries(StarMode).map(([key, label]) => { const mode = StarMode[key as keyof typeof StarMode]; return (<button key={key} onClick={() => { setStarMode(mode); setShowStarMenu(false); }} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${starMode === mode ? 'bg-purple-600/20 text-purple-400' : 'hover:bg-white/5 text-slate-300'}`}>{mode === StarMode.OFF ? <X size={14} /> : mode === StarMode.STAR_WARS ? <Swords size={14} /> : mode === StarMode.NORMAL ? <Globe size={14} /> : <Sparkles size={14} />}{label}</button>); })}</div>}
+  const renderToolbarButtons = () => (
+    <div className="flex h-full items-start px-1 space-x-0.5 pt-1 w-full justify-end min-w-max">
+        <div className="flex flex-col h-full border-r border-slate-600 px-1">
+            <div className="flex space-x-0.5 flex-1">
+                <ToolbarButton icon={isLiteMode ? <Zap size={18} className="fill-amber-400" /> : <Gauge size={18} />} label={`Lite\nMode`} color={isLiteMode ? "text-amber-400" : "text-gray-400"} active={isLiteMode} onClick={() => setIsLiteMode(!isLiteMode)} />
+                <ToolbarButton icon={showGrid ? <Eye size={18} /> : <EyeOff size={18} />} label={`Show\nGrid`} color={showGrid ? "text-blue-400" : "text-gray-400"} active={showGrid} onClick={() => setShowGrid(!showGrid)} />
+                <ToolbarButton icon={<Focus size={18} />} label={`Auto\nFit`} onClick={() => setZoomFitTrigger(p => p + 1)} />
+                <ToolbarButton icon={is3DFullScreen ? <Minimize size={18} /> : <Maximize size={18} />} label={`Full\nScreen`} color={is3DFullScreen ? "text-blue-400" : "text-gray-400"} onClick={toggleFullScreen} />
             </div>
-            <div className="relative">
-                <button onClick={() => setShowViewModeMenu(!showViewModeMenu)} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${showViewModeMenu ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Chế độ hiển thị"><ListFilter size={16} /> <ChevronDown size={14} /></button>
-                {showViewModeMenu && <div className="absolute top-14 right-0 bg-slate-900 border border-white/10 rounded-xl p-2 w-64 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 px-2 py-1 mb-1">CHỌN KIỂU MÔ PHỎNG</div>{Object.values(ViewMode).map(mode => (<button key={mode} onClick={() => { setViewMode(mode); setShowViewModeMenu(false); }} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewMode === mode ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-white/5 text-slate-300'}`}><div className={`w-2 h-2 rounded-full ${viewMode === mode ? 'bg-blue-500' : 'bg-slate-700'}`} />{mode}</button>))}</div>}
+            <div className="text-center text-[8px] text-gray-500 mb-1">View Options</div>
+        </div>
+
+        <div className="flex flex-col h-full border-r border-slate-600 px-1">
+            <div className="flex space-x-0.5 flex-1 relative">
+                <div className="relative">
+                    <ToolbarButton icon={<Sparkles size={18} />} label={`View\nStar`} color={showStarMenu ? "text-purple-400" : "text-gray-400"} active={showStarMenu} onClick={() => setShowStarMenu(!showStarMenu)} />
+                    {showStarMenu && <div className="absolute top-[56px] right-0 bg-slate-900 border border-white/10 rounded p-2 w-48 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 mb-1">KIỂU SAO</div>{Object.entries(StarMode).map(([key, label]) => { const mode = StarMode[key as keyof typeof StarMode]; return (<button key={key} onClick={() => { setStarMode(mode); setShowStarMenu(false); }} className={`w-full text-left px-2 py-1.5 rounded text-xs transition-all flex items-center gap-2 ${starMode === mode ? 'bg-purple-600/20 text-purple-400' : 'hover:bg-white/5 text-slate-300'}`}>{label}</button>); })}</div>}
+                </div>
+                <div className="relative">
+                    <ToolbarButton icon={<ListFilter size={18} />} label={`Sim\nMode`} color={showViewModeMenu ? "text-blue-400" : "text-gray-400"} active={showViewModeMenu} onClick={() => setShowViewModeMenu(!showViewModeMenu)} />
+                    {showViewModeMenu && <div className="absolute top-[56px] right-0 bg-slate-900 border border-white/10 rounded p-2 w-48 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 mb-1">MÔ PHỎNG</div>{Object.values(ViewMode).map(mode => (<button key={mode} onClick={() => { setViewMode(mode); setShowViewModeMenu(false); }} className={`w-full text-left px-2 py-1.5 rounded text-xs transition-all flex items-center gap-2 ${viewMode === mode ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-white/5 text-slate-300'}`}><div className={`w-1.5 h-1.5 rounded-full ${viewMode === mode ? 'bg-blue-500' : 'bg-slate-700'}`} />{mode}</button>))}</div>}
+                </div>
+                <div className="relative">
+                    <ToolbarButton icon={<MoreHorizontal size={18} />} label={`View\nOptions`} color={showViewOptionsMenu ? "text-blue-400" : "text-gray-400"} active={showViewOptionsMenu} onClick={() => setShowViewOptionsMenu(!showViewOptionsMenu)} />
+                    {showViewOptionsMenu && <div className="absolute top-[56px] right-0 bg-slate-900 border border-white/10 rounded p-2 w-56 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 mb-1">TÙY CHỌN</div>{[{ key: 'showToolpath', label: 'Hiện đường dao' }, { key: 'showPoints', label: 'Hiện các điểm' }, { key: 'showRapid', label: 'Hiện đường G0' }, { key: 'showCutting', label: 'Hiện G1/G2/G3' }, { key: 'highlightArcs', label: 'Tô màu cung' }, { key: 'highlightElement', label: 'Highlight Hover' }, { key: 'largePoints', label: 'Điểm to hơn' }].map(opt => (<button key={opt.key} onClick={() => setViewOptions(prev => ({ ...prev, [opt.key]: !prev[opt.key as keyof ViewOptions] }))} className={`w-full text-left px-2 py-1.5 rounded text-[11px] transition-all flex items-center justify-between ${viewOptions[opt.key as keyof ViewOptions] ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-white/5 text-slate-400'}`}><span>{opt.label}</span>{viewOptions[opt.key as keyof ViewOptions] && <Check size={12} />}</button>))}</div>}
+                </div>
+                <div className="relative">
+                    <ToolbarButton icon={<Wrench size={18} />} label={`Tool\nConfig`} color={showToolConfig ? "text-emerald-400" : "text-gray-400"} active={showToolConfig} onClick={() => setShowToolConfig(!showToolConfig)} />
+                    {showToolConfig && <div className="absolute top-[56px] right-0 bg-slate-900 border border-white/10 rounded p-3 w-56 shadow-2xl z-[100]"><div className="flex justify-between items-center mb-2"><span className="text-[10px] font-black uppercase text-white">CẤU HÌNH DAO</span><button onClick={() => setShowToolConfig(false)}><X size={12} className="text-slate-500 hover:text-white" /></button></div><div className="space-y-2">{[{ l: 'Kính mũi', k: 'diameter' }, { l: 'Dài mũi', k: 'length' }, { l: 'Kính cán', k: 'holderDiameter' }, { l: 'Dài cán', k: 'holderLength' }].map(f => (<div key={f.k} className="flex justify-between items-center"><label className="text-[9px] font-black text-slate-500 uppercase">{f.l}</label><input type="number" value={toolConfig[f.k as keyof ToolConfig]} onChange={e => setToolConfig({ ...toolConfig, [f.k]: parseFloat(e.target.value) })} className="w-16 bg-slate-800 border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white outline-none focus:border-blue-500 text-right" /></div>))}</div></div>}
+                </div>
+                <div className="relative">
+                    <ToolbarButton icon={<Palette size={18} />} label={`Color\nTheme`} color={showThemeSettings ? "text-indigo-400" : "text-gray-400"} active={showThemeSettings} onClick={() => setShowThemeSettings(!showThemeSettings)} />
+                    {showThemeSettings && <div className="absolute top-[56px] right-0 bg-slate-900 border border-white/10 rounded p-3 w-64 shadow-2xl z-[100]"><div className="flex justify-between items-center mb-2 border-b border-white/10 pb-1"><span className="text-[10px] font-black uppercase text-white">MÀU SẮC</span><button onClick={() => setShowThemeSettings(false)} className="hover:text-white text-slate-500"><X size={12} /></button></div><div className="grid grid-cols-3 gap-1 mb-2"><button onClick={() => setTheme(DEFAULT_THEME)} className="bg-slate-800 hover:bg-slate-700 text-[8px] font-bold text-slate-300 py-1 rounded">MẶC ĐỊNH</button><button onClick={() => setTheme({ ...DEFAULT_THEME, background: '#ffffff', grid: '#e2e8f0', g0: '#ef4444', g1: '#0f172a', arc: '#3b82f6', text: '#000000' })} className="bg-slate-200 hover:bg-white text-[8px] font-bold text-black py-1 rounded">SÁNG</button><button onClick={() => setTheme({ ...DEFAULT_THEME, background: '#172554', grid: '#1e3a8a', g0: '#facc15', g1: '#60a5fa', arc: '#c084fc', text: '#dbeafe' })} className="bg-blue-950 hover:bg-blue-900 text-[8px] font-bold text-blue-200 py-1 rounded">BLUEPRINT</button></div><div className="space-y-1.5 max-h-[250px] overflow-y-auto custom-scrollbar">{Object.entries(theme).map(([key, val]) => (<div key={key} className="flex items-center justify-between"><span className="text-[9px] font-bold uppercase text-slate-400">{THEME_LABELS[key as keyof ThemeConfig]}</span><div className="flex items-center gap-1.5"><span className="text-[8px] font-mono text-slate-600">{val}</span><div className="relative w-4 h-4 rounded-full overflow-hidden border border-white/20"><input type="color" value={val} onChange={e => setTheme({ ...theme, [key]: e.target.value })} className="absolute -top-1 -left-1 w-8 h-8 cursor-pointer p-0 border-0" /></div></div></div>))}</div></div>}
+                </div>
             </div>
-            <div className="relative">
-                <button onClick={() => setShowViewOptionsMenu(!showViewOptionsMenu)} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${showViewOptionsMenu ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Tùy chọn hiển thị"><MoreHorizontal size={16} /></button>
-                {showViewOptionsMenu && <div className="absolute top-14 right-0 bg-slate-900 border border-white/10 rounded-xl p-2 w-64 shadow-2xl z-[100]"><div className="text-[10px] font-black uppercase text-slate-500 px-2 py-1 mb-1">TÙY CHỌN HIỂN THỊ</div>{[{ key: 'showToolpath', label: 'Hiện đường chạy dao' }, { key: 'showPoints', label: 'Hiện các điểm' }, { key: 'showRapid', label: 'Hiện đường G0' }, { key: 'showCutting', label: 'Hiện đường G1/G2/G3' }, { key: 'highlightArcs', label: 'Tô màu cung G2/G3' }, { key: 'highlightElement', label: 'Highlight khi Hover' }, { key: 'largePoints', label: 'Điểm to hơn' }].map(opt => (<button key={opt.key} onClick={() => setViewOptions(prev => ({ ...prev, [opt.key]: !prev[opt.key as keyof ViewOptions] }))} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between ${viewOptions[opt.key as keyof ViewOptions] ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-white/5 text-slate-400'}`}><span>{opt.label}</span>{viewOptions[opt.key as keyof ViewOptions] && <Check size={14} />}</button>))}</div>}
+            <div className="text-center text-[8px] text-gray-500 mb-1">Sim & Config</div>
+        </div>
+
+        <div className="flex flex-col h-full border-r border-slate-600 px-1">
+            <div className="flex space-x-0.5 flex-1">
+                <ToolbarButton icon={<Ruler size={18} />} label={`Measure\nTool`} color={snapMode ? "text-orange-400" : "text-gray-400"} active={snapMode} onClick={() => { setSnapMode(!snapMode); setMeasurePoints([]); }} />
             </div>
-            <div className="w-px h-6 bg-white/10 mx-1"></div>
-            <div className="relative">
-                <button onClick={() => setShowToolConfig(!showToolConfig)} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${showToolConfig ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Cấu hình dao"><Wrench size={16} /></button>
-                {showToolConfig && <div className="absolute top-14 right-0 bg-slate-900 border border-white/10 rounded-xl p-4 w-64 shadow-2xl z-[100]"><div className="flex justify-between items-center mb-4"><span className="text-xs font-black uppercase text-white">CẤU HÌNH DAO</span><button onClick={() => setShowToolConfig(false)}><X size={14} className="text-slate-500 hover:text-white" /></button></div><div className="space-y-4">{[{ l: 'Đường kính mũi', k: 'diameter' }, { l: 'Chiều dài mũi', k: 'length' }, { l: 'Đường kính cán', k: 'holderDiameter' }, { l: 'Chiều dài cán', k: 'holderLength' }].map(f => (<div key={f.k}><label className="text-[10px] font-black text-slate-500 uppercase block mb-1">{f.l} (mm)</label><input type="number" value={toolConfig[f.k as keyof ToolConfig]} onChange={e => setToolConfig({ ...toolConfig, [f.k]: parseFloat(e.target.value) })} className="w-full bg-slate-800 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500" /></div>))}</div></div>}
+            <div className="text-center text-[8px] text-gray-500 mb-1">Tools</div>
+        </div>
+
+        {!isLiteMode && (
+            <div className="flex flex-col h-full px-1">
+                <div className="flex space-x-0.5 flex-1">
+                    <ToolbarButton icon={isAnalyzing ? <Activity size={18} className="animate-spin" /> : <Cpu size={18} />} label={`AI\nAnalyze`} color={isAnalyzing ? "text-purple-400" : "text-pink-400"} disabled={isAnalyzing || !content} onClick={handleAIAnalyze} />
+                </div>
+                <div className="text-center text-[8px] text-gray-500 mb-1">Analysis</div>
             </div>
-            <button onClick={() => { setSnapMode(!snapMode); setMeasurePoints([]); }} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${snapMode ? 'bg-orange-600/20 text-orange-400 border-orange-500/50' : 'bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-white'}`} title="Công cụ đo đạc"><Ruler size={16} /> <MousePointerClick size={14} /></button>
-            <div className="relative"><button onClick={() => setShowThemeSettings(!showThemeSettings)} className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 active:scale-95 border border-white/5 ${showThemeSettings ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50' : 'bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-white'}`} title="Đổi màu sắc"><Palette size={16} /></button>{showThemeSettings && <div className="absolute top-14 right-0 bg-slate-900 border border-white/10 rounded-xl p-4 w-72 shadow-2xl z-[100]"><div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2"><span className="text-xs font-black uppercase text-white tracking-widest">MÀU SẮC</span><button onClick={() => setShowThemeSettings(false)} className="hover:text-white text-slate-500 transition-colors"><X size={14} /></button></div><div className="grid grid-cols-3 gap-2 mb-4"><button onClick={() => setTheme(DEFAULT_THEME)} className="bg-slate-800 hover:bg-slate-700 text-[9px] font-bold text-slate-300 py-1.5 rounded-lg border border-white/5 transition-all">MẶC ĐỊNH</button><button onClick={() => setTheme({ ...DEFAULT_THEME, background: '#ffffff', grid: '#e2e8f0', g0: '#ef4444', g1: '#0f172a', arc: '#3b82f6', text: '#000000' })} className="bg-slate-200 hover:bg-white text-[9px] font-bold text-black py-1.5 rounded-lg border border-white/5 transition-all">SÁNG</button><button onClick={() => setTheme({ ...DEFAULT_THEME, background: '#172554', grid: '#1e3a8a', g0: '#facc15', g1: '#60a5fa', arc: '#c084fc', text: '#dbeafe' })} className="bg-blue-950 hover:bg-blue-900 text-[9px] font-bold text-blue-200 py-1.5 rounded-lg border border-blue-500/30 transition-all">BLUEPRINT</button></div><div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">{Object.entries(theme).map(([key, val]) => (<div key={key} className="flex items-center justify-between group"><span className="text-[10px] font-bold uppercase text-slate-400 group-hover:text-white transition-colors">{THEME_LABELS[key as keyof ThemeConfig]}</span><div className="flex items-center gap-2"><span className="text-[9px] font-mono text-slate-600 uppercase">{val}</span><div className="relative w-6 h-6 rounded-full overflow-hidden border border-white/20 shadow-sm cursor-pointer hover:scale-110 transition-transform"><input type="color" value={val} onChange={e => setTheme({ ...theme, [key]: e.target.value })} className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] cursor-pointer p-0 border-0" /></div></div></div>))}</div><div className="mt-4 pt-2 border-t border-white/10 text-center"><button onClick={() => setTheme(DEFAULT_THEME)} className="text-[9px] text-slate-500 hover:text-white flex items-center justify-center gap-1 mx-auto transition-colors"><RefreshCcw size={10} /> Khôi phục mặc định</button></div></div>}</div>
-           {!isLiteMode && <div className="w-px h-6 bg-white/10 mx-1 hidden md:block"></div>}
-           {!isLiteMode && <button onClick={handleAIAnalyze} disabled={isAnalyzing || !content} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all active:scale-95 disabled:opacity-50 disabled:grayscale">{isAnalyzing ? <Activity className="animate-spin" size={14} /> : <Zap size={14} />} <span className="hidden md:inline">AI ANALYZE</span></button>}
+        )}
     </div>
   );
+  
   const ThreeDViewContent = (
       <>
-          {is3DFullScreen && <div className="absolute top-4 left-4 right-16 z-50 flex justify-end pointer-events-none"><div className="pointer-events-auto bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl">{renderToolbarButtons()}</div></div>}
+          {is3DFullScreen && (
+            <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
+              <div className="pointer-events-auto bg-[#2d2d2d] h-[67px] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full">
+                <div className="flex items-start p-1 space-x-0.5 h-full w-full">
+                  <div className="flex flex-col h-full border-r border-slate-600 px-1">
+                      <div className="flex space-x-0.5 items-center mb-1 flex-1">
+                          <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                          <ToolbarButton icon={<Upload size={20} />} label={`Import\nFile`} color="text-green-400" onClick={() => fileInputRef.current?.click()} />
+                          <ToolbarButton icon={<HardDrive size={20} />} label={`Local\nAccess`} color="text-blue-400" onClick={handleOpenFilePicker} />
+                          <div className="ml-2 flex flex-col justify-center min-w-[120px] max-w-[200px]">
+                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{file ? "G-CODE" : "NO FILE"}</span>
+                              <span className="text-xs text-white font-bold truncate">{file ? file.name : "Tải lên tệp .nc/.gcode"}</span>
+                          </div>
+                      </div>
+                      <div className="text-center text-[8px] text-gray-500 -mt-1">File</div>
+                  </div>
+                  <div className="flex items-start space-x-0.5 h-full flex-1 justify-end">
+                      {renderToolbarButtons()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
-          <div className="absolute top-4 left-4 z-10 pointer-events-none hidden sm:block"><div className="bg-black/80 backdrop-blur-sm border border-white/10 rounded-2xl p-4 shadow-2xl"><div className="flex flex-col gap-1">{[{l:'X',c:'text-red-500',v:displayPos.x},{l:'Y',c:'text-green-500',v:displayPos.y},{l:'Z',c:'text-blue-500',v:displayPos.z}].map(a=>(<div key={a.l} className="flex items-baseline gap-4"><span className={`text-xl font-black ${a.c} w-6`}>{a.l}</span><span className="text-3xl font-mono font-bold tracking-wider" style={{ color: theme.text }}>{a.v.toFixed(3)}</span></div>))}<div className="h-px bg-white/10 my-3" /><div className="flex justify-between items-center text-xs font-mono text-slate-400"><div className="flex gap-2">LỆNH: <span className="font-bold" style={{ color: theme.text }}>{currentCmd.code.split(' ')[0]}</span></div><div className="flex gap-2 text-orange-400">F: <span className="font-bold">{currentCmd.f || 0}</span></div></div></div></div></div>
+          <div className={`absolute left-4 z-10 pointer-events-none hidden sm:block ${is3DFullScreen ? 'top-[83px]' : 'top-4'}`}><div className="bg-black/80 backdrop-blur-sm border border-white/10 rounded-2xl p-4 shadow-2xl"><div className="flex flex-col gap-1">{[{l:'X',c:'text-red-500',v:displayPos.x},{l:'Y',c:'text-green-500',v:displayPos.y},{l:'Z',c:'text-blue-500',v:displayPos.z}].map(a=>(<div key={a.l} className="flex items-baseline gap-4"><span className={`text-xl font-black ${a.c} w-6`}>{a.l}</span><span className="text-3xl font-mono font-bold tracking-wider" style={{ color: theme.text }}>{a.v.toFixed(3)}</span></div>))}<div className="h-px bg-white/10 my-3" /><div className="flex justify-between items-center text-xs font-mono text-slate-400"><div className="flex gap-2">LỆNH: <span className="font-bold" style={{ color: theme.text }}>{currentCmd.code.split(' ')[0]}</span></div><div className="flex gap-2 text-orange-400">F: <span className="font-bold">{currentCmd.f || 0}</span></div></div></div></div></div>
           {!isLiteMode && <div className="absolute bottom-4 left-4 z-10 pointer-events-none"><div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-lg"><div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest"><HardDrive size={10} /><span>PHẦN CỨNG ({cpuThreads} THREADS)</span></div><div className="text-[10px] font-mono text-emerald-400 truncate max-w-[200px]" title={gpuName}>{gpuName.replace(/ANGLE \((.*)\)/, '$1')}</div></div></div>}
           <AnimatePresence>{isProcessing && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center"><Loader2 size={48} className="text-blue-500 animate-spin mb-4" /><h3 className="text-white font-black uppercase tracking-widest text-lg">ĐANG XỬ LÝ DỮ LIỆU</h3><div className="w-64 h-2 bg-slate-800 rounded-full mt-4 overflow-hidden border border-white/10"><motion.div className="h-full bg-blue-500" initial={{width:0}} animate={{width:`${loadingProgress}%`}} /></div><span className="text-blue-400 font-mono text-sm mt-2">{loadingProgress.toFixed(1)}%</span></motion.div>}</AnimatePresence>
           
@@ -1291,38 +1353,28 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
           </>
         )}
       </AnimatePresence>
-      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
-           
-           <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0">
-               <div className="flex items-center gap-3 px-2 w-full sm:w-auto justify-center sm:justify-start">
-                   <div className="p-2 bg-purple-500/20 rounded-xl text-purple-400 shadow-inner shrink-0">
-                       <Monitor size={18} />
-                   </div>
-                   <div className="flex flex-col min-w-[120px] text-center sm:text-left">
-                       <h2 className="text-white font-black uppercase tracking-widest text-xs truncate max-w-[200px]" title={file ? file.name : ""}>{file ? file.name : ""}</h2>
-                       
-                   </div>
-               </div>
-               
-               <div className="flex items-center gap-1.5 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-                   <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                   <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-[10px] font-black flex items-center justify-center gap-2 border border-white/10 transition-all shadow-sm flex-1 sm:flex-auto whitespace-nowrap active:scale-95">
-                       <Upload size={14} /> <span className="hidden sm:inline">TẢI FILE</span><span className="sm:hidden">TẢI LÊN</span>
-                   </button>
-                   <button onClick={handleOpenFilePicker} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-[10px] font-black flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(37,99,235,0.3)] transition-all flex-1 sm:flex-auto whitespace-nowrap active:scale-95">
-                       <HardDrive size={14} /> <span className="hidden sm:inline">LOCAL ACCESS</span><span className="sm:hidden">LOCAL</span>
-                   </button>
-               </div>
-           </div>
+      {!is3DFullScreen && (
+        <header className="h-[67px] shrink-0 bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg w-full relative z-50">
+          <div className="flex items-start p-1 space-x-0.5 h-full w-full">
+              <div className="flex flex-col h-full border-r border-slate-600 px-1">
+                  <div className="flex space-x-0.5 items-center mb-1 flex-1">
+                      <input type="file" accept=".nc,.gcode,.cnc,.txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                      <ToolbarButton icon={<Upload size={20} />} label={`Import\nFile`} color="text-green-400" onClick={() => fileInputRef.current?.click()} />
+                      <ToolbarButton icon={<HardDrive size={20} />} label={`Local\nAccess`} color="text-blue-400" onClick={handleOpenFilePicker} />
+                      <div className="ml-2 flex flex-col justify-center min-w-[120px] max-w-[200px]">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{file ? "G-CODE" : "NO FILE"}</span>
+                          <span className="text-xs text-white font-bold truncate">{file ? file.name : "Tải lên tệp .nc/.gcode"}</span>
+                      </div>
+                  </div>
+                  <div className="text-center text-[8px] text-gray-500 -mt-1">File</div>
+              </div>
 
-           <div className="hidden xl:block w-px h-8 bg-white/10 mx-1 shrink-0"></div>
-
-           {!is3DFullScreen && (
-               <div className="w-full xl:flex-1 flex justify-center xl:justify-end xl:pl-4">
-                   {renderToolbarButtons()}
-               </div>
-           )}
-      </div>
+              <div className="flex items-start space-x-0.5 h-full flex-1 justify-end flex-wrap overflow-hidden">
+                  {renderToolbarButtons()}
+              </div>
+          </div>
+        </header>
+      )}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-1 bg-[#25252b] p-1 w-full rounded-b-xl border border-t-0 border-black/50 overflow-hidden"> 
         {showEditor && (
             <div className="col-span-1 lg:col-span-3 bg-[#1e1e24] rounded flex flex-col overflow-hidden shadow-inner border border-black/40 relative z-0 h-96 lg:h-full order-2 lg:order-1">
