@@ -1018,6 +1018,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const viewCubeControllerRef = useRef<any>(null);
+  const miniCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => localStorage.setItem('vjp26_gc_speed', JSON.stringify(speedSliderVal)), [speedSliderVal]);
   useEffect(() => localStorage.setItem('vjp26_gc_grid', JSON.stringify(showGrid)), [showGrid]);
@@ -1116,8 +1117,59 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const handleSendReport = async () => {
       if(!analysis || isReporting) return;
       setIsReporting(true);
+      
+      let videoBlob: Blob | null = null;
       try {
-          await fetch(DISCORD_REPORT_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: `📊 **G-CODE ANALYSIS REPORT**`, embeds: [{ title: file ? file.name : "Unknown File", color: 0x8b5cf6, fields: [{ name: "Thời gian gia công", value: analysis.totalTime, inline: true }, { name: "Kích thước (mm)", value: `${(analysis.maxX - analysis.minX).toFixed(1)} x ${(analysis.maxY - analysis.minY).toFixed(1)} x ${(analysis.maxZ - analysis.minZ).toFixed(1)}`, inline: true }, { name: "Thay dao", value: analysis.toolChanges.toString(), inline: true }, { name: "Cảnh báo", value: analysis.collisionWarnings.length > 0 ? "⚠️ CÓ VA CHẠM" : "✅ AN TOÀN", inline: true }], timestamp: new Date().toISOString() }] }) });
+          if (miniCanvasRef.current) {
+              const canvas = miniCanvasRef.current;
+              const stream = canvas.captureStream(30);
+              const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+              const chunks: Blob[] = [];
+              
+              recorder.ondataavailable = (e) => chunks.push(e.data);
+              
+              const recordPromise = new Promise<Blob>((resolve) => {
+                  recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+              });
+              
+              recorder.start();
+              setIsPlaying(true);
+              
+              await new Promise(r => setTimeout(r, 4000));
+              recorder.stop();
+              setIsPlaying(false);
+              
+              videoBlob = await recordPromise;
+          }
+      } catch (e) {
+          console.error("Video recording failed", e);
+      }
+      
+      try {
+          const formData = new FormData();
+          
+          const embedData = { 
+              content: `📊 **G-CODE ANALYSIS REPORT**\n${aiAnalysis.substring(0, 1500)}`, 
+              embeds: [{ 
+                  title: file ? file.name : "Unknown File", 
+                  color: 0x8b5cf6, 
+                  fields: [
+                      { name: "Thời gian gia công", value: analysis.totalTime, inline: true }, 
+                      { name: "Kích thước (mm)", value: `${(analysis.maxX - analysis.minX).toFixed(1)} x ${(analysis.maxY - analysis.minY).toFixed(1)} x ${(analysis.maxZ - analysis.minZ).toFixed(1)}`, inline: true }, 
+                      { name: "Thay dao", value: analysis.toolChanges.toString(), inline: true }, 
+                      { name: "Cảnh báo", value: analysis.collisionWarnings.length > 0 ? "⚠️ CÓ VA CHẠM" : "✅ AN TOÀN", inline: true }
+                  ], 
+                  timestamp: new Date().toISOString() 
+              }] 
+          };
+          
+          formData.append('payload_json', JSON.stringify(embedData));
+          
+          if (videoBlob) {
+              formData.append('file', videoBlob, 'simulation.webm');
+          }
+          
+          await fetch(DISCORD_REPORT_WEBHOOK, { method: 'POST', body: formData });
           alert("Đã gửi báo cáo!");
       } catch (e) { alert("Lỗi gửi báo cáo"); } finally { setIsReporting(false); }
   };
@@ -1414,7 +1466,10 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         {!isLiteMode && (
             <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col gap-4 border-white/5 p-4 overflow-hidden z-0 order-3 h-auto lg:h-full">
                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div>
-               <div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div><button onClick={handleSendReport} disabled={isReporting || !analysis} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white p-1.5 rounded-lg border border-blue-500/30"><Share2 size={12} /></button></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
+               <div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div><button onClick={handleSendReport} disabled={isReporting || !analysis} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-1.5 rounded-lg border border-blue-500/30 flex items-center gap-1 transition-all">
+    {isReporting ? <Activity size={12} className="animate-spin" /> : <Share2 size={12} />}
+    <span className="text-[10px] font-bold uppercase">{isReporting ? "Đang xử lý video..." : "Chia sẻ & Video"}</span>
+</button></div><div className="flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-mono custom-scrollbar">
 {isAnalyzing ? (
     <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
         <Activity className="animate-spin text-purple-500" size={24} />
@@ -1440,7 +1495,12 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                 </div>
             )}
             <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden">
-                <Canvas camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} dpr={1} gl={{ powerPreference: "low-power", antialias: false, stencil: false, depth: true }}>
+                <Canvas 
+                    onCreated={({ gl }) => {
+                        // Lưu ref của canvas để có thể record video
+                        (miniCanvasRef as any).current = gl.domElement;
+                    }}
+                    camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} dpr={1} gl={{ powerPreference: "low-power", antialias: false, stencil: false, depth: true, preserveDrawingBuffer: true }}>
                     <color attach="background" args={['#000000']} />
                     <SceneContent 
                         commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} theme={{...theme, background: '#000000'}} toolConfig={toolConfig} showGrid={false} snapMode={false} measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={true} 
