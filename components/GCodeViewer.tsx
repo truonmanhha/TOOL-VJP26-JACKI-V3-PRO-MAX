@@ -1239,9 +1239,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
   return (
     <div className="flex flex-col gap-4 h-full pb-10">
-      <div className="bg-slate-900/90 backdrop-blur-xl shadow-2xl border-b border-white/10 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
+      <div className="bg-[#1e1e24] shadow-xl border-b border-black/50 p-2 rounded-t-xl relative z-50 flex flex-col xl:flex-row items-center justify-between gap-2 w-full">
            
-           <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0 bg-black/40 p-1.5 rounded-xl border border-white/5">
+           <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto flex-shrink-0">
                <div className="flex items-center gap-3 px-2 w-full sm:w-auto justify-center sm:justify-start">
                    <div className="p-2 bg-purple-500/20 rounded-xl text-purple-400 shadow-inner shrink-0">
                        <Monitor size={18} />
