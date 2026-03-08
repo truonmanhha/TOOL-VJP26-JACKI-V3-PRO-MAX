@@ -1003,18 +1003,43 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     const getGpu = (pref: WebGLPowerPreference) => {
         try {
             const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl', { powerPreference: pref });
-            if (!gl) return 'Không xác định';
+            const options = { 
+                powerPreference: pref,
+                failIfMajorPerformanceCaveat: pref === 'high-performance'
+            };
+            const gl = canvas.getContext('webgl2', options) || canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+            if (!gl) return 'Không xác định (Fallback)';
             const ext = gl.getExtension('WEBGL_debug_renderer_info');
-            if (!ext) return 'Không xác định';
+            if (!ext) return 'Không xác định (No Ext)';
             const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
-            return renderer ? renderer.replace(/ANGLE \((.*)\)/, '$1').substring(0, 30) + '...' : 'Không xác định';
-        } catch(e) { return 'Không xác định'; }
+            return renderer ? renderer.replace(/ANGLE \((.*)\)/, '$1').split(' Direct3D')[0].substring(0, 40) : 'Không xác định';
+        } catch(e) { return 'Không xác định (Lỗi)'; }
     };
-    setDetectedGpus({
-        high: getGpu('high-performance'),
-        low: getGpu('low-power')
-    });
+    
+    // We run it with a slight delay to ensure browser has settled
+    setTimeout(async () => {
+        let highGpu = getGpu('high-performance');
+        let lowGpu = getGpu('low-power');
+
+        // Let's also try WebGPU to extract accurate adapter names if WebGL is returning the same for both!
+        if (navigator.gpu) {
+            try {
+                const highAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+                if (highAdapter && highAdapter.info && highAdapter.info.device) {
+                    highGpu = highAdapter.info.device + ' (WebGPU)';
+                }
+                const lowAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' });
+                if (lowAdapter && lowAdapter.info && lowAdapter.info.device) {
+                    lowGpu = lowAdapter.info.device + ' (WebGPU)';
+                }
+            } catch(e) { console.warn('WebGPU info extraction failed', e); }
+        }
+
+        setDetectedGpus({
+            high: highGpu,
+            low: lowGpu
+        });
+    }, 500);
   }, []);
   useEffect(() => localStorage.setItem('vjp26_gc_gpu_pref', JSON.stringify(gpuPreference)), [gpuPreference]);
   const [toolConfig, setToolConfig] = useState<ToolConfig>(() => loadSetting('vjp26_gc_tool', { diameter: 6, length: 20, holderDiameter: 25, holderLength: 20 }));
@@ -1052,16 +1077,39 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   useEffect(() => localStorage.setItem('vjp26_gc_starmode', JSON.stringify(starMode)), [starMode]);
   useEffect(() => localStorage.setItem('vjp26_gc_options', JSON.stringify(viewOptions)), [viewOptions]);
   useEffect(() => {
-    const canvas = document.createElement('canvas'); 
-    const options = gpuPreference === 'default' ? {} : { powerPreference: gpuPreference };
-    const gl = canvas.getContext('webgl', options); 
-    if (gl) { 
-        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info'); 
-        if (debugInfo) { 
-            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL); 
-            setGpuName(renderer); 
-        } 
-    } 
+    setTimeout(async () => {
+        const getGpuGL = (pref: WebGLPowerPreference) => {
+            try {
+                const canvas = document.createElement('canvas'); 
+                const options = pref === 'default' ? {} : { 
+                    powerPreference: pref,
+                    failIfMajorPerformanceCaveat: pref === 'high-performance'
+                };
+                const gl = canvas.getContext('webgl2', options) || canvas.getContext('webgl', options); 
+                if (gl) { 
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info'); 
+                    if (debugInfo) { 
+                        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL); 
+                        return renderer ? renderer.replace(/ANGLE \((.*)\)/, '$1').split(' Direct3D')[0] : 'Unknown';
+                    } 
+                }
+                return 'Cannot initialize GPU';
+            } catch(e) { return 'Error'; }
+        };
+
+        let currentGpu = getGpuGL(gpuPreference);
+        
+        if (navigator.gpu) {
+            try {
+                const adapter = await navigator.gpu.requestAdapter({ powerPreference: gpuPreference === 'default' ? undefined : gpuPreference });
+                if (adapter && adapter.info && adapter.info.device) {
+                    currentGpu = adapter.info.device + ' (WebGPU)';
+                }
+            } catch(e) {}
+        }
+        
+        setGpuName(currentGpu);
+    }, 100);
 }, [gpuPreference]);
   const playbackSpeed = useMemo(() => { if (speedSliderVal <= 40) return 0.1 + (speedSliderVal / 40) * 1.9; const t = (speedSliderVal - 40) / 60; return 2 + Math.pow(t, 3) * 500; }, [speedSliderVal]);
   useEffect(() => { const handleResize = () => setZoomFitTrigger(prev => prev + 1); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize); }, []);
