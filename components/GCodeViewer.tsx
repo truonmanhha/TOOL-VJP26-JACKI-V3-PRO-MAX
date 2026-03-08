@@ -1209,31 +1209,35 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
     if (!isWorkspaceLocked) {
       if (workspaceRef.current) {
+        setIsWorkspaceLocked(true);
         const rect = workspaceRef.current.getBoundingClientRect();
         const targetY = rect.top + window.pageYOffset;
         
         fluidScroll(targetY, 1000);
-
-        setTimeout(() => {
-          setIsWorkspaceLocked(true);
-          setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
-        }, 1000); 
+        setTimeout(() => setZoomFitTrigger(p => p + 1), 1000); 
       }
     } else {
-      setIsWorkspaceLocked(false);
-      
       fluidScroll(0, 1000);
-      setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
+      setTimeout(() => {
+        setIsWorkspaceLocked(false);
+        setTimeout(() => setZoomFitTrigger(p => p + 1), 100);
+      }, 1000);
     }
   };
   
   useEffect(() => {
+    let timeoutId: any;
     if (isWorkspaceLocked) {
-      document.body.style.overflow = 'hidden';
+      timeoutId = setTimeout(() => {
+        document.body.style.overflow = 'hidden';
+      }, 1000);
     } else {
       document.body.style.overflow = 'auto';
     }
-    return () => { document.body.style.overflow = 'auto'; };
+    return () => { 
+      clearTimeout(timeoutId);
+      document.body.style.overflow = 'auto'; 
+    };
   }, [isWorkspaceLocked]);
   const handleJumpToLine = () => { const line = parseInt(jumpTarget); if (!isNaN(line) && line >= 1 && line <= commands.length) { setCurrentIndex(line - 1); setShowJumpInput(false); setJumpTarget(''); } };
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
