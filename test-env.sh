@@ -1,1 +1,0 @@
-echo "$GEMINI_API_KEY"
