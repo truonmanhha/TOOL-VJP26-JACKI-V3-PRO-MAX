@@ -1213,18 +1213,18 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         const targetY = rect.top + window.pageYOffset;
         const yOffset = -65;
         
-        fluidScroll(targetY + yOffset, 600);
+        fluidScroll(targetY + yOffset, 1200);
         
         setTimeout(() => {
           setIsWorkspaceLocked(true);
           setZoomFitTrigger(p => p + 1);
           document.body.style.overflow = 'hidden';
-        }, 600);
+        }, 1300);
       }
     } else {
-      fluidScroll(0, 500); 
+      fluidScroll(0, 1000); 
       setIsWorkspaceLocked(false);
-      setTimeout(() => setZoomFitTrigger(p => p + 1), 500);
+      setTimeout(() => setZoomFitTrigger(p => p + 1), 300);
     }
   };
   
