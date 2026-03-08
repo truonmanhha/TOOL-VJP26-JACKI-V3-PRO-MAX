@@ -1217,11 +1217,11 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         setTimeout(() => setZoomFitTrigger(p => p + 1), 1000); 
       }
     } else {
-      fluidScroll(0, 1000);
+      fluidScroll(0, 1600);
       setTimeout(() => {
         setIsWorkspaceLocked(false);
         setTimeout(() => setZoomFitTrigger(p => p + 1), 100);
-      }, 1000);
+      }, 1600);
     }
   };
   
