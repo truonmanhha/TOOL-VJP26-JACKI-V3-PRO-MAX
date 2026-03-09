@@ -12,16 +12,24 @@ export interface OfflineRendererProgress {
   encodeQueueSize: number;
 }
 
+export interface OfflineRenderSurface<TSnapshot = unknown> {
+  canvas: OffscreenCanvas | HTMLCanvasElement;
+  renderFrame: (frame: TimelineFrame, snapshot: TSnapshot | undefined) => void | Promise<void>;
+  dispose?: () => void | Promise<void>;
+}
+
 export interface RenderVideoOfflineParams<TSnapshot = unknown> {
   commands: GCodeCommand[];
   initialSpeed: number;
-  canvas: OffscreenCanvas | HTMLCanvasElement;
+  canvas?: OffscreenCanvas | HTMLCanvasElement;
   onProgress?: (progress: OfflineRendererProgress) => void;
 
   fps?: number;
   encoderConfig?: Partial<WebMEncoderConfig>;
 
   snapshot?: TSnapshot;
+
+  createRenderSurface?: (snapshot: TSnapshot | undefined) => OfflineRenderSurface<TSnapshot> | Promise<OfflineRenderSurface<TSnapshot>>;
 
   applyFrameState?: (frame: TimelineFrame, snapshot: TSnapshot | undefined) => void | Promise<void>;
 
@@ -36,7 +44,6 @@ export interface RenderVideoOfflineParams<TSnapshot = unknown> {
   backpressureYieldThreshold?: number;
 }
 
-const MICROS_PER_SECOND = 1_000_000;
 const DEFAULT_YIELD_EVERY_FRAMES = 8;
 
 export async function renderVideoOffline<TSnapshot = unknown>(params: RenderVideoOfflineParams<TSnapshot>): Promise<Blob> {
@@ -48,6 +55,7 @@ export async function renderVideoOffline<TSnapshot = unknown>(params: RenderVide
     fps,
     encoderConfig,
     snapshot,
+    createRenderSurface,
     applyFrameState,
     renderScene,
     restoreState,
@@ -64,9 +72,16 @@ export async function renderVideoOffline<TSnapshot = unknown>(params: RenderVide
     fps: frameRate
   });
 
+  const surface = createRenderSurface ? await createRenderSurface(snapshot) : null;
+  const renderCanvas = surface?.canvas ?? canvas;
+
+  if (!renderCanvas) {
+    throw new Error('[offlineRenderer] Missing render canvas. Provide `canvas` or `createRenderSurface`.');
+  }
+
   const encoder = new WebMEncoder({
-    width: canvas.width,
-    height: canvas.height,
+    width: renderCanvas.width,
+    height: renderCanvas.height,
     frameRate,
     ...encoderConfig
   });
@@ -80,21 +95,25 @@ export async function renderVideoOffline<TSnapshot = unknown>(params: RenderVide
     while (true) {
       const frame = sampler.nextFrame();
 
-      if (applyFrameState) {
-        await applyFrameState(frame, snapshot);
+      if (surface) {
+        await surface.renderFrame(frame, snapshot);
+      } else {
+        if (applyFrameState) {
+          await applyFrameState(frame, snapshot);
+        }
+
+        if (renderScene) {
+          await renderScene(snapshot);
+        }
       }
 
-      if (renderScene) {
-        await renderScene(snapshot);
-      }
-
-      await encoder.addFrame(canvas, frame.time * MICROS_PER_SECOND);
+      await encoder.addFrame(renderCanvas, frame.timestampMicros, frame.durationMicros);
       encodedFrames += 1;
 
       if (onProgress) {
         onProgress({
           frame: frame.frame,
-          time: frame.time,
+          time: frame.outputTime,
           index: frame.index,
           progress: frame.progress,
           isFinished: frame.isFinished,
@@ -127,6 +146,10 @@ export async function renderVideoOffline<TSnapshot = unknown>(params: RenderVide
       thrownError = new Error(`${thrownError.message} (also failed to finalize encoder: ${finalizeMessage})`);
     }
   } finally {
+    if (surface?.dispose) {
+      await surface.dispose();
+    }
+
     if (restoreState && snapshot !== undefined) {
       await restoreState(snapshot);
     }

@@ -10,6 +10,9 @@ export interface TimelineSamplerOptions {
 export interface TimelineFrame {
   frame: number;
   time: number;
+  outputTime: number;
+  timestampMicros: number;
+  durationMicros: number;
   position: {
     x: number;
     y: number;
@@ -24,6 +27,7 @@ export interface TimelineFrame {
 
 const DEFAULT_FPS = 60;
 const EPSILON = 1e-6;
+const MICROS_PER_SECOND = 1_000_000;
 
 export class GCodeTimelineSampler {
   private readonly commands: GCodeCommand[];
@@ -150,10 +154,18 @@ export class GCodeTimelineSampler {
     const x = forcedX ?? sampled.position.x;
     const y = forcedY ?? sampled.position.y;
     const z = forcedZ ?? sampled.position.z;
+    const frameTimestampMicros = this.frameIndex > 0
+      ? Math.round(((this.frameIndex - 1) / this.fps) * MICROS_PER_SECOND)
+      : 0;
+    const nextFrameTimestampMicros = Math.round((this.frameIndex / this.fps) * MICROS_PER_SECOND);
+    const frameDurationMicros = Math.max(1, nextFrameTimestampMicros - frameTimestampMicros);
 
     return {
       frame: this.frameIndex,
       time: this.timelineTime,
+      outputTime: frameTimestampMicros / MICROS_PER_SECOND,
+      timestampMicros: frameTimestampMicros,
+      durationMicros: frameDurationMicros,
       position: { x, y, z },
       isRapid,
       isFinished,

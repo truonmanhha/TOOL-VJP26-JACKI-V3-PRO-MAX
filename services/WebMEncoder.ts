@@ -35,6 +35,7 @@ export class WebMEncoder {
   private frameContext: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
 
   private frameCount = 0;
+  private lastTimestampMicros = -1;
   private encoderError: Error | null = null;
   private isFinishing = false;
   private isFinalized = false;
@@ -88,21 +89,30 @@ export class WebMEncoder {
     }
   }
 
-  public async addFrame(canvas: OffscreenCanvas | HTMLCanvasElement, timestampMicros: number): Promise<void> {
+  public async addFrame(
+    canvas: OffscreenCanvas | HTMLCanvasElement,
+    timestampMicros: number,
+    durationMicros?: number
+  ): Promise<void> {
     this.ensureWritableState();
     await this.waitForBackpressure();
     this.ensureWritableState();
 
     this.frameContext.drawImage(canvas, 0, 0, this.config.width, this.config.height);
 
+    const resolvedTimestampMicros = this.normalizeTimestampMicros(timestampMicros);
+    const resolvedDurationMicros = this.normalizeDurationMicros(durationMicros);
+
     const frame = new VideoFrame(this.frameCanvas, {
-      timestamp: Math.round(timestampMicros)
+      timestamp: resolvedTimestampMicros,
+      duration: resolvedDurationMicros
     });
 
     try {
       const keyFrame = this.frameCount % this.config.keyFrameInterval === 0;
       this.encoder.encode(frame, { keyFrame });
       this.frameCount += 1;
+      this.lastTimestampMicros = resolvedTimestampMicros;
     } finally {
       frame.close();
     }
@@ -178,6 +188,20 @@ export class WebMEncoder {
     return new Promise(resolve => {
       setTimeout(resolve, ms);
     });
+  }
+
+  private normalizeTimestampMicros(timestampMicros: number): number {
+    const rounded = Number.isFinite(timestampMicros) ? Math.round(timestampMicros) : 0;
+    const nonNegative = Math.max(0, rounded);
+    return nonNegative > this.lastTimestampMicros ? nonNegative : this.lastTimestampMicros + 1;
+  }
+
+  private normalizeDurationMicros(durationMicros?: number): number {
+    if (!Number.isFinite(durationMicros)) {
+      return 1;
+    }
+
+    return Math.max(1, Math.round(durationMicros ?? 1));
   }
 
   private safeCloseEncoder(): void {

@@ -5,10 +5,11 @@ import { OrbitControls, Text, Html, Instance, Instances, Center } from '@react-t
 import * as THREE from 'three';
 import { advanceMotion, MotionState } from '@/services/gcodeMotionHelper';
 import { renderVideoOffline } from '@/services/offlineRenderer';
+import { getExportConfig } from '@/services/exportPolicy';
 import { Play, Pause, RotateCcw, Upload, Code, Monitor, Activity, Zap, Layers, Cpu, Ruler, MousePointer2, Settings, Palette, Eye, EyeOff, Save, X, ListFilter, ChevronDown, Check, MoreHorizontal, Circle, MousePointerClick, Send, Share2, Timer, Maximize, Minimize, Focus, Sparkles, Globe, Rocket, Swords, FastForward, CornerDownRight, ArrowRightCircle, Wrench, Replace, Search, CaseSensitive, Repeat, Undo2, Redo2, Copy, FileCode, RefreshCcw, Loader2, AlertCircle, Terminal, Bot, Gauge, HardDrive, PanelLeftClose, PanelLeftOpen, Home as HomeIcon, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GCodeService } from '../services/gcodeService';
-import { GCodeCommand, GCodeAnalysisReport } from '../types';
+import { GCodeCommand, GCodeAnalysisReport, ExportDataSnapshot } from '../types';
 import { Language, TRANSLATIONS, FORMAT_NUMBER } from '../constants';
 import { GoogleGenAI } from "@google/genai";
 import { getVideoExportErrorMessage } from '../utils/errorHandling';
@@ -1129,195 +1130,228 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
     setVideoExportErrorMessageState('');
 
+    const exportConfig = getExportConfig(speedSliderVal);
+    const exportDataSnapshot: ExportDataSnapshot = {
+      commands: commands.map(cmd => ({ ...cmd })),
+      analysis,
+      rawText: content
+    };
 
-    const offscreenCanvas = document.createElement('canvas');
-    offscreenCanvas.width = 1280;
-    offscreenCanvas.height = 720;
-    offscreenCanvas.style.width = '100%';
-    offscreenCanvas.style.height = 'auto';
-    offscreenCanvas.style.borderRadius = '8px';
-    if (videoPreviewRef.current) {
-        videoPreviewRef.current.innerHTML = '';
-        videoPreviewRef.current.appendChild(offscreenCanvas);
-    }
+    const miniCameraSnapshot = miniCameraRef.current instanceof THREE.PerspectiveCamera
+      ? {
+          position: miniCameraRef.current.position.clone(),
+          quaternion: miniCameraRef.current.quaternion.clone(),
+          up: miniCameraRef.current.up.clone(),
+          fov: miniCameraRef.current.fov,
+          near: miniCameraRef.current.near,
+          far: miniCameraRef.current.far
+        }
+      : null;
 
+    const exportSnapshot = {
+      exportData: exportDataSnapshot,
+      theme: { ...theme },
+      viewOptions: {
+        showRapid: viewOptions.showRapid,
+        showCutting: viewOptions.showCutting
+      },
+      camera: miniCameraSnapshot
+    };
 
-    let renderer: THREE.WebGLRenderer | null = null;
-    let activeGeo: THREE.BufferGeometry | null = null;
-    let ghostGeo: THREE.BufferGeometry | null = null;
-    let ghostLineMat: THREE.LineBasicMaterial | null = null;
-    let activeLineMat: THREE.LineBasicMaterial | null = null;
-    let toolMat: THREE.MeshStandardMaterial | null = null;
-    let toolHeadGeo: THREE.SphereGeometry | null = null;
-    let ambientLight: THREE.AmbientLight | null = null;
-    let pointLight: THREE.PointLight | null = null;
-    let axesHelper: THREE.AxesHelper | null = null;
-    let toolHead: THREE.Mesh | null = null;
-
-    const positions: number[] = [];
-    const commandToVertexIndex = new Int32Array(commands.length);
-    let currentVertCount = 0;
-
-    for (let i = 0; i < commands.length - 1; i++) {
-      const c1 = commands[i];
-      const c2 = commands[i + 1];
-      commandToVertexIndex[i] = currentVertCount;
-
-      if (c1.type === 'OTHER' || c2.type === 'OTHER') continue;
-
-      const isZeroLen =
-        Math.abs(c1.x - c2.x) < 0.0001 &&
-        Math.abs(c1.y - c2.y) < 0.0001 &&
-        Math.abs(c1.z - c2.z) < 0.0001;
-      if (isZeroLen) continue;
-
-      const isRapid = c2.type === 'G0';
-      const isCut = c2.type === 'G1' || c2.type === 'G2' || c2.type === 'G3';
-      if ((isRapid && !viewOptions.showRapid) || (isCut && !viewOptions.showCutting)) continue;
-
-      positions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
-      currentVertCount += 2;
-    }
-
-    if (commands.length > 0) {
-      commandToVertexIndex[commands.length - 1] = currentVertCount;
-    }
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(theme.background);
-
-    const camera = new THREE.PerspectiveCamera(45, offscreenCanvas.width / offscreenCanvas.height, 0.1, 100000);
-
-    if (miniCameraRef.current) {
-      camera.position.copy(miniCameraRef.current.position);
-      camera.quaternion.copy(miniCameraRef.current.quaternion);
-      camera.up.copy(miniCameraRef.current.up);
-    } else {
-      const bounds = new THREE.Box3();
-      let hasBounds = false;
-      for (const cmd of commands) {
-        if (cmd.type === 'OTHER') continue;
-        bounds.expandByPoint(new THREE.Vector3(cmd.x, cmd.y, cmd.z));
-        hasBounds = true;
-      }
-
-      if (hasBounds) {
-        const center = new THREE.Vector3();
-        bounds.getCenter(center);
-        const size = new THREE.Vector3();
-        bounds.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z) || 100;
-        const distance = maxDim * 2;
-        camera.position.set(center.x + distance, center.y - distance, center.z + distance * 0.8);
-        camera.up.set(0, 0, 1);
-        camera.lookAt(center);
-      } else {
-        camera.position.set(100, -100, 100);
-        camera.up.set(0, 0, 1);
-        camera.lookAt(new THREE.Vector3(0, 0, 0));
-      }
-    }
+    let progressRafId: number | null = null;
+    let pendingProgressBucket = 0;
+    let appliedProgressBucket = -1;
 
     try {
-      renderer = new THREE.WebGLRenderer({
-        canvas: offscreenCanvas,
-        antialias: true,
-        alpha: false,
-        powerPreference: 'high-performance'
-      });
-      renderer.setPixelRatio(1);
-      renderer.setSize(offscreenCanvas.width, offscreenCanvas.height, false);
-      renderer.setClearColor(theme.background, 1);
-
-      const baseGeo = new THREE.BufferGeometry();
-      baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-      ghostGeo = baseGeo.clone();
-      activeGeo = baseGeo.clone();
-      ghostLineMat = new THREE.LineBasicMaterial({ color: theme.g1, opacity: 0.18, transparent: true, depthWrite: false });
-      activeLineMat = new THREE.LineBasicMaterial({ color: theme.g1, opacity: 1, transparent: false });
-
-      const ghostLine = new THREE.LineSegments(ghostGeo, ghostLineMat);
-      const activeLine = new THREE.LineSegments(activeGeo, activeLineMat);
-      scene.add(ghostLine);
-      scene.add(activeLine);
-
-      toolHeadGeo = new THREE.SphereGeometry(2.5, 20, 20);
-      toolMat = new THREE.MeshStandardMaterial({ color: theme.text, emissive: theme.text, emissiveIntensity: 0.2 });
-      toolHead = new THREE.Mesh(toolHeadGeo, toolMat);
-      scene.add(toolHead);
-
-      ambientLight = new THREE.AmbientLight('#ffffff', 0.5);
-      pointLight = new THREE.PointLight('#ffffff', 1);
-      pointLight.position.set(100, 100, 120);
-      axesHelper = new THREE.AxesHelper(100);
-      scene.add(ambientLight, pointLight, axesHelper);
-
       setVideoExportState('rendering');
       setVideoExportProgress(0);
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 
       const videoBlob = await renderVideoOffline({
-        commands,
-        initialSpeed: playbackSpeed,
-        canvas: offscreenCanvas,
-        miniCamera: miniCameraRef.current,
-        onProgress: (progress) => {
-          setVideoExportProgress(Math.max(0, Math.min(1, progress.progress)));
-        },
-        captureState: () => ({
-          currentIndex,
-          displayPos: displayPos.clone(),
-          interpolatedPos: interpolatedPosRef.current.clone(),
-          isPlaying,
-          elapsedTime
-        }),
-        applyFrameState: (frame) => {
-          const idx = Math.max(0, Math.min(commands.length - 1, frame.index));
-          const c1 = commands[idx] || commands[commands.length - 1];
-          const c2 = commands[Math.min(commands.length - 1, idx + 1)] || c1;
-          const currentPos = new THREE.Vector3().lerpVectors(
-            new THREE.Vector3(c1.x, c1.y, c1.z),
-            new THREE.Vector3(c2.x, c2.y, c2.z),
-            Math.max(0, Math.min(1, frame.progress))
+        commands: exportSnapshot.exportData.commands,
+        initialSpeed: exportConfig.playbackSpeed,
+        fps: exportConfig.fps,
+        snapshot: exportSnapshot,
+        createRenderSurface: (snapshot) => {
+          const safeSnapshot = snapshot || exportSnapshot;
+          const snapshotCommands = safeSnapshot.exportData.commands;
+
+          const offscreenCanvas = document.createElement('canvas');
+          offscreenCanvas.width = 1280;
+          offscreenCanvas.height = 720;
+          offscreenCanvas.style.width = '100%';
+          offscreenCanvas.style.height = 'auto';
+          offscreenCanvas.style.borderRadius = '8px';
+
+          if (videoPreviewRef.current) {
+            videoPreviewRef.current.innerHTML = '';
+            videoPreviewRef.current.appendChild(offscreenCanvas);
+          }
+
+          const positions: number[] = [];
+          const commandToVertexIndex = new Int32Array(snapshotCommands.length);
+          let currentVertCount = 0;
+
+          for (let i = 0; i < snapshotCommands.length - 1; i++) {
+            const c1 = snapshotCommands[i];
+            const c2 = snapshotCommands[i + 1];
+            commandToVertexIndex[i] = currentVertCount;
+
+            if (c1.type === 'OTHER' || c2.type === 'OTHER') continue;
+
+            const isZeroLen =
+              Math.abs(c1.x - c2.x) < 0.0001 &&
+              Math.abs(c1.y - c2.y) < 0.0001 &&
+              Math.abs(c1.z - c2.z) < 0.0001;
+            if (isZeroLen) continue;
+
+            const isRapid = c2.type === 'G0';
+            const isCut = c2.type === 'G1' || c2.type === 'G2' || c2.type === 'G3';
+            if ((isRapid && !safeSnapshot.viewOptions.showRapid) || (isCut && !safeSnapshot.viewOptions.showCutting)) continue;
+
+            positions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
+            currentVertCount += 2;
+          }
+
+          if (snapshotCommands.length > 0) {
+            commandToVertexIndex[snapshotCommands.length - 1] = currentVertCount;
+          }
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(safeSnapshot.theme.background);
+
+          const camera = new THREE.PerspectiveCamera(
+            safeSnapshot.camera?.fov ?? 45,
+            offscreenCanvas.width / offscreenCanvas.height,
+            safeSnapshot.camera?.near ?? 0.1,
+            safeSnapshot.camera?.far ?? 100000
           );
 
-          interpolatedPosRef.current.copy(currentPos);
-          // KHÔNG set state UI ở đây để tránh re-render liên tục gây nghẽn tốc độ export
-          // setDisplayPos(currentPos.clone());
-          // setCurrentIndex(idx);
-
-          if (toolHead) {
-            toolHead.position.copy(currentPos);
-          }
-
-          if (activeGeo && ghostGeo) {
-            const totalVerts = commandToVertexIndex[commands.length - 1] || 0;
-            const drawLimit = commandToVertexIndex[idx] || 0;
-
-            let extraVerts = 0;
-            const nextCmd = commands[idx + 1];
-            if (nextCmd) {
-              const nextIsRapid = nextCmd.type === 'G0';
-              const nextIsCut = nextCmd.type === 'G1' || nextCmd.type === 'G2' || nextCmd.type === 'G3';
-              const visible = (nextIsRapid && viewOptions.showRapid) || (nextIsCut && viewOptions.showCutting);
-              if (visible) {
-                extraVerts = Math.round(Math.max(0, Math.min(1, frame.progress)) * 2);
-              }
+          if (safeSnapshot.camera) {
+            camera.position.copy(safeSnapshot.camera.position);
+            camera.quaternion.copy(safeSnapshot.camera.quaternion);
+            camera.up.copy(safeSnapshot.camera.up);
+            camera.updateProjectionMatrix();
+          } else {
+            const bounds = new THREE.Box3();
+            let hasBounds = false;
+            for (const cmd of snapshotCommands) {
+              if (cmd.type === 'OTHER') continue;
+              bounds.expandByPoint(new THREE.Vector3(cmd.x, cmd.y, cmd.z));
+              hasBounds = true;
             }
 
-            ghostGeo.setDrawRange(0, totalVerts);
-            activeGeo.setDrawRange(0, Math.min(totalVerts, drawLimit + extraVerts));
+            if (hasBounds) {
+              const center = new THREE.Vector3();
+              bounds.getCenter(center);
+              const size = new THREE.Vector3();
+              bounds.getSize(size);
+              const maxDim = Math.max(size.x, size.y, size.z) || 100;
+              const distance = maxDim * 2;
+              camera.position.set(center.x + distance, center.y - distance, center.z + distance * 0.8);
+              camera.up.set(0, 0, 1);
+              camera.lookAt(center);
+            } else {
+              camera.position.set(100, -100, 100);
+              camera.up.set(0, 0, 1);
+              camera.lookAt(new THREE.Vector3(0, 0, 0));
+            }
           }
+
+          const renderer = new THREE.WebGLRenderer({
+            canvas: offscreenCanvas,
+            antialias: true,
+            alpha: false,
+            powerPreference: 'high-performance'
+          });
+          renderer.setPixelRatio(1);
+          renderer.setSize(offscreenCanvas.width, offscreenCanvas.height, false);
+          renderer.setClearColor(safeSnapshot.theme.background, 1);
+
+          const baseGeo = new THREE.BufferGeometry();
+          baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+          const ghostGeo = baseGeo.clone();
+          const activeGeo = baseGeo.clone();
+
+          const ghostLineMat = new THREE.LineBasicMaterial({ color: safeSnapshot.theme.g1, opacity: 0.18, transparent: true, depthWrite: false });
+          const activeLineMat = new THREE.LineBasicMaterial({ color: safeSnapshot.theme.g1, opacity: 1, transparent: false });
+          const ghostLine = new THREE.LineSegments(ghostGeo, ghostLineMat);
+          const activeLine = new THREE.LineSegments(activeGeo, activeLineMat);
+          scene.add(ghostLine, activeLine);
+
+          const toolHeadGeo = new THREE.SphereGeometry(2.5, 20, 20);
+          const toolMat = new THREE.MeshStandardMaterial({ color: safeSnapshot.theme.text, emissive: safeSnapshot.theme.text, emissiveIntensity: 0.2 });
+          const toolHead = new THREE.Mesh(toolHeadGeo, toolMat);
+          scene.add(toolHead);
+
+          const ambientLight = new THREE.AmbientLight('#ffffff', 0.5);
+          const pointLight = new THREE.PointLight('#ffffff', 1);
+          pointLight.position.set(100, 100, 120);
+          const axesHelper = new THREE.AxesHelper(100);
+          scene.add(ambientLight, pointLight, axesHelper);
+
+          return {
+            canvas: offscreenCanvas,
+            renderFrame: (frame) => {
+              const idx = Math.max(0, Math.min(snapshotCommands.length - 1, frame.index));
+              const c1 = snapshotCommands[idx] || snapshotCommands[snapshotCommands.length - 1];
+              const c2 = snapshotCommands[Math.min(snapshotCommands.length - 1, idx + 1)] || c1;
+              const currentPos = new THREE.Vector3().lerpVectors(
+                new THREE.Vector3(c1.x, c1.y, c1.z),
+                new THREE.Vector3(c2.x, c2.y, c2.z),
+                Math.max(0, Math.min(1, frame.progress))
+              );
+
+              toolHead.position.copy(currentPos);
+
+              const totalVerts = commandToVertexIndex[snapshotCommands.length - 1] || 0;
+              const drawLimit = commandToVertexIndex[idx] || 0;
+              let extraVerts = 0;
+
+              const nextCmd = snapshotCommands[idx + 1];
+              if (nextCmd) {
+                const nextIsRapid = nextCmd.type === 'G0';
+                const nextIsCut = nextCmd.type === 'G1' || nextCmd.type === 'G2' || nextCmd.type === 'G3';
+                const visible = (nextIsRapid && safeSnapshot.viewOptions.showRapid) || (nextIsCut && safeSnapshot.viewOptions.showCutting);
+                if (visible) {
+                  extraVerts = Math.round(Math.max(0, Math.min(1, frame.progress)) * 2);
+                }
+              }
+
+              ghostGeo.setDrawRange(0, totalVerts);
+              activeGeo.setDrawRange(0, Math.min(totalVerts, drawLimit + extraVerts));
+              renderer.render(scene, camera);
+            },
+            dispose: () => {
+              renderer.dispose();
+              baseGeo.dispose();
+              ghostGeo.dispose();
+              activeGeo.dispose();
+              ghostLineMat.dispose();
+              activeLineMat.dispose();
+              toolHeadGeo.dispose();
+              toolMat.dispose();
+              if (videoPreviewRef.current) {
+                videoPreviewRef.current.innerHTML = '';
+              }
+              offscreenCanvas.width = 0;
+              offscreenCanvas.height = 0;
+            }
+          };
         },
-        renderScene: () => {
-          renderer?.render(scene, camera);
-        },
-        restoreState: (state) => {
-          setIsPlaying(state.isPlaying);
-          setCurrentIndex(state.currentIndex);
-          setDisplayPos(state.displayPos.clone());
-          interpolatedPosRef.current.copy(state.interpolatedPos);
-          setElapsedTime(state.elapsedTime);
+        onProgress: (progress) => {
+          const clampedProgress = Math.max(0, Math.min(1, progress.progress));
+          const bucket = progress.isFinished ? 10 : Math.floor(clampedProgress * 10);
+          if (bucket === pendingProgressBucket && progressRafId !== null) return;
+
+          pendingProgressBucket = bucket;
+          if (progressRafId !== null) return;
+          progressRafId = requestAnimationFrame(() => {
+            progressRafId = null;
+            if (pendingProgressBucket === appliedProgressBucket) return;
+            appliedProgressBucket = pendingProgressBucket;
+            setVideoExportProgress(appliedProgressBucket / 10);
+          });
         }
       });
 
@@ -1360,30 +1394,17 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       setVideoExportState('error');
       setVideoExportErrorMessageState(getVideoExportErrorMessage(error));
     } finally {
-      if (renderer) {
-        renderer.dispose();
+      if (progressRafId !== null) {
+        cancelAnimationFrame(progressRafId);
+        progressRafId = null;
       }
-      if (videoPreviewRef.current) {
-         videoPreviewRef.current.innerHTML = '';
-      }
-      if (activeGeo) activeGeo.dispose();
-      if (ghostGeo) ghostGeo.dispose();
-      if (ghostLineMat) ghostLineMat.dispose();
-      if (activeLineMat) activeLineMat.dispose();
-      if (toolHeadGeo) toolHeadGeo.dispose();
-      if (toolMat) toolMat.dispose();
-      offscreenCanvas.width = 0;
-      offscreenCanvas.height = 0;
     }
   }, [
     videoExportState,
     analysis,
     commands,
     speedSliderVal,
-    currentIndex,
-    displayPos,
-    isPlaying,
-    elapsedTime,
+    content,
     viewOptions.showRapid,
     viewOptions.showCutting,
     theme.background,
