@@ -216,7 +216,7 @@ Wave FINAL (independent parallel review):
 
 ## TODOs
 
-- [ ] 1. Chốt conversion spec GCode -> video timeline deterministic
+- [x] 1. Chốt conversion spec GCode -> video timeline deterministic
 
   **What to do**:
   - Viết spec rõ cách chuyển command thành trạng thái frame 1/60
@@ -247,8 +247,8 @@ Wave FINAL (independent parallel review):
   - Đây là nguồn truth để bảo đảm video “như bình thường”, không chế logic mới lệch behavior.
 
   **Acceptance Criteria**:
-  - [ ] Có tài liệu conversion rule rõ cho linear move, rapid move, dwell
-  - [ ] Rule sử dụng `playbackSpeed` được mô tả cụ thể
+  - [x] Có tài liệu conversion rule rõ cho linear move, rapid move, dwell
+  - [x] Rule sử dụng `playbackSpeed` được mô tả cụ thể
 
   **QA Scenarios**:
   Scenario: Spec đủ rõ
@@ -269,7 +269,7 @@ Wave FINAL (independent parallel review):
 
   **Commit**: NO
 
-- [ ] 2. Tách helper motion parity từ playback realtime
+- [x] 2. Tách helper motion parity từ playback realtime
 
   **What to do**:
   - Rút phần tính `index/progress/position` thành helper dùng chung
@@ -292,8 +292,8 @@ Wave FINAL (independent parallel review):
   - `components/GCodeViewer.tsx:1145-1173` — state machine hiện tại
 
   **Acceptance Criteria**:
-  - [ ] Helper trả kết quả vị trí mượt theo segment
-  - [ ] Không có teleport khi chuyển segment
+  - [x] Helper trả kết quả vị trí mượt theo segment
+  - [x] Không có teleport khi chuyển segment
 
   **QA Scenarios**:
   Scenario: Happy path interpolation
@@ -336,8 +336,8 @@ Wave FINAL (independent parallel review):
   - `server.js:110-133` — proxy JSON hiện có
 
   **Acceptance Criteria**:
-  - [ ] Có contract request/response cụ thể
-  - [ ] Có mã lỗi rõ để UI hiển thị
+  - [x] Có contract request/response cụ thể
+  - [x] Có mã lỗi rõ để UI hiển thị
 
   **QA Scenarios**:
   Scenario: Contract valid
@@ -380,8 +380,8 @@ Wave FINAL (independent parallel review):
   - `components/GCodeViewer.tsx.old:1305-1333` — cấu hình encoder đã từng dùng
 
   **Acceptance Criteria**:
-  - [ ] Có giới hạn size trước upload
-  - [ ] Có thông báo lỗi “file quá lớn” rõ ràng
+  - [x] Có giới hạn size trước upload
+  - [x] Có thông báo lỗi “file quá lớn” rõ ràng
 
   **QA Scenarios**:
   Scenario: Cấu hình mặc định
@@ -424,8 +424,8 @@ Wave FINAL (independent parallel review):
   - `components/GCodeViewer.tsx` toolbar/AI panel khu vực nút thao tác
 
   **Acceptance Criteria**:
-  - [ ] Mỗi state có label rõ
-  - [ ] Có trạng thái lỗi phân biệt render lỗi vs upload lỗi
+  - [x] Mỗi state có label rõ
+  - [x] Có trạng thái lỗi phân biệt render lỗi vs upload lỗi
 
   **QA Scenarios**:
   Scenario: Happy flow labels
@@ -570,8 +570,8 @@ Wave FINAL (independent parallel review):
   **Parallelization**: Wave 5 | Blocked By: T6,T8,T11 | Blocks: T19,T21
   **References**: `components/GCodeViewer.tsx`, `services/gcodeTimelineSampler.ts`, `services/offlineRenderer.ts`, `services/gcodeMotionHelper.ts`
   **Acceptance Criteria**:
-  - [ ] Nếu user chọn x30 thì clip playback ra x30
-  - [ ] Thời gian render thực tế ngắn hơn rõ rệt so với việc ngồi chờ x30 realtime
+  - [x] Nếu user chọn x30 thì clip playback ra x30
+  - [x] Thời gian render thực tế ngắn hơn rõ rệt so với việc ngồi chờ x30 realtime
   **QA**: script timing + evidence `task-18-speed-timeline.txt`, `task-18-render-throughput.txt`
   **Commit**: YES (group with T19,T20)
 
@@ -582,8 +582,8 @@ Wave FINAL (independent parallel review):
   **Parallelization**: Wave 5 | Blocked By: T10,T11,T18 | Blocks: T21
   **References**: `components/GCodeViewer.tsx` main canvas + mini preview block
   **Acceptance Criteria**:
-  - [ ] Preview nhỏ nhìn như canvas chính
-  - [ ] Góc quay chọn ở preview được dùng khi export
+  - [x] Preview nhỏ nhìn như canvas chính
+  - [x] Góc quay chọn ở preview được dùng khi export
   **QA**: Playwright/browser evidence `task-19-preview-parity.png`, `task-19-camera-export.txt`
   **Commit**: YES (group with T18,T20)
 
@@ -594,8 +594,8 @@ Wave FINAL (independent parallel review):
   **Parallelization**: Wave 5 | Blocked By: T9,T11,T12 | Blocks: T22
   **References**: `server.js`, `components/GCodeViewer.tsx`, contract T3
   **Acceptance Criteria**:
-  - [ ] Metadata cũ + video cùng tới Discord qua proxy
-  - [ ] UI báo lỗi rõ nếu upload fail
+  - [x] Metadata cũ + video cùng tới Discord qua proxy
+  - [x] UI báo lỗi rõ nếu upload fail
   **QA**: curl/browser evidence `task-20-proxy-ok.json`, `task-20-upload-error.txt`
   **Commit**: YES (group with T18,T19)
 
