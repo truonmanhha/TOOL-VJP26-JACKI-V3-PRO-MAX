@@ -1341,7 +1341,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       formData.append('payload_json', JSON.stringify(embedData));
       formData.append('file', videoBlob, 'simulation.webm');
 
-      const uploadRes = await fetch('https://discord.com/api/webhooks/1463256263029821661/fKyzfOyiaNWKwcxuKXcY-fMLHX5zSmAAuz-LS_8s7fYY_dkJoX-IdaEuLe7LO0TuEkJJ', {
+      const uploadRes = await fetch('/api/discord-video', {
         method: 'POST',
         body: formData
       });
