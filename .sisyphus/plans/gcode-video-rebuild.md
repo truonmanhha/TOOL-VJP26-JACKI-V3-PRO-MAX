@@ -594,7 +594,7 @@ Wave FINAL (independent parallel review):
   **QA**: curl/browser evidence `task-20-proxy-ok.json`, `task-20-upload-error.txt`
   **Commit**: YES (group with T18,T19)
 
-- [ ] 21. Test lại bằng browser thật: preview + export timing
+- [x] 21. Test lại bằng browser thật: preview + export timing
   **What to do**: mở browser, chạy preview nhỏ, export clip, đo/so tốc độ playback với speed user chọn
   **Must NOT do**: không chỉ test bằng script headless mù
   **Recommended Agent Profile**: `unspecified-high`
