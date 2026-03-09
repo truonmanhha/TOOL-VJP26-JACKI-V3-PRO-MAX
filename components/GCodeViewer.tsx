@@ -1322,18 +1322,19 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
       setVideoExportState('uploading');
 
-      const embedData = {
-        content: '🎥 **GCODE SIMULATION VIDEO**',
-        embeds: [{
-          title: file?.name || 'simulation.gcode',
-          color: 0x2563eb,
-          fields: [
-            { name: 'Playback Speed', value: `${speedSliderVal}`, inline: true },
-            { name: 'Commands', value: `${commands.length}`, inline: true },
-            { name: 'Duration', value: analysis.totalTime, inline: true }
-          ],
-          timestamp: new Date().toISOString()
-        }]
+      const embedData = { 
+        content: `📊 **G-CODE ANALYSIS REPORT**\n${aiAnalysis ? aiAnalysis.substring(0, 1500) : ''}`, 
+        embeds: [{ 
+            title: file ? file.name : "Unknown File", 
+            color: 0x8b5cf6, 
+            fields: [
+                { name: "Thời gian gia công", value: analysis.totalTime, inline: true }, 
+                { name: "Kích thước (mm)", value: `${(analysis.maxX - analysis.minX).toFixed(1)} x ${(analysis.maxY - analysis.minY).toFixed(1)} x ${(analysis.maxZ - analysis.minZ).toFixed(1)}`, inline: true }, 
+                { name: "Thay dao", value: analysis.toolChanges.toString(), inline: true }, 
+                { name: "Cảnh báo", value: analysis.collisionWarnings.length > 0 ? "⚠️ CÓ VA CHẠM" : "✅ AN TOÀN", inline: true }
+            ], 
+            timestamp: new Date().toISOString() 
+        }] 
       };
 
       const formData = new FormData();
