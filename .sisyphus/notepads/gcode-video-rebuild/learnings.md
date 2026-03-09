@@ -14,3 +14,4 @@
 - Issue: GCode viewer video export was previously tied to the raw UI slider value rather than the calculated `playbackSpeed` (which applies non-linear mapping). This made exports run at incorrect visual speeds.
 - Solution: Swapped `initialSpeed: speedSliderVal` with `initialSpeed: playbackSpeed` in `GCodeViewer.tsx` where `renderVideoOffline` is called.
 - Finding: The renderer runs completely decoupled from wall clock time. Testing shows that a 10x speed multiplier perfectly divides the frame count (and thus video duration) by 10, while the wall-clock render time remains only a few milliseconds.
+\n- [T21] Created and ran puppeteer test to verify app stability and load sequence for export timing. No WebGL context loss errors occur, though full hardware acceleration is restricted in headless CI environments.
