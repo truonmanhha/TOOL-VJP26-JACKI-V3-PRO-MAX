@@ -1,1 +1,1 @@
-No scope creep/no contamination | PASS
+[SUCCESS] Scope strictly maintained. Changes isolated to handleVideoExport within components/GCodeViewer.tsx, without changing logic of realtime playback or other unrelated functionality.
