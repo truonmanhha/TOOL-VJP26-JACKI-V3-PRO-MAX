@@ -1107,6 +1107,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const viewCubeControllerRef = useRef<any>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const videoPreviewRef = useRef<HTMLDivElement>(null);
+
 
   const handleVideoExport = useCallback(async () => {
     const isRendering = videoExportState === 'rendering';
@@ -1115,9 +1117,18 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
     setVideoExportErrorMessageState('');
 
+
     const offscreenCanvas = document.createElement('canvas');
     offscreenCanvas.width = 1280;
     offscreenCanvas.height = 720;
+    offscreenCanvas.style.width = '100%';
+    offscreenCanvas.style.height = 'auto';
+    offscreenCanvas.style.borderRadius = '8px';
+    if (videoPreviewRef.current) {
+        videoPreviewRef.current.innerHTML = '';
+        videoPreviewRef.current.appendChild(offscreenCanvas);
+    }
+
 
     let renderer: THREE.WebGLRenderer | null = null;
     let activeGeo: THREE.BufferGeometry | null = null;
@@ -1330,6 +1341,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     } finally {
       if (renderer) {
         renderer.dispose();
+      }
+      if (videoPreviewRef.current) {
+         videoPreviewRef.current.innerHTML = '';
       }
       if (activeGeo) activeGeo.dispose();
       if (ghostGeo) ghostGeo.dispose();
@@ -1902,6 +1916,15 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         {!isLiteMode && (
             <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col gap-4 border-white/5 p-4 overflow-hidden z-0 order-3 h-auto lg:h-full">
                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div><div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div>
+
+{videoExportState === 'rendering' && (
+    <div className="w-full mb-3 p-2 bg-black/50 border border-white/10 rounded-xl overflow-hidden shadow-inner flex flex-col items-center gap-1">
+        <div className="w-full aspect-video bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center relative" ref={videoPreviewRef}>
+            <Activity className="animate-spin text-slate-500 absolute" size={24} />
+        </div>
+        <div className="text-[9px] text-slate-400 font-mono tracking-widest mt-1 animate-pulse">LIVE PREVIEW</div>
+    </div>
+)}
 <div className="flex flex-col items-center gap-1">
 <button 
     onClick={handleVideoExport} 
