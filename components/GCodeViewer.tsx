@@ -988,6 +988,126 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [videoExportProgress, setVideoExportProgress] = useState(0);
   const [videoExportErrorMessageState, setVideoExportErrorMessageState] = useState('');
 
+
+
+  const [showGrid, setShowGrid] = useState(() => loadSetting('vjp26_gc_grid', true));
+  const [snapMode, setSnapMode] = useState(false);
+  const [measurePoints, setMeasurePoints] = useState<THREE.Vector3[]>([]);
+  const [showThemeSettings, setShowThemeSettings] = useState(false);
+  const [theme, setTheme] = useState<ThemeConfig>(() => loadSetting('vjp26_gc_theme', DEFAULT_THEME));
+  const [is3DFullScreen, setIs3DFullScreen] = useState(false);
+  const [isWorkspaceLocked, setIsWorkspaceLocked] = useState(false);
+  const [showBorderFlash, setShowBorderFlash] = useState(false);
+  const [zoomFitTrigger, setZoomFitTrigger] = useState(0);
+  const [gpuName, setGpuName] = useState<string>('Unknown GPU');
+  const [cpuThreads, setCpuThreads] = useState<number>(window.navigator.hardwareConcurrency || 4);
+  const [gpuPreference, setGpuPreference] = useState<'high-performance' | 'low-power' | 'default'>(() => loadSetting('vjp26_gc_gpu_pref', 'high-performance'));
+
+  const [showGpuWarning, setShowGpuWarning] = useState(false);
+  const [isAutoFixingGpu, setIsAutoFixingGpu] = useState(false);
+
+  useEffect(() => {
+    if (gpuPreference === 'high-performance' && gpuName) {
+        const isIntel = gpuName.toLowerCase().includes('intel');
+        const isAMDOnboard = gpuName.toLowerCase().includes('radeon graphics');
+        const isAngle = gpuName.toLowerCase().includes('angle') || gpuName.toLowerCase().includes('swiftshader');
+        
+        const hasWarned = sessionStorage.getItem('vjp26_gpu_warned');
+        
+        if ((isIntel || isAMDOnboard || isAngle) && !hasWarned && gpuName !== 'Unknown GPU') {
+            setShowGpuWarning(true);
+            sessionStorage.setItem('vjp26_gpu_warned', 'true');
+        }
+    }
+  }, [gpuName, gpuPreference]);
+
+  const handleAutoFixGPU = async () => {
+      setIsAutoFixingGpu(true);
+      try {
+          // Gọi xuống server local (Node.js) để nó chạy file .bat
+          await fetch('http://localhost:3000/api/fix-gpu', { method: 'POST' });
+          // Màn hình sẽ chớp và trình duyệt tự khởi động lại nhờ file .bat
+      } catch (e) {
+          console.error('Không thể tự động fix GPU qua backend', e);
+          setIsAutoFixingGpu(false);
+          alert('Không thể kết nối đến máy chủ Local. Vui lòng chạy file KHỞI_ĐỘNG_TOOL_GPU.bat thủ công ở thư mục gốc.');
+      }
+  };
+
+  const [showGpuMenu, setShowGpuMenu] = useState(false);
+  const [detectedGpus, setDetectedGpus] = useState<{high: string, low: string}>({ high: 'Đang quét...', low: 'Đang quét...' });
+  
+  useEffect(() => {
+    // Luôn quét sẵn để người dùng có thể thấy ngay
+    const getGpu = (pref: WebGLPowerPreference) => {
+        try {
+            const canvas = document.createElement('canvas');
+            const options = { 
+                powerPreference: pref,
+                failIfMajorPerformanceCaveat: pref === 'high-performance'
+            };
+            const gl = canvas.getContext('webgl2', options) || canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+            if (!gl) return 'Không xác định (Fallback)';
+            const ext = gl.getExtension('WEBGL_debug_renderer_info');
+            if (!ext) return 'Không xác định (No Ext)';
+            const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+            return renderer ? renderer.replace(/ANGLE \((.*)\)/, '$1').split(' Direct3D')[0].substring(0, 40) : 'Không xác định';
+        } catch(e) { return 'Không xác định (Lỗi)'; }
+    };
+    
+    // We run it with a slight delay to ensure browser has settled
+    setTimeout(async () => {
+        let highGpu = getGpu('high-performance');
+        let lowGpu = getGpu('low-power');
+
+        // Let's also try WebGPU to extract accurate adapter names if WebGL is returning the same for both!
+        if (navigator.gpu) {
+            try {
+                const highAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+                if (highAdapter && highAdapter.info && highAdapter.info.device) {
+                    highGpu = highAdapter.info.device + ' (WebGPU)';
+                }
+                const lowAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' });
+                if (lowAdapter && lowAdapter.info && lowAdapter.info.device) {
+                    lowGpu = lowAdapter.info.device + ' (WebGPU)';
+                }
+            } catch(e) { console.warn('WebGPU info extraction failed', e); }
+        }
+
+        setDetectedGpus({
+            high: highGpu,
+            low: lowGpu
+        });
+    }, 500);
+  }, []);
+  useEffect(() => localStorage.setItem('vjp26_gc_gpu_pref', JSON.stringify(gpuPreference)), [gpuPreference]);
+  const [toolConfig, setToolConfig] = useState<ToolConfig>(() => loadSetting('vjp26_gc_tool', { diameter: 6, length: 20, holderDiameter: 25, holderLength: 20 }));
+  const [showToolConfig, setShowToolConfig] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => loadSetting('vjp26_gc_viewmode', ViewMode.REMAINING_DIMMED));
+  const [showViewModeMenu, setShowViewModeMenu] = useState(false);
+  const [starMode, setStarMode] = useState<StarMode>(() => loadSetting('vjp26_gc_starmode', StarMode.NORMAL));
+  const [showStarMenu, setShowStarMenu] = useState(false);
+  const [showJumpInput, setShowJumpInput] = useState(false);
+  const [jumpTarget, setJumpTarget] = useState('');
+  const [showReplace, setShowReplace] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [matchCase, setMatchCase] = useState(false);
+  const [wrapAround, setWrapAround] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const historyTimeoutRef = useRef<any>(null);
+  const isUndoRedoAction = useRef(false);
+  const [viewOptions, setViewOptions] = useState<ViewOptions>(() => loadSetting('vjp26_gc_options', { showToolpath: true, showPoints: false, showRapid: true, showCutting: true, highlightArcs: true, highlightElement: true, largePoints: false }));
+  const [showViewOptionsMenu, setShowViewOptionsMenu] = useState(false);
+  const interpolatedPosRef = useRef(new THREE.Vector3(0,0,0));
+  const [displayPos, setDisplayPos] = useState(new THREE.Vector3(0,0,0));
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const viewCubeControllerRef = useRef<any>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+
   const handleVideoExport = useCallback(async () => {
     const isRendering = videoExportState === 'rendering';
     const isUploading = videoExportState === 'uploading';
@@ -1236,124 +1356,6 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     theme.text,
     file
   ]);
-
-  const [showGrid, setShowGrid] = useState(() => loadSetting('vjp26_gc_grid', true));
-  const [snapMode, setSnapMode] = useState(false);
-  const [measurePoints, setMeasurePoints] = useState<THREE.Vector3[]>([]);
-  const [showThemeSettings, setShowThemeSettings] = useState(false);
-  const [theme, setTheme] = useState<ThemeConfig>(() => loadSetting('vjp26_gc_theme', DEFAULT_THEME));
-  const [is3DFullScreen, setIs3DFullScreen] = useState(false);
-  const [isWorkspaceLocked, setIsWorkspaceLocked] = useState(false);
-  const [showBorderFlash, setShowBorderFlash] = useState(false);
-  const [zoomFitTrigger, setZoomFitTrigger] = useState(0);
-  const [gpuName, setGpuName] = useState<string>('Unknown GPU');
-  const [cpuThreads, setCpuThreads] = useState<number>(window.navigator.hardwareConcurrency || 4);
-  const [gpuPreference, setGpuPreference] = useState<'high-performance' | 'low-power' | 'default'>(() => loadSetting('vjp26_gc_gpu_pref', 'high-performance'));
-
-  const [showGpuWarning, setShowGpuWarning] = useState(false);
-  const [isAutoFixingGpu, setIsAutoFixingGpu] = useState(false);
-
-  useEffect(() => {
-    if (gpuPreference === 'high-performance' && gpuName) {
-        const isIntel = gpuName.toLowerCase().includes('intel');
-        const isAMDOnboard = gpuName.toLowerCase().includes('radeon graphics');
-        const isAngle = gpuName.toLowerCase().includes('angle') || gpuName.toLowerCase().includes('swiftshader');
-        
-        const hasWarned = sessionStorage.getItem('vjp26_gpu_warned');
-        
-        if ((isIntel || isAMDOnboard || isAngle) && !hasWarned && gpuName !== 'Unknown GPU') {
-            setShowGpuWarning(true);
-            sessionStorage.setItem('vjp26_gpu_warned', 'true');
-        }
-    }
-  }, [gpuName, gpuPreference]);
-
-  const handleAutoFixGPU = async () => {
-      setIsAutoFixingGpu(true);
-      try {
-          // Gọi xuống server local (Node.js) để nó chạy file .bat
-          await fetch('http://localhost:3000/api/fix-gpu', { method: 'POST' });
-          // Màn hình sẽ chớp và trình duyệt tự khởi động lại nhờ file .bat
-      } catch (e) {
-          console.error('Không thể tự động fix GPU qua backend', e);
-          setIsAutoFixingGpu(false);
-          alert('Không thể kết nối đến máy chủ Local. Vui lòng chạy file KHỞI_ĐỘNG_TOOL_GPU.bat thủ công ở thư mục gốc.');
-      }
-  };
-
-  const [showGpuMenu, setShowGpuMenu] = useState(false);
-  const [detectedGpus, setDetectedGpus] = useState<{high: string, low: string}>({ high: 'Đang quét...', low: 'Đang quét...' });
-  
-  useEffect(() => {
-    // Luôn quét sẵn để người dùng có thể thấy ngay
-    const getGpu = (pref: WebGLPowerPreference) => {
-        try {
-            const canvas = document.createElement('canvas');
-            const options = { 
-                powerPreference: pref,
-                failIfMajorPerformanceCaveat: pref === 'high-performance'
-            };
-            const gl = canvas.getContext('webgl2', options) || canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
-            if (!gl) return 'Không xác định (Fallback)';
-            const ext = gl.getExtension('WEBGL_debug_renderer_info');
-            if (!ext) return 'Không xác định (No Ext)';
-            const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
-            return renderer ? renderer.replace(/ANGLE \((.*)\)/, '$1').split(' Direct3D')[0].substring(0, 40) : 'Không xác định';
-        } catch(e) { return 'Không xác định (Lỗi)'; }
-    };
-    
-    // We run it with a slight delay to ensure browser has settled
-    setTimeout(async () => {
-        let highGpu = getGpu('high-performance');
-        let lowGpu = getGpu('low-power');
-
-        // Let's also try WebGPU to extract accurate adapter names if WebGL is returning the same for both!
-        if (navigator.gpu) {
-            try {
-                const highAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-                if (highAdapter && highAdapter.info && highAdapter.info.device) {
-                    highGpu = highAdapter.info.device + ' (WebGPU)';
-                }
-                const lowAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' });
-                if (lowAdapter && lowAdapter.info && lowAdapter.info.device) {
-                    lowGpu = lowAdapter.info.device + ' (WebGPU)';
-                }
-            } catch(e) { console.warn('WebGPU info extraction failed', e); }
-        }
-
-        setDetectedGpus({
-            high: highGpu,
-            low: lowGpu
-        });
-    }, 500);
-  }, []);
-  useEffect(() => localStorage.setItem('vjp26_gc_gpu_pref', JSON.stringify(gpuPreference)), [gpuPreference]);
-  const [toolConfig, setToolConfig] = useState<ToolConfig>(() => loadSetting('vjp26_gc_tool', { diameter: 6, length: 20, holderDiameter: 25, holderLength: 20 }));
-  const [showToolConfig, setShowToolConfig] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => loadSetting('vjp26_gc_viewmode', ViewMode.REMAINING_DIMMED));
-  const [showViewModeMenu, setShowViewModeMenu] = useState(false);
-  const [starMode, setStarMode] = useState<StarMode>(() => loadSetting('vjp26_gc_starmode', StarMode.NORMAL));
-  const [showStarMenu, setShowStarMenu] = useState(false);
-  const [showJumpInput, setShowJumpInput] = useState(false);
-  const [jumpTarget, setJumpTarget] = useState('');
-  const [showReplace, setShowReplace] = useState(false);
-  const [findText, setFindText] = useState('');
-  const [replaceText, setReplaceText] = useState('');
-  const [matchCase, setMatchCase] = useState(false);
-  const [wrapAround, setWrapAround] = useState(false);
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const historyTimeoutRef = useRef<any>(null);
-  const isUndoRedoAction = useRef(false);
-  const [viewOptions, setViewOptions] = useState<ViewOptions>(() => loadSetting('vjp26_gc_options', { showToolpath: true, showPoints: false, showRapid: true, showCutting: true, highlightArcs: true, highlightElement: true, largePoints: false }));
-  const [showViewOptionsMenu, setShowViewOptionsMenu] = useState(false);
-  const interpolatedPosRef = useRef(new THREE.Vector3(0,0,0));
-  const [displayPos, setDisplayPos] = useState(new THREE.Vector3(0,0,0));
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const viewCubeControllerRef = useRef<any>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => localStorage.setItem('vjp26_gc_speed', JSON.stringify(speedSliderVal)), [speedSliderVal]);
   useEffect(() => localStorage.setItem('vjp26_gc_grid', JSON.stringify(showGrid)), [showGrid]);
