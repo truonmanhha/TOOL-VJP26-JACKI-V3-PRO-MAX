@@ -923,8 +923,9 @@ const SceneContent: React.FC<{
     zoomFitTrigger: number,
     onSegmentClick: (index: number) => void,
     isLiteMode: boolean,
-    viewCubeControllerRef?: React.Ref<any>
-}> = ({ commands, interpolatedPosRef, theme, toolConfig, showGrid, snapMode, measurePoints, setMeasurePoints, currentIndex, viewMode, viewOptions, starMode, zoomFitTrigger, onSegmentClick, isLiteMode, viewCubeControllerRef }) => {
+    viewCubeControllerRef?: React.Ref<any>,
+    orbitParams?: any
+}> = ({ commands, interpolatedPosRef, theme, toolConfig, showGrid, snapMode, measurePoints, setMeasurePoints, currentIndex, viewMode, viewOptions, starMode, zoomFitTrigger, onSegmentClick, isLiteMode, viewCubeControllerRef, orbitParams }) => {
     const { camera } = useThree();
     const controlsRef = useRef<any>(null);
     const initRef = useRef(false);
@@ -961,7 +962,7 @@ const SceneContent: React.FC<{
     useEffect(() => { if (zoomFitTrigger > 0) fitView(); }, [zoomFitTrigger, fitView]);
     return (
         <>
-            <OrbitControls ref={controlsRef} makeDefault dampingFactor={0.1} />
+            <OrbitControls ref={controlsRef} makeDefault dampingFactor={0.1} {...orbitParams} />
             <ambientLight intensity={0.5} /><pointLight position={[100, 100, 100]} intensity={1} />
             {!isLiteMode && <ChunkedStarField mode={starMode} />}
             {!isLiteMode && starMode === StarMode.STAR_WARS && <StarWarsBattleScene />}
@@ -1993,9 +1994,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                     gl={{ powerPreference: gpuPreference, antialias: true, stencil: false, depth: true }}
                 >
                     <color attach="background" args={[theme.background]} />
-                    <OrbitControls makeDefault zoomSpeed={0.5} panSpeed={0.5} rotateSpeed={0.5} />
                     <UpdateMiniCamera cameraRef={miniCameraRef} />
-                    <SceneContent 
+                    <SceneContent orbitParams={{ zoomSpeed: 0.5, panSpeed: 0.5, rotateSpeed: 0.5 }} 
                         commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} 
                         theme={theme} toolConfig={toolConfig} showGrid={showGrid} snapMode={snapMode} 
                         measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} 
