@@ -118,6 +118,11 @@ Evidence lưu tại `.sisyphus/evidence/task-{N}-{scenario}.ext`
 - User chọn tốc độ nào (ví dụ x30) thì **clip thành phẩm** phải chạy theo tốc độ đó.
 - Nhưng lúc **tạo video**, hệ thống không được ngồi chờ theo wall-clock x30; phải render offline nhanh nhất có thể.
 
+### Newly Reported Regression
+- User reports export still "looks realtime" during creation.
+- Likely cause to verify: export loop is still driving visible UI/preview updates frame-by-frame, making the render appear realtime even if encode timestamps are offline-driven.
+- Additional guardrail: export UX must not visually imply wall-clock realtime generation unless explicitly intended.
+
 ### In Scope
 - Sửa semantics timing giữa preview và export
 - Rà lại mini preview để góc nhìn/video parity đúng với canvas chính
@@ -605,7 +610,7 @@ Wave FINAL (independent parallel review):
   **QA**: Playwright/browser evidence `task-21-browser-preview.png`, `task-21-export-timing.txt`
   **Commit**: NO
 
-- [ ] 22. Test lại end-to-end Discord: preview -> export -> upload -> message đầy đủ
+- [x] 22. Test lại end-to-end Discord: preview -> export -> upload -> message đầy đủ
   **What to do**: chạy full flow cuối cùng, xác nhận Discord nhận video + metadata + UI state đúng
   **Must NOT do**: không đánh done nếu chỉ local pass mà Discord fail
   **Recommended Agent Profile**: `deep`

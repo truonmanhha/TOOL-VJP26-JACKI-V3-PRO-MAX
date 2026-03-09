@@ -1282,8 +1282,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
           );
 
           interpolatedPosRef.current.copy(currentPos);
-          setDisplayPos(currentPos.clone());
-          setCurrentIndex(idx);
+          // KHÔNG set state UI ở đây để tránh re-render liên tục gây nghẽn tốc độ export
+          // setDisplayPos(currentPos.clone());
+          // setCurrentIndex(idx);
 
           if (toolHead) {
             toolHead.position.copy(currentPos);
