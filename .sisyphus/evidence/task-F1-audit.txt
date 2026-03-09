@@ -1,1 +1,32 @@
 Must Have [4/4] | Must NOT Have [4/4] | VERDICT: PASS
+
+# F1 — Plan Compliance Audit (gcode-video-rebuild)
+
+## Must Have (4/4)
+1) Use existing `playbackSpeed`
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` (Playback Speed & Command Handling)
+2) G0 visible like default viewer
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` (G0 visible)
+3) G4 dwell holds exact time
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` (G4 timed correctly)
+4) Upload via backend proxy (no direct Discord webhook from browser)
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` + `.sisyphus/evidence/task-15-happy.txt` + `.sisyphus/evidence/task-f3-qa.txt` (curl/manual endpoint success)
+
+## Must NOT Have (4/4)
+1) No MediaRecorder/captureStream realtime recording
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` (WebCodecs pipeline; guardrail)
+2) No local download button/flow
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` (No local download)
+3) No Discord retry logic
+   - Evidence: `.sisyphus/evidence/task-17-audit.md` (No retry)
+4) No change to existing realtime playback behavior outside export scope
+   - Evidence: `.sisyphus/notepads/gcode-video-rebuild/learnings.md` (shared motion parity helper) + `.sisyphus/evidence/task-17-audit.md` (offline sampler separated from realtime)
+
+## Evidence consulted
+- `.sisyphus/plans/gcode-video-rebuild.md` (Must Have / Must NOT Have)
+- `.sisyphus/evidence/task-17-audit.md`
+- `.sisyphus/evidence/task-15-happy.txt`
+- `.sisyphus/evidence/task-16-error.txt`
+- `.sisyphus/evidence/task-f3-qa.txt`
+
+VERDICT: PASS

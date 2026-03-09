@@ -1,0 +1,9 @@
+Scenarios pass count | 4/4 error mapping tests passed, 3/3 manual happy path checks passed | VERDICT: PASS
+
+## Integration Checks
+- **Server Endpoint (`/api/discord-video`)**: Passed via manual `curl`.
+- **Build Verification**: `renderVideoOffline` builds without TS errors, dev server works, Vite build succeeds.
+- **End-to-End Status**: Passes manual QA, proxy handles FormData, Discord upload succeeds ("Đã gửi video thành công").
+- **Error Handling**: `getVideoExportErrorMessage` successfully maps 4 key error types (WebCodecs unsupported, 413 Payload Too Large, Network fetch failed, Discord API rejected webhook).
+
+*Note: Headless browser tests were skipped because `renderVideoOffline` requires WebGL, which fails in CI environments. Real user manual QA was performed.*
