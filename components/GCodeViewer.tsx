@@ -1990,17 +1990,17 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                 <Canvas 
                     camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} 
                     dpr={1} 
-                    gl={{ powerPreference: 'low-power' }}
+                    gl={{ powerPreference: gpuPreference, antialias: true, stencil: false, depth: true }}
                 >
                     <color attach="background" args={[theme.background]} />
-                    <OrbitControls makeDefault />
+                    <OrbitControls makeDefault zoomSpeed={0.5} panSpeed={0.5} rotateSpeed={0.5} />
                     <UpdateMiniCamera cameraRef={miniCameraRef} />
                     <SceneContent 
                         commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} 
-                        theme={theme} toolConfig={toolConfig} showGrid={false} snapMode={false} 
+                        theme={theme} toolConfig={toolConfig} showGrid={showGrid} snapMode={snapMode} 
                         measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} 
-                        viewMode={viewMode} viewOptions={viewOptions} starMode={StarMode.OFF} 
-                        zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={true} 
+                        viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} 
+                        zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={false} 
                     />
                 </Canvas>
             </div>
