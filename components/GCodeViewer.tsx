@@ -897,6 +897,15 @@ const Line = ({ start, end, color, dashed = false, linewidth = 2 }: { start: THR
     return (<line ref={ref as any}><bufferGeometry />{dashed ? <lineDashedMaterial color={color} dashSize={2} gapSize={1} linewidth={linewidth} scale={1} /> : <lineBasicMaterial color={color} linewidth={linewidth} />}</line>);
 };
 
+
+const UpdateMiniCamera = ({ cameraRef }: { cameraRef: React.MutableRefObject<any> }) => {
+    const { camera } = useThree();
+    useEffect(() => {
+        cameraRef.current = camera;
+    }, [camera, cameraRef]);
+    return null;
+};
+
 const SceneContent: React.FC<{ 
     commands: GCodeCommand[], 
     currentCmd: GCodeCommand,
@@ -1108,6 +1117,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const viewCubeControllerRef = useRef<any>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const videoPreviewRef = useRef<HTMLDivElement>(null);
+  const miniCameraRef = useRef<THREE.Camera>(null);
+
 
 
   const handleVideoExport = useCallback(async () => {
@@ -1176,28 +1187,34 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
     const camera = new THREE.PerspectiveCamera(45, offscreenCanvas.width / offscreenCanvas.height, 0.1, 100000);
 
-    const bounds = new THREE.Box3();
-    let hasBounds = false;
-    for (const cmd of commands) {
-      if (cmd.type === 'OTHER') continue;
-      bounds.expandByPoint(new THREE.Vector3(cmd.x, cmd.y, cmd.z));
-      hasBounds = true;
-    }
-
-    if (hasBounds) {
-      const center = new THREE.Vector3();
-      bounds.getCenter(center);
-      const size = new THREE.Vector3();
-      bounds.getSize(size);
-      const maxDim = Math.max(size.x, size.y, size.z) || 100;
-      const distance = maxDim * 2;
-      camera.position.set(center.x + distance, center.y - distance, center.z + distance * 0.8);
-      camera.up.set(0, 0, 1);
-      camera.lookAt(center);
+    if (miniCameraRef.current) {
+      camera.position.copy(miniCameraRef.current.position);
+      camera.quaternion.copy(miniCameraRef.current.quaternion);
+      camera.up.copy(miniCameraRef.current.up);
     } else {
-      camera.position.set(100, -100, 100);
-      camera.up.set(0, 0, 1);
-      camera.lookAt(new THREE.Vector3(0, 0, 0));
+      const bounds = new THREE.Box3();
+      let hasBounds = false;
+      for (const cmd of commands) {
+        if (cmd.type === 'OTHER') continue;
+        bounds.expandByPoint(new THREE.Vector3(cmd.x, cmd.y, cmd.z));
+        hasBounds = true;
+      }
+
+      if (hasBounds) {
+        const center = new THREE.Vector3();
+        bounds.getCenter(center);
+        const size = new THREE.Vector3();
+        bounds.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z) || 100;
+        const distance = maxDim * 2;
+        camera.position.set(center.x + distance, center.y - distance, center.z + distance * 0.8);
+        camera.up.set(0, 0, 1);
+        camera.lookAt(center);
+      } else {
+        camera.position.set(100, -100, 100);
+        camera.up.set(0, 0, 1);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+      }
     }
 
     try {
@@ -1242,6 +1259,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         commands,
         initialSpeed: speedSliderVal,
         canvas: offscreenCanvas,
+        miniCamera: miniCameraRef.current,
         onProgress: (progress) => {
           setVideoExportProgress(Math.max(0, Math.min(1, progress.progress)));
         },
@@ -1968,9 +1986,25 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
                     PLAYING: {Math.floor((currentIndex / Math.max(1, commands.length)) * 100)}%
                 </div>
             )}
-            <div className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden">
-                <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${(currentIndex / Math.max(1, commands.length)) * 100}%` }}></div>
+            <div className="absolute inset-0 rounded-lg overflow-hidden" style={{ pointerEvents: 'auto' }}>
+                <Canvas 
+                    camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} 
+                    dpr={1} 
+                    gl={{ powerPreference: 'low-power' }}
+                >
+                    <color attach="background" args={[theme.background]} />
+                    <OrbitControls makeDefault />
+                    <UpdateMiniCamera cameraRef={miniCameraRef} />
+                    <SceneContent 
+                        commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} 
+                        theme={theme} toolConfig={toolConfig} showGrid={false} snapMode={false} 
+                        measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} 
+                        viewMode={viewMode} viewOptions={viewOptions} starMode={StarMode.OFF} 
+                        zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={true} 
+                    />
+                </Canvas>
             </div>
+            <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-75 pointer-events-none" style={{ width: `${(currentIndex / Math.max(1, commands.length)) * 100}%` }}></div>
         </div>
     </div>
 ) : (
