@@ -1,0 +1,132 @@
+  const handleSendReport = async () => {
+      if(!analysis || isReporting) return;
+      setIsReporting(true);
+      
+      let videoBlob: Blob | null = null;
+      try {
+// ══════════════════════════════════════════════════════════════
+// OFFSCREEN RENDERER — Fast, smooth, GPU-aware
+// ══════════════════════════════════════════════════════════════
+
+const RENDER_FPS = 30;
+const W = 1280, H = 720;
+
+// ── Bước 1: Tính tổng duration video theo playbackSpeed ───────
+let totalDurationS = 0;
+for (let i = 0; i < commands.length - 1; i++) {
+    const c1 = commands[i], c2 = commands[i + 1];
+    const segLen = Math.sqrt(
+        Math.pow(c2.x - c1.x, 2) +
+        Math.pow(c2.y - c1.y, 2) +
+        Math.pow(c2.z - c1.z, 2)
+    );
+    const feed = c1.f || 1000;
+    const speed = (feed / 60) * playbackSpeed;
+    if (speed > 0) totalDurationS += segLen / speed;
+}
+if (totalDurationS < 1) totalDurationS = 1;
+if (totalDurationS > 30) totalDurationS = 30;
+
+const totalFrames = Math.floor(totalDurationS * RENDER_FPS);
+const frameDeltaS = 1 / RENDER_FPS;
+
+// ── Bước 2: Build geometry standalone ────────────────────────
+const positions: number[] = [];
+const colors: number[] = [];
+const cmdToVert = new Int32Array(commands.length + 1);
+let vertCount = 0;
+
+const colG0 = new THREE.Color(theme.g0);
+const colG1 = new THREE.Color(theme.g1);
+const colArc = new THREE.Color(theme.arc);
+
+for (let i = 0; i < commands.length - 1; i++) {
+    const c1 = commands[i], c2 = commands[i + 1];
+    cmdToVert[i] = vertCount;
+
+    if (c1.type === 'OTHER' || c2.type === 'OTHER') continue;
+    if (
+        Math.abs(c1.x - c2.x) < 0.001 &&
+        Math.abs(c1.y - c2.y) < 0.001 &&
+        Math.abs(c1.z - c2.z) < 0.001
+    ) continue;
+
+    const col = c2.type === 'G0' ? colG0 : (c2.type === 'G1' ? colG1 : colArc);
+    positions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
+    colors.push(col.r, col.g, col.b, col.r, col.g, col.b);
+    vertCount += 2;
+}
+cmdToVert[commands.length - 1] = vertCount;
+cmdToVert[commands.length] = vertCount;
+
+// ── Bước 3: Setup Three.js Offscreen Scene ────────────────────
+const offscreen = new OffscreenCanvas(W, H);
+const offscreenRenderer = new THREE.WebGLRenderer({
+    canvas: offscreen as any,
+    antialias: false,
+    powerPreference: gpuPreference,
+});
+offscreenRenderer.setSize(W, H);
+offscreenRenderer.setClearColor(new THREE.Color(theme.background));
+
+const offscreenScene = new THREE.Scene();
+
+// Ghost line: toàn bộ path, mờ
+const ghostGeo = new THREE.BufferGeometry();
+ghostGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+ghostGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+const ghostMat = new THREE.LineBasicMaterial({ vertexColors: true, opacity: 0.15, transparent: true });
+const ghostLine = new THREE.LineSegments(ghostGeo, ghostMat);
+offscreenScene.add(ghostLine);
+
+// Active line: draw range tăng dần theo progress
+const activeGeo = new THREE.BufferGeometry();
+activeGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+activeGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+activeGeo.setDrawRange(0, 0);
+const activeMat = new THREE.LineBasicMaterial({ vertexColors: true, opacity: 1 });
+const activeLine = new THREE.LineSegments(activeGeo, activeMat);
+offscreenScene.add(activeLine);
+
+// Tool head sphere
+const sphereGeo = new THREE.SphereGeometry(
+    Math.max(
+        (analysis.maxX - analysis.minX) * 0.008,
+        (analysis.maxY - analysis.minY) * 0.008,
+        2
+    ),
+    8, 8
+);
+const sphereMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+const toolSphere = new THREE.Mesh(sphereGeo, sphereMat);
+offscreenScene.add(toolSphere);
+
+// Camera: orthographic top-down, fit bounds
+const cx = (analysis.minX + analysis.maxX) / 2;
+const cy = (analysis.minY + analysis.maxY) / 2;
+const spanX = (analysis.maxX - analysis.minX) * 1.15 || 100;
+const spanY = (analysis.maxY - analysis.minY) * 1.15 || 100;
+const aspect = W / H;
+const halfH = Math.max(spanX / aspect, spanY) / 2;
+const offscreenCamera = new THREE.OrthographicCamera(
+    cx - halfH * aspect, cx + halfH * aspect,
+    cy + halfH, cy - halfH,
+    -100000, 100000
+);
+offscreenCamera.position.set(cx, cy, 1000);
+offscreenCamera.lookAt(cx, cy, 0);
+
+// ── Bước 4: Setup VideoEncoder ────────────────────────────────
+const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: { codec: 'V_VP8', width: W, height: H, frameRate: RENDER_FPS }
+});
+
+const encConfig = {
+    codec: 'vp8',
+    width: W,
+    height: H,
+    bitrate: 4_000_000,
+    framerate: RENDER_FPS
+};
+

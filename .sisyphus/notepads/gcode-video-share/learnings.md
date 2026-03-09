@@ -1,0 +1,1 @@
+Successfully implemented offscreen WebGL renderer for fast GCode video encoding. Extracted geometry build loop, applied exact simulation path lerp interpolation to smooth toolhead, wired up async yield loops, and configured WebCodecs encoder directly from OffscreenCanvas to ArrayBuffer Muxer.

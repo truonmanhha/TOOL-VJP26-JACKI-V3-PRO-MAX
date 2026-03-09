@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>VideoEncoder Test</title>
+</head>
+<body>
+<script>
+async function test() {
+    try {
+        const encConfig = {
+            codec: 'vp8',
+            width: 1280,
+            height: 720,
+            bitrate: 4000000,
+            framerate: 30
+        };
+        const support = await window.VideoEncoder.isConfigSupported(encConfig);
+        document.body.innerHTML += `<p>VP8 Support: ${JSON.stringify(support)}</p>`;
+        
+        const encConfig2 = {
+            codec: 'vp09.00.10.08',
+            width: 1280,
+            height: 720,
+            bitrate: 4000000,
+            framerate: 30
+        };
+        const support2 = await window.VideoEncoder.isConfigSupported(encConfig2);
+        document.body.innerHTML += `<p>VP9 Support: ${JSON.stringify(support2)}</p>`;
+        
+    } catch(e) {
+        document.body.innerHTML += `<p>Error: ${e.message}</p>`;
+    }
+}
+test();
+</script>
+</body>
+</html>
