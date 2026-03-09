@@ -1258,7 +1258,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
       const videoBlob = await renderVideoOffline({
         commands,
-        initialSpeed: speedSliderVal,
+        initialSpeed: playbackSpeed,
         canvas: offscreenCanvas,
         miniCamera: miniCameraRef.current,
         onProgress: (progress) => {

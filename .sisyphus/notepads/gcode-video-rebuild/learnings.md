@@ -9,3 +9,8 @@
 - Playback hiện tại đã có xử lý an toàn độ dài segment gần 0 bằng `safeLen` để tránh chia 0.
 - Khi viết spec cho export deterministic, cần bám đúng các nguồn truth trên để không lệch motion parity.
 - 2026-03-09 F4 scope fidelity: No tracked modifications detected in `components/nesting/`; branch diff vs merge-base is empty, indicating no code contamination from this task context.
+
+### Task 18: Video Export Speed Semantics
+- Issue: GCode viewer video export was previously tied to the raw UI slider value rather than the calculated `playbackSpeed` (which applies non-linear mapping). This made exports run at incorrect visual speeds.
+- Solution: Swapped `initialSpeed: speedSliderVal` with `initialSpeed: playbackSpeed` in `GCodeViewer.tsx` where `renderVideoOffline` is called.
+- Finding: The renderer runs completely decoupled from wall clock time. Testing shows that a 10x speed multiplier perfectly divides the frame count (and thus video duration) by 10, while the wall-clock render time remains only a few milliseconds.

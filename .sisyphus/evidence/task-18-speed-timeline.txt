@@ -1,0 +1,1 @@
+Test proven. Wall clock remains near 0. Video frame count changes.

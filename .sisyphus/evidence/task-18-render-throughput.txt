@@ -1,0 +1,22 @@
+--- Render Throughput & Video Duration Test ---
+
+Testing speed multiplier: 1
+Frames: 721
+Video duration: 12.017s
+Wall clock render time: 4ms
+
+Testing speed multiplier: 2
+Frames: 361
+Video duration: 6.017s
+Wall clock render time: 1ms
+
+Testing speed multiplier: 10
+Frames: 72
+Video duration: 1.200s
+Wall clock render time: 1ms
+
+--- Analysis ---
+Wall clock times should be extremely fast (a few ms) and independent of video duration, proving it runs unthrottled.
+Video duration should be exactly inverse to speed multiplier:
+1x -> 2x duration ratio: 1.9972299168975072 (Expected: ~2)
+1x -> 10x duration ratio: 10.01388888888889 (Expected: ~10)
