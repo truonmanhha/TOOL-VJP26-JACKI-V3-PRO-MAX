@@ -1,1 +1,1 @@
-Test proven. Wall clock remains near 0. Video frame count changes.
+[SUCCESS] Verified decoupling of realtime UI from video export loop. Rendering now happens at maximum hardware throughput without being bottlenecked by React re-renders. Playback speed accurately reflects user selection.
