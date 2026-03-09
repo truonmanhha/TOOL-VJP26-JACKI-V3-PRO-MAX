@@ -66,11 +66,11 @@ Xây lại pipeline video để vừa đạt **đúng chuyển động như real
 - QA evidence đầy đủ cho cả thành công và lỗi
 
 ### Definition of Done
-- [ ] Tạo video WebM 60 FPS 720p từ GCode và gửi thành công qua `/api/discord`
-- [ ] Motion trong video chạy mượt theo line, không teleport
-- [ ] Render chạy nhanh hơn playback wall-clock của cùng nội dung
-- [ ] Nếu user chọn x30 thì clip mở ra xem phải chạy ở nhịp x30
-- [ ] App không treo và không phá trạng thái viewer sau render
+- [x] Tạo video WebM 60 FPS 720p từ GCode và gửi thành công qua `/api/discord`
+- [x] Motion trong video chạy mượt theo line, không teleport
+- [x] Render chạy nhanh hơn playback wall-clock của cùng nội dung
+- [x] Nếu user chọn x30 thì clip mở ra xem phải chạy ở nhịp x30
+- [x] App không treo và không phá trạng thái viewer sau render
 
 ### Must Have
 - Dùng đúng mapping tốc độ hiện có của app để xác định clip playback
@@ -605,8 +605,8 @@ Wave FINAL (independent parallel review):
   **Recommended Agent Profile**: `unspecified-high`
   **Parallelization**: Wave 6 | Blocked By: T18,T19 | Blocks: T22,F3
   **Acceptance Criteria**:
-  - [ ] Có evidence browser cho preview hoạt động
-  - [ ] Có evidence clip playback khớp speed user chọn
+  - [x] Có evidence browser cho preview hoạt động
+  - [x] Có evidence clip playback khớp speed user chọn
   **QA**: Playwright/browser evidence `task-21-browser-preview.png`, `task-21-export-timing.txt`
   **Commit**: NO
 
@@ -616,8 +616,8 @@ Wave FINAL (independent parallel review):
   **Recommended Agent Profile**: `deep`
   **Parallelization**: Wave 6 | Blocked By: T20,T21 | Blocks: F1,F2,F3,F4
   **Acceptance Criteria**:
-  - [ ] Discord nhận message có metadata cũ + video
-  - [ ] Nếu lỗi, UI hiển thị message dễ hiểu
+  - [x] Discord nhận message có metadata cũ + video
+  - [x] Nếu lỗi, UI hiển thị message dễ hiểu
   **QA**: evidence `task-22-discord-ok.txt`, `task-22-discord-error.txt`
   **Commit**: NO
 
@@ -625,16 +625,16 @@ Wave FINAL (independent parallel review):
 
 ## Final Verification Wave (MANDATORY)
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Output: `Must Have [N/N] | Must NOT Have [N/N] | VERDICT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   Output: `Build/Lint/Types status | Slop checks | VERDICT`
 
-- [ ] F3. **Real Manual QA (agent-executed)** — `unspecified-high`
+- [x] F3. **Real Manual QA (agent-executed)** — `unspecified-high`
   Output: `Scenarios pass count | Integration checks | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   Output: `No scope creep/no contamination | VERDICT`
 
 ---
@@ -664,10 +664,10 @@ curl -X POST http://localhost:3000/api/discord-video -F "file=@sample.webm" -F "
 ```
 
 ### Final Checklist
-- [ ] Motion video mượt như playback realtime
-- [ ] 60 FPS, 720p, WebM only
-- [ ] Render nhanh hơn realtime rõ rệt
-- [ ] Discord nhận file qua backend proxy
-- [ ] Không local download, không retry
-- [ ] G0 visible, G4 exact dwell
-- [ ] Đầy đủ evidence cho happy + error paths
+- [x] Motion video mượt như playback realtime
+- [x] 60 FPS, 720p, WebM only
+- [x] Render nhanh hơn realtime rõ rệt
+- [x] Discord nhận file qua backend proxy
+- [x] Không local download, không retry
+- [x] G0 visible, G4 exact dwell
+- [x] Đầy đủ evidence cho happy + error paths
