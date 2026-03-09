@@ -91,6 +91,12 @@ export interface GCodeAnalysisReport {
   collisionWarnings: string[];
 }
 
+export interface ExportDataSnapshot {
+  commands: GCodeCommand[];
+  analysis: GCodeAnalysisReport;
+  rawText: string;
+}
+
 export type NestingStrategy = 'RECTANGULAR' | 'TRUE_SHAPE' | 'MAX_RECTS';
 export type SortStrategy = 'AREA_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC' | 'PERIMETER_DESC' | 'ASPECT_RATIO';
 export type PlacementStrategy = 'BOTTOM_LEFT' | 'BEST_FIT' | 'BEST_SHORT_SIDE' | 'BEST_LONG_SIDE' | 'BEST_AREA';

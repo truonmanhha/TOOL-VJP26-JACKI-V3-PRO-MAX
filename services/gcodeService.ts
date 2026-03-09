@@ -1,5 +1,5 @@
 ﻿
-import { GCodeCommand, GCodeAnalysisReport } from '../types';
+import { GCodeCommand, GCodeAnalysisReport, ExportDataSnapshot } from '../types';
 
 export class GCodeService {
   private worker: Worker | null = null;
@@ -211,7 +211,7 @@ export class GCodeService {
   public processFileAsync(
       file: File | any,
       onProgress: (percent: number) => void
-  ): Promise<{ commands: GCodeCommand[], analysis: GCodeAnalysisReport, rawText: string }> {
+  ): Promise<ExportDataSnapshot> {
       return new Promise((resolve, reject) => {
           if (this.worker) this.worker.terminate();
 

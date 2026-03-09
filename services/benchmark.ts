@@ -1,4 +1,5 @@
 import { renderVideoOffline } from '@/services/offlineRenderer';
+import { getExportConfig } from '@/services/exportPolicy';
 import { GCodeCommand } from '@/types';
 
 interface RenderBenchmarkResult {
@@ -12,7 +13,7 @@ interface RenderBenchmarkResult {
 const BENCHMARK_WIDTH = 1280;
 const BENCHMARK_HEIGHT = 720;
 const BENCHMARK_COMMANDS = 500;
-const BENCHMARK_FPS = 60;
+const BENCHMARK_SPEED = 15;
 
 export async function runRenderBenchmark(): Promise<RenderBenchmarkResult> {
   ensureBrowserBenchmarkSupport();
@@ -24,15 +25,16 @@ export async function runRenderBenchmark(): Promise<RenderBenchmarkResult> {
   }
 
   const commands = createDummyCommands(BENCHMARK_COMMANDS);
+  const exportConfig = getExportConfig(BENCHMARK_SPEED);
 
   let encodedFrames = 0;
 
   const start = performance.now();
   const blob = await renderVideoOffline({
     commands,
-    initialSpeed: 1,
+    initialSpeed: exportConfig.playbackSpeed,
     canvas,
-    fps: BENCHMARK_FPS,
+    fps: exportConfig.fps,
     yieldEveryFrames: 8,
     yieldDelayMs: 0,
     onProgress: progress => {
@@ -63,7 +65,7 @@ export async function runRenderBenchmark(): Promise<RenderBenchmarkResult> {
   const totalMs = end - start;
   const totalSeconds = totalMs / 1000;
   const avgFps = totalSeconds > 0 ? encodedFrames / totalSeconds : 0;
-  const videoDurationSeconds = encodedFrames / BENCHMARK_FPS;
+  const videoDurationSeconds = encodedFrames / exportConfig.fps;
   const realtimeFactor = totalSeconds > 0 ? videoDurationSeconds / totalSeconds : 0;
 
   console.log('[benchmark] Offline render finished', {
