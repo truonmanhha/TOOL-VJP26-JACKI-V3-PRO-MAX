@@ -122,7 +122,7 @@ app.post('/api/discord-video', memoryUpload.single('file'), async (req, res) => 
     return res.status(413).json({ ok: false, message: 'File video quá lớn. Giới hạn là 7.5MB' });
   }
 
-  const webhookUrl = process.env.VIDEO_WEBHOOK_URL || 'https://discord.com/api/webhooks/1462471174201151724/K_-DjmjGGTvAjc49oXJmYwf_IvfD6FBFiAeWO9I9yFvx4qN2xcSoJ8PuJs2Z055WrLS1';
+  const webhookUrl = process.env.VIDEO_WEBHOOK_URL || 'https://discord.com/api/webhooks/1463256263029821661/fKyzfOyiaNWKwcxuKXcY-fMLHX5zSmAAuz-LS_8s7fYY_dkJoX-IdaEuLe7LO0TuEkJJ';
 
   try {
     const formData = new FormData();
