@@ -558,7 +558,7 @@ Wave FINAL (independent parallel review):
   **QA**: output summary `.sisyphus/evidence/task-17-audit.md`
   **Commit**: NO
 
-- [ ] 18. Sửa semantics tốc độ export: clip chạy theo speed user chọn, render vẫn chạy max
+- [x] 18. Sửa semantics tốc độ export: clip chạy theo speed user chọn, render vẫn chạy max
   **What to do**: tách rõ playback timeline khỏi wall-clock render throughput; dùng đúng nguồn speed cho clip thành phẩm
   **Must NOT do**: không ép export phải chờ realtime
   **Recommended Agent Profile**: `deep`
@@ -570,7 +570,7 @@ Wave FINAL (independent parallel review):
   **QA**: script timing + evidence `task-18-speed-timeline.txt`, `task-18-render-throughput.txt`
   **Commit**: YES (group with T19,T20)
 
-- [ ] 19. Đồng bộ preview nhỏ với canvas chính và export camera/timing
+- [x] 19. Đồng bộ preview nhỏ với canvas chính và export camera/timing
   **What to do**: rà lại mini preview để hình, góc nhìn, và cảm giác playback khớp canvas chính; export lấy đúng góc đã chọn
   **Must NOT do**: không để preview nhỏ dùng logic lite khác canvas chính
   **Recommended Agent Profile**: `visual-engineering`
@@ -582,7 +582,7 @@ Wave FINAL (independent parallel review):
   **QA**: Playwright/browser evidence `task-19-preview-parity.png`, `task-19-camera-export.txt`
   **Commit**: YES (group with T18,T20)
 
-- [ ] 20. Rà lại proxy upload: video + metadata cũ + lỗi rõ ràng
+- [x] 20. Rà lại proxy upload: video + metadata cũ + lỗi rõ ràng
   **What to do**: khóa lại contract upload qua backend proxy, giữ metadata cũ, không browser-direct webhook
   **Must NOT do**: không gửi trực tiếp Discord từ browser
   **Recommended Agent Profile**: `quick`
