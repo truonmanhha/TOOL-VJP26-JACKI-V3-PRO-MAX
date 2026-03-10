@@ -291,3 +291,10 @@ export const DEFAULT_NESTING_SETTINGS: NestingSettings = {
   fillDirection: 'BOTTOM_TO_TOP',
   grainDirection: false
 };
+
+export interface DiscordVideoUploadPayload {
+  content: string;
+  username?: string;
+  avatar_url?: string;
+  [key: string]: any;
+}

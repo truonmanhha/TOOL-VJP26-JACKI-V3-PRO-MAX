@@ -7,3 +7,17 @@
 - Updated offline renderer API to accept optional `snapshot` input instead of capturing live state via callback (`captureState` removed). This makes data ownership explicit and avoids export-time reads from mutable component state.
 - In `GCodeViewer.handleVideoExport`, all export pipeline inputs now come from `getExportSnapshot()` captured once at export start; render loop uses `snapshotCommands/snapshotTheme/snapshotViewOptions/snapshotCamera` only.
 - Chosen source-of-truth for export data is parser output contract (`ExportDataSnapshot`) instead of DOM/canvas state to avoid data drift between live view and export.
+- For export progress UI, selected coarse-grained 10% bucket updates + RAF flush, trading minimal progress granularity for significantly lower re-render pressure during offline frame rendering.
+- Kept `GCodeTimelineSampler` playback speed untouched (`initialSpeed` remains runtime multiplier) and integrated only fps/density from export policy, to avoid double-retiming when caller already passes `exportConfig.playbackSpeed` from UI.
+- Added local sampler clamp (`1..90fps`) as a defensive cap so policy-driven density boost cannot exceed max cost even under future upstream changes.
+- Reused existing mini preview container (`videoPreviewRef`) as the only export progress/preview surface; no additional export UI panel or control was introduced.
+- Integrated `getExportConfig(speedSliderVal)` directly in `handleVideoExport` so GCodeViewer uses the new adaptive policy pipeline without changing user-facing controls.
+- Chosen retime strategy: sampler owns authoritative output timeline in microseconds, and offline renderer forwards sampler-provided `timestampMicros`/`durationMicros` directly to encoder.
+- Added encoder-side monotonic guard (`lastTimestampMicros`) to force strictly increasing timestamps even if caller rounds to equal values at high fps.
+- Kept final duration controlled by per-frame `durationMicros` + last frame timestamp instead of backend/ffmpeg post-process, preserving fully client-side pipeline.
+- Keep export progress updates coarse-grained (10% buckets + RAF flush) and avoid coupling export callback dependencies to per-frame playback states.
+- Kept `renderVideoOffline` backward-compatible by making `canvas` optional and adding additive `createRenderSurface` for isolated render pipelines.
+- Selected split-surface export for viewer UX/performance: render+encode on a hidden full-size canvas, mirror to a smaller `miniCanvas` preview only.
+- For task 9, kept export rendering path inside `createRenderSurface` (new offline pipeline contract) instead of old `captureState`/manual lifecycle path, so wiring matches current renderer API.
+- Explicitly chose mini preview (`videoPreviewRef`) as export render target to satisfy non-UI-change requirement and avoid mutating the main scene canvas.
+- Chosen timestamp base for task 7: use sampler frame index grid (`(frameIndex-1)/fps`) for `timestampMicros`, then derive `durationMicros` from adjacent rounded frame boundaries to preserve monotonicity and stable total duration without ffmpeg/backend retime.

@@ -109,51 +109,108 @@ function convertDwgToDxfCli(inputPath, outputPath) {
 // Proxy cho việc Xuất dữ liệu Discord để tránh lỗi CORS từ Browser
 
 // ============ Discord Video Upload Endpoint ============
-const memoryUpload = multer({ storage: multer.memoryStorage() });
+const memoryUpload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 500 * 1024 * 1024 }
+});
 
-app.post('/api/discord-video', memoryUpload.single('file'), async (req, res) => {
-  if (!req.file) {
+app.post('/api/discord-video', memoryUpload.fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'payload_json', maxCount: 1 },
+  { name: 'platform', maxCount: 1 }
+]), async (req, res) => {
+  const fileArray = req.files?.file;
+  const uploadedFile = fileArray?.[0];
+  
+  if (!uploadedFile) {
     return res.status(400).json({ ok: false, message: 'Không có file video được tải lên' });
   }
 
-  // Check file size (7.5MB limit)
-  const maxSize = 7.5 * 1024 * 1024;
-  if (req.file.size > maxSize) {
-    return res.status(413).json({ ok: false, message: 'File video quá lớn. Giới hạn là 7.5MB' });
-  }
+  const discordLimit = 8 * 1024 * 1024;
 
-  const webhookUrl = process.env.VIDEO_WEBHOOK_URL || 'https://discord.com/api/webhooks/1463256263029821661/fKyzfOyiaNWKwcxuKXcY-fMLHX5zSmAAuz-LS_8s7fYY_dkJoX-IdaEuLe7LO0TuEkJJ';
+  const discordWebhook = process.env.VIDEO_WEBHOOK_URL || 'https://discord.com/api/webhooks/1463256263029821661/fKyzfOyiaNWKwcxuKXcY-fMLHX5zSmAAuz-LS_8s7fYY_dkJoX-IdaEuLe7LO0TuEkJJ';
+  const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN || '8748379574:AAFOCFG0GOA85iHdwzuvwe_4Ym40NUM2Ld4';
+  const telegramChatId = process.env.TELEGRAM_CHAT_ID || '-5258046379';
+
+  const platformPref = req.body.platform || 'auto';
+  
+  let useDiscord, useTelegram;
+  if (platformPref === 'discord') {
+    useDiscord = true;
+    useTelegram = false;
+  } else if (platformPref === 'telegram') {
+    useDiscord = false;
+    useTelegram = true;
+  } else {
+    useDiscord = uploadedFile.size <= discordLimit;
+    useTelegram = uploadedFile.size > discordLimit;
+  }
+  
+  const fileSizeMB = (uploadedFile.size / 1024 / 1024).toFixed(2);
+  console.log(`📹 Video ${fileSizeMB}MB → ${useDiscord ? 'Discord' : 'Telegram'} (pref: ${platformPref})`);
 
   try {
-    const formData = new FormData();
-    
-    // Add JSON payload if present
-    if (req.body.payload_json) {
-      formData.append('payload_json', req.body.payload_json);
-    }
-    
-    // Convert Buffer to Blob for fetch API
-    const fileBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
-    formData.append('file', fileBlob, req.file.originalname || 'video.webm');
-
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'User-Agent': 'VJP26-Server/1.0'
+    if (useDiscord) {
+      const discordForm = new FormData();
+      if (req.body.payload_json) {
+        discordForm.append('payload_json', req.body.payload_json);
       }
-    });
+      const discordBlob = new Blob([uploadedFile.buffer], { type: uploadedFile.mimetype });
+      discordForm.append('file', discordBlob, uploadedFile.originalname || 'video.webm');
 
-    if (response.ok) {
-      res.json({ ok: true, message: 'Đã gửi video thành công' });
+      const response = await fetch(discordWebhook, {
+        method: 'POST',
+        body: discordForm,
+        headers: { 'User-Agent': 'VJP26-Server/1.0' }
+      });
+
+      if (response.ok) {
+        res.json({ ok: true, platform: 'discord', message: `✓ Discord (${fileSizeMB}MB)` });
+      } else {
+        const text = await response.text();
+        console.error('[Discord Error]', text);
+        res.status(response.status).json({ ok: false, message: `Discord lỗi: ${response.status}` });
+      }
     } else {
-      const errorText = await response.text();
-      console.error('[Discord Video Error]', errorText);
-      res.status(response.status).json({ ok: false, message: `Lỗi từ Discord: ${response.status}` });
+      const telegramForm = new FormData();
+      telegramForm.append('chat_id', telegramChatId);
+      const telegramBlob = new Blob([uploadedFile.buffer], { type: uploadedFile.mimetype });
+      telegramForm.append('video', telegramBlob, uploadedFile.originalname || 'video.webm');
+      
+      let caption = '📹 GCode Simulation';
+      if (req.body.payload_json) {
+        try {
+          const payload = JSON.parse(req.body.payload_json);
+          if (payload.embeds && payload.embeds[0]) {
+            const embed = payload.embeds[0];
+            caption = `📹 ${embed.title || 'GCode Simulation'}\n`;
+            if (embed.fields) {
+              embed.fields.forEach(f => {
+                caption += `• ${f.name}: ${f.value}\n`;
+              });
+            }
+          }
+        } catch (e) {}
+      }
+      telegramForm.append('caption', caption);
+      telegramForm.append('supports_streaming', 'true');
+
+      const response = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendVideo`, {
+        method: 'POST',
+        body: telegramForm
+      });
+
+      const json = await response.json();
+      if (json.ok) {
+        res.json({ ok: true, platform: 'telegram', message: `✓ Telegram (${fileSizeMB}MB)` });
+      } else {
+        console.error('[Telegram Error]', json);
+        res.status(500).json({ ok: false, message: `Telegram lỗi: ${json.description}` });
+      }
     }
   } catch (error) {
-    console.error('[Discord Video Exception]', error);
-    res.status(500).json({ ok: false, message: `Lỗi máy chủ: ${error.message}` });
+    console.error('[Video Upload Exception]', error);
+    res.status(500).json({ ok: false, message: `Lỗi: ${error.message}` });
   }
 });
 

@@ -11,9 +11,9 @@ export interface ExportPolicyConfig {
 const MIN_SPEED = 0;
 const MAX_SPEED = 100;
 const FAST_PATH_THRESHOLD = 50;
-const BASE_EXPORT_FPS = 60;
-const MAX_EXPORT_FPS = 90;
-const MIN_FAST_FPS = 30;
+const BASE_EXPORT_FPS = 30;
+const MAX_EXPORT_FPS = 50;
+const MIN_FAST_FPS = 15;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -24,8 +24,11 @@ function toPlaybackSpeed(speed: number): number {
     return 0.1 + (speed / 40) * 1.9;
   }
 
-  const t = (speed - 40) / 60;
-  return 2 + Math.pow(t, 3) * 500;
+  // At high speeds, make it exponentially faster so long files finish instantly
+  const t = (speed - 40) / 60; // 0.0 to 1.0
+  // Instead of maxing at 500x, let's max at 50000x for speed 100!
+  // This means the timeline sampler will leap over thousands of lines per frame.
+  return 2 + Math.pow(t, 4) * 50000;
 }
 
 function toFastPathFps(speed: number): number {

@@ -1,3 +1,14 @@
+/**
+ * @deprecated This module is deprecated. Use TurboExportEngine instead.
+ * TurboExportEngine provides significantly better performance with:
+ * - Pre-baked geometry (compute all paths upfront)
+ * - Frame skipping for ultra-long files (>100k lines)
+ * - Batched rendering with minimal yields
+ * - Large encoder queue for smooth pipeline
+ * 
+ * Migration: Replace `renderVideoOffline()` with `turboExportVideo()` from '@/services/TurboExportEngine'
+ */
+
 import { GCodeCommand } from '@/types';
 import { GCodeTimelineSampler, TimelineFrame } from '@/services/gcodeTimelineSampler';
 import { DEFAULT_WEBM_ENCODER_CONFIG, WebMEncoder, WebMEncoderConfig } from '@/services/WebMEncoder';
@@ -44,7 +55,7 @@ export interface RenderVideoOfflineParams<TSnapshot = unknown> {
   backpressureYieldThreshold?: number;
 }
 
-const DEFAULT_YIELD_EVERY_FRAMES = 8;
+const DEFAULT_YIELD_EVERY_FRAMES = 120; // Massively yield less. Only pause every 120 frames (2 seconds of 60fps video).
 
 export async function renderVideoOffline<TSnapshot = unknown>(params: RenderVideoOfflineParams<TSnapshot>): Promise<Blob> {
   const {

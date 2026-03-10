@@ -1,5 +1,4 @@
-import { renderVideoOffline } from '@/services/offlineRenderer';
-import { getExportConfig } from '@/services/exportPolicy';
+import { turboExportVideoLegacy } from '@/services/TurboExportEngine';
 import { GCodeCommand } from '@/types';
 
 interface RenderBenchmarkResult {
@@ -18,46 +17,30 @@ const BENCHMARK_SPEED = 15;
 export async function runRenderBenchmark(): Promise<RenderBenchmarkResult> {
   ensureBrowserBenchmarkSupport();
 
-  const canvas = new OffscreenCanvas(BENCHMARK_WIDTH, BENCHMARK_HEIGHT);
-  const context = canvas.getContext('2d');
-  if (!context) {
-    throw new Error('[benchmark] Failed to create 2D context for OffscreenCanvas');
-  }
-
   const commands = createDummyCommands(BENCHMARK_COMMANDS);
-  const exportConfig = getExportConfig(BENCHMARK_SPEED);
 
   let encodedFrames = 0;
+  let totalFrames = 0;
 
   const start = performance.now();
-  const blob = await renderVideoOffline({
+  const blob = await turboExportVideoLegacy({
     commands,
-    initialSpeed: exportConfig.playbackSpeed,
-    canvas,
-    fps: exportConfig.fps,
-    yieldEveryFrames: 8,
-    yieldDelayMs: 0,
-    onProgress: progress => {
-      encodedFrames = progress.encodedFrames;
+    speedSlider: BENCHMARK_SPEED,
+    width: BENCHMARK_WIDTH,
+    height: BENCHMARK_HEIGHT,
+    theme: {
+      background: '#0f1419',
+      g0: '#00ff00',
+      g1: '#3b82f6',
+      grid: '#334155'
     },
-    applyFrameState: frame => {
-      const x = ((frame.position.x + 100) / 200) * BENCHMARK_WIDTH;
-      const y = ((frame.position.y + 60) / 120) * BENCHMARK_HEIGHT;
-
-      context.fillStyle = '#05070b';
-      context.fillRect(0, 0, BENCHMARK_WIDTH, BENCHMARK_HEIGHT);
-
-      context.strokeStyle = frame.isRapid ? '#60a5fa' : '#34d399';
-      context.lineWidth = 2;
-      context.beginPath();
-      context.moveTo(0, y);
-      context.lineTo(BENCHMARK_WIDTH, y);
-      context.stroke();
-
-      context.fillStyle = '#f8fafc';
-      context.beginPath();
-      context.arc(x, y, 6, 0, Math.PI * 2);
-      context.fill();
+    viewOptions: {
+      showRapid: true,
+      showCutting: true
+    },
+    onProgress: progress => {
+      encodedFrames = progress.currentFrame;
+      totalFrames = progress.totalFrames;
     }
   });
   const end = performance.now();
@@ -65,12 +48,13 @@ export async function runRenderBenchmark(): Promise<RenderBenchmarkResult> {
   const totalMs = end - start;
   const totalSeconds = totalMs / 1000;
   const avgFps = totalSeconds > 0 ? encodedFrames / totalSeconds : 0;
-  const videoDurationSeconds = encodedFrames / exportConfig.fps;
+  const videoDurationSeconds = encodedFrames / 30;
   const realtimeFactor = totalSeconds > 0 ? videoDurationSeconds / totalSeconds : 0;
 
-  console.log('[benchmark] Offline render finished', {
+  console.log('[benchmark] TurboExport render finished', {
     totalMs: Number(totalMs.toFixed(2)),
     encodedFrames,
+    totalFrames,
     avgFps: Number(avgFps.toFixed(2)),
     outputBytes: blob.size,
     realtimeFactor: Number(realtimeFactor.toFixed(2))

@@ -1,0 +1,7 @@
+
+Running 1 test using 1 worker
+
+Test completed without hanging. Errors found: [33m0[39m
+  ✓  1 tests/export-e2e.spec.ts:3:1 › GCode Export Test (7.7s)
+
+  1 passed (20.6s)

@@ -6,8 +6,8 @@ export function getVideoExportErrorMessage(error: any): string {
     return 'Trình duyệt của bạn không hỗ trợ WebCodecs. Vui lòng dùng Chrome/Edge mới nhất.';
   }
   
-  if (lowerMessage.includes('413') || lowerMessage.includes('lớn')) {
-    return 'Video tạo ra quá lớn (vượt quá 7.5MB). Vui lòng giảm thời gian video.';
+  if (lowerMessage.includes('413') || lowerMessage.includes('too large')) {
+    return 'File quá lớn để upload. Vui lòng thử lại với video ngắn hơn.';
   }
   
   if (lowerMessage.includes('fetch') || lowerMessage.includes('network')) {

@@ -14,15 +14,15 @@ export interface WebMEncoderConfig {
 }
 
 export const DEFAULT_WEBM_ENCODER_CONFIG: WebMEncoderConfig = {
-  width: 1280,
+  width: 1280, // Drop down width a bit could help, but let's keep 720p
   height: 720,
   frameRate: 60,
   bitrate: 2_500_000,
-  codec: 'vp09.00.10.08',
-  hardwareAcceleration: 'no-preference',
+  codec: 'vp8', 
+  hardwareAcceleration: 'prefer-hardware', 
   keyFrameInterval: 60,
-  maxEncodeQueueSize: 8,
-  backpressurePollMs: 4,
+  maxEncodeQueueSize: 120, // MASSIVE BOOST: allow GPU encoder to accept up to 120 frames at once without blocking CPU loop
+  backpressurePollMs: 1, // Poll faster to unblock
   mimeType: 'video/webm'
 };
 
@@ -40,6 +40,7 @@ export class WebMEncoder {
   private isFinishing = false;
   private isFinalized = false;
   private finalizedBlob: Blob | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor(config: Partial<WebMEncoderConfig> = {}) {
     this.config = { ...DEFAULT_WEBM_ENCODER_CONFIG, ...config };
@@ -74,19 +75,64 @@ export class WebMEncoder {
       }
     });
 
-    try {
-      this.encoder.configure({
+
+    const initEncoder = async () => {
+      let config: VideoEncoderConfig = {
         codec: this.config.codec,
         width: this.config.width,
         height: this.config.height,
         bitrate: this.config.bitrate,
         framerate: this.config.frameRate,
         hardwareAcceleration: this.config.hardwareAcceleration
-      });
-    } catch (error) {
-      this.safeCloseEncoder();
-      throw new Error(`[WebMEncoder] Failed to configure VideoEncoder: ${error instanceof Error ? error.message : 'unknown error'}`);
-    }
+      };
+
+      try {
+        const support = await VideoEncoder.isConfigSupported(config);
+        if (!support.supported) {
+          throw new Error('Config not supported natively');
+        }
+        this.encoder.configure(support.config || config);
+      } catch (e) {
+        console.warn('[WebMEncoder] Hardware/VP9 encode failed or not supported, falling back to VP8/CPU:', e);
+        
+        // Hard fallback to safe vp8 config
+        this.config.codec = 'vp8';
+        this.muxer = new Muxer({
+          target: this.target,
+          video: {
+            codec: 'V_VP8',
+            width: this.config.width,
+            height: this.config.height,
+            frameRate: this.config.frameRate
+          },
+          firstTimestampBehavior: 'offset'
+        });
+        
+        const fallbackConfig: VideoEncoderConfig = {
+          codec: 'vp8',
+          width: this.config.width,
+          height: this.config.height,
+          bitrate: this.config.bitrate,
+          framerate: this.config.frameRate,
+          hardwareAcceleration: 'prefer-software'
+        };
+        
+        try {
+          // Double check if even fallback is supported
+          const fallbackSupport = await VideoEncoder.isConfigSupported(fallbackConfig);
+          this.encoder.configure(fallbackSupport.config || fallbackConfig);
+        } catch (fallbackError) {
+          this.safeCloseEncoder();
+          throw new Error(`[WebMEncoder] Failed to configure VideoEncoder even with fallback: ${fallbackError}`);
+        }
+      }
+    };
+    
+    // We can't await in constructor, so we start it. 
+    // It's fast enough before the first addFrame is called usually.
+    // If not, we will need to wrap it.
+    this.initPromise = initEncoder();
+
   }
 
   public async addFrame(
@@ -94,6 +140,10 @@ export class WebMEncoder {
     timestampMicros: number,
     durationMicros?: number
   ): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
+      this.initPromise = null;
+    }
     this.ensureWritableState();
     await this.waitForBackpressure();
     this.ensureWritableState();
@@ -119,6 +169,10 @@ export class WebMEncoder {
   }
 
   public async finish(): Promise<Blob> {
+    if (this.initPromise) {
+      await this.initPromise;
+      this.initPromise = null;
+    }
     if (this.finalizedBlob) {
       return this.finalizedBlob;
     }

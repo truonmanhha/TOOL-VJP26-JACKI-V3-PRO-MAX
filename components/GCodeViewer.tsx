@@ -4,8 +4,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text, Html, Instance, Instances, Center } from '@react-three/drei';
 import * as THREE from 'three';
 import { advanceMotion, MotionState } from '@/services/gcodeMotionHelper';
-import { renderVideoOffline } from '@/services/offlineRenderer';
-import { getExportConfig } from '@/services/exportPolicy';
+import { turboExportVideoLegacy, TurboExportProgress } from '@/services/TurboExportEngine';
 import { Play, Pause, RotateCcw, Upload, Code, Monitor, Activity, Zap, Layers, Cpu, Ruler, MousePointer2, Settings, Palette, Eye, EyeOff, Save, X, ListFilter, ChevronDown, Check, MoreHorizontal, Circle, MousePointerClick, Send, Share2, Timer, Maximize, Minimize, Focus, Sparkles, Globe, Rocket, Swords, FastForward, CornerDownRight, ArrowRightCircle, Wrench, Replace, Search, CaseSensitive, Repeat, Undo2, Redo2, Copy, FileCode, RefreshCcw, Loader2, AlertCircle, Terminal, Bot, Gauge, HardDrive, PanelLeftClose, PanelLeftOpen, Home as HomeIcon, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GCodeService } from '../services/gcodeService';
@@ -998,6 +997,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const [videoExportState, setVideoExportState] = useState<'idle' | 'rendering' | 'uploading' | 'done' | 'error'>('idle');
   const [videoExportProgress, setVideoExportProgress] = useState(0);
   const [videoExportErrorMessageState, setVideoExportErrorMessageState] = useState('');
+  const [videoPlatform, setVideoPlatform] = useState<'auto' | 'discord' | 'telegram'>(() => loadSetting('vjp26_gc_video_platform', 'auto'));
+  const [showPlatformMenu, setShowPlatformMenu] = useState(false);
 
 
 
@@ -1130,7 +1131,6 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
     setVideoExportErrorMessageState('');
 
-    const exportConfig = getExportConfig(speedSliderVal);
     const exportDataSnapshot: ExportDataSnapshot = {
       commands: commands.map(cmd => ({ ...cmd })),
       analysis,
@@ -1167,181 +1167,29 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       setVideoExportProgress(0);
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 
-      const videoBlob = await renderVideoOffline({
+      const videoFormat = videoPlatform === 'telegram' ? 'mp4' : 'webm';
+      
+      const videoBlob = await turboExportVideoLegacy({
         commands: exportSnapshot.exportData.commands,
-        initialSpeed: exportConfig.playbackSpeed,
-        fps: exportConfig.fps,
-        snapshot: exportSnapshot,
-        createRenderSurface: (snapshot) => {
-          const safeSnapshot = snapshot || exportSnapshot;
-          const snapshotCommands = safeSnapshot.exportData.commands;
-
-          const offscreenCanvas = document.createElement('canvas');
-          offscreenCanvas.width = 1280;
-          offscreenCanvas.height = 720;
-          offscreenCanvas.style.width = '100%';
-          offscreenCanvas.style.height = 'auto';
-          offscreenCanvas.style.borderRadius = '8px';
-
-          if (videoPreviewRef.current) {
-            videoPreviewRef.current.innerHTML = '';
-            videoPreviewRef.current.appendChild(offscreenCanvas);
-          }
-
-          const positions: number[] = [];
-          const commandToVertexIndex = new Int32Array(snapshotCommands.length);
-          let currentVertCount = 0;
-
-          for (let i = 0; i < snapshotCommands.length - 1; i++) {
-            const c1 = snapshotCommands[i];
-            const c2 = snapshotCommands[i + 1];
-            commandToVertexIndex[i] = currentVertCount;
-
-            if (c1.type === 'OTHER' || c2.type === 'OTHER') continue;
-
-            const isZeroLen =
-              Math.abs(c1.x - c2.x) < 0.0001 &&
-              Math.abs(c1.y - c2.y) < 0.0001 &&
-              Math.abs(c1.z - c2.z) < 0.0001;
-            if (isZeroLen) continue;
-
-            const isRapid = c2.type === 'G0';
-            const isCut = c2.type === 'G1' || c2.type === 'G2' || c2.type === 'G3';
-            if ((isRapid && !safeSnapshot.viewOptions.showRapid) || (isCut && !safeSnapshot.viewOptions.showCutting)) continue;
-
-            positions.push(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z);
-            currentVertCount += 2;
-          }
-
-          if (snapshotCommands.length > 0) {
-            commandToVertexIndex[snapshotCommands.length - 1] = currentVertCount;
-          }
-
-          const scene = new THREE.Scene();
-          scene.background = new THREE.Color(safeSnapshot.theme.background);
-
-          const camera = new THREE.PerspectiveCamera(
-            safeSnapshot.camera?.fov ?? 45,
-            offscreenCanvas.width / offscreenCanvas.height,
-            safeSnapshot.camera?.near ?? 0.1,
-            safeSnapshot.camera?.far ?? 100000
-          );
-
-          if (safeSnapshot.camera) {
-            camera.position.copy(safeSnapshot.camera.position);
-            camera.quaternion.copy(safeSnapshot.camera.quaternion);
-            camera.up.copy(safeSnapshot.camera.up);
-            camera.updateProjectionMatrix();
-          } else {
-            const bounds = new THREE.Box3();
-            let hasBounds = false;
-            for (const cmd of snapshotCommands) {
-              if (cmd.type === 'OTHER') continue;
-              bounds.expandByPoint(new THREE.Vector3(cmd.x, cmd.y, cmd.z));
-              hasBounds = true;
-            }
-
-            if (hasBounds) {
-              const center = new THREE.Vector3();
-              bounds.getCenter(center);
-              const size = new THREE.Vector3();
-              bounds.getSize(size);
-              const maxDim = Math.max(size.x, size.y, size.z) || 100;
-              const distance = maxDim * 2;
-              camera.position.set(center.x + distance, center.y - distance, center.z + distance * 0.8);
-              camera.up.set(0, 0, 1);
-              camera.lookAt(center);
-            } else {
-              camera.position.set(100, -100, 100);
-              camera.up.set(0, 0, 1);
-              camera.lookAt(new THREE.Vector3(0, 0, 0));
-            }
-          }
-
-          const renderer = new THREE.WebGLRenderer({
-            canvas: offscreenCanvas,
-            antialias: true,
-            alpha: false,
-            powerPreference: 'high-performance'
-          });
-          renderer.setPixelRatio(1);
-          renderer.setSize(offscreenCanvas.width, offscreenCanvas.height, false);
-          renderer.setClearColor(safeSnapshot.theme.background, 1);
-
-          const baseGeo = new THREE.BufferGeometry();
-          baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-          const ghostGeo = baseGeo.clone();
-          const activeGeo = baseGeo.clone();
-
-          const ghostLineMat = new THREE.LineBasicMaterial({ color: safeSnapshot.theme.g1, opacity: 0.18, transparent: true, depthWrite: false });
-          const activeLineMat = new THREE.LineBasicMaterial({ color: safeSnapshot.theme.g1, opacity: 1, transparent: false });
-          const ghostLine = new THREE.LineSegments(ghostGeo, ghostLineMat);
-          const activeLine = new THREE.LineSegments(activeGeo, activeLineMat);
-          scene.add(ghostLine, activeLine);
-
-          const toolHeadGeo = new THREE.SphereGeometry(2.5, 20, 20);
-          const toolMat = new THREE.MeshStandardMaterial({ color: safeSnapshot.theme.text, emissive: safeSnapshot.theme.text, emissiveIntensity: 0.2 });
-          const toolHead = new THREE.Mesh(toolHeadGeo, toolMat);
-          scene.add(toolHead);
-
-          const ambientLight = new THREE.AmbientLight('#ffffff', 0.5);
-          const pointLight = new THREE.PointLight('#ffffff', 1);
-          pointLight.position.set(100, 100, 120);
-          const axesHelper = new THREE.AxesHelper(100);
-          scene.add(ambientLight, pointLight, axesHelper);
-
-          return {
-            canvas: offscreenCanvas,
-            renderFrame: (frame) => {
-              const idx = Math.max(0, Math.min(snapshotCommands.length - 1, frame.index));
-              const c1 = snapshotCommands[idx] || snapshotCommands[snapshotCommands.length - 1];
-              const c2 = snapshotCommands[Math.min(snapshotCommands.length - 1, idx + 1)] || c1;
-              const currentPos = new THREE.Vector3().lerpVectors(
-                new THREE.Vector3(c1.x, c1.y, c1.z),
-                new THREE.Vector3(c2.x, c2.y, c2.z),
-                Math.max(0, Math.min(1, frame.progress))
-              );
-
-              toolHead.position.copy(currentPos);
-
-              const totalVerts = commandToVertexIndex[snapshotCommands.length - 1] || 0;
-              const drawLimit = commandToVertexIndex[idx] || 0;
-              let extraVerts = 0;
-
-              const nextCmd = snapshotCommands[idx + 1];
-              if (nextCmd) {
-                const nextIsRapid = nextCmd.type === 'G0';
-                const nextIsCut = nextCmd.type === 'G1' || nextCmd.type === 'G2' || nextCmd.type === 'G3';
-                const visible = (nextIsRapid && safeSnapshot.viewOptions.showRapid) || (nextIsCut && safeSnapshot.viewOptions.showCutting);
-                if (visible) {
-                  extraVerts = Math.round(Math.max(0, Math.min(1, frame.progress)) * 2);
-                }
-              }
-
-              ghostGeo.setDrawRange(0, totalVerts);
-              activeGeo.setDrawRange(0, Math.min(totalVerts, drawLimit + extraVerts));
-              renderer.render(scene, camera);
-            },
-            dispose: () => {
-              renderer.dispose();
-              baseGeo.dispose();
-              ghostGeo.dispose();
-              activeGeo.dispose();
-              ghostLineMat.dispose();
-              activeLineMat.dispose();
-              toolHeadGeo.dispose();
-              toolMat.dispose();
-              if (videoPreviewRef.current) {
-                videoPreviewRef.current.innerHTML = '';
-              }
-              offscreenCanvas.width = 0;
-              offscreenCanvas.height = 0;
-            }
-          };
+        speedSlider: speedSliderVal,
+        width: 1280,
+        height: 720,
+        format: videoFormat,
+        theme: {
+          background: exportSnapshot.theme.background,
+          g0: exportSnapshot.theme.g0 || '#00ff00',
+          g1: exportSnapshot.theme.g1,
+          grid: exportSnapshot.theme.grid || '#334155'
         },
-        onProgress: (progress) => {
+        viewOptions: {
+          showRapid: exportSnapshot.viewOptions.showRapid,
+          showCutting: exportSnapshot.viewOptions.showCutting
+        },
+        gpuPreference: gpuPreference,
+        previewContainer: videoPreviewRef.current,
+        onProgress: (progress: TurboExportProgress) => {
           const clampedProgress = Math.max(0, Math.min(1, progress.progress));
-          const bucket = progress.isFinished ? 10 : Math.floor(clampedProgress * 10);
+          const bucket = progress.phase === 'done' ? 10 : Math.floor(clampedProgress * 10);
           if (bucket === pendingProgressBucket && progressRafId !== null) return;
 
           pendingProgressBucket = bucket;
@@ -1374,7 +1222,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 
       const formData = new FormData();
       formData.append('payload_json', JSON.stringify(embedData));
-      formData.append('file', videoBlob, 'simulation.webm');
+      formData.append('file', videoBlob, `simulation.${videoFormat}`);
+      formData.append('platform', videoPlatform);
 
       const uploadRes = await fetch('/api/discord-video', {
         method: 'POST',
@@ -1410,7 +1259,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     theme.background,
     theme.g1,
     theme.text,
-    file
+    file,
+    videoPlatform
   ]);
 
   useEffect(() => localStorage.setItem('vjp26_gc_speed', JSON.stringify(speedSliderVal)), [speedSliderVal]);
@@ -1959,15 +1809,9 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
             <div className="col-span-1 lg:col-span-3 glass-panel rounded-2xl flex flex-col gap-4 border-white/5 p-4 overflow-hidden z-0 order-3 h-auto lg:h-full">
                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 shrink-0"><div className="flex items-center justify-between mb-3 text-emerald-400"><div className="flex items-center gap-2"><Layers size={14} /><span className="text-xs font-black uppercase tracking-widest">THÔNG SỐ CẮT</span></div>{analysis && <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded text-[9px] font-black uppercase border border-emerald-500/20 animate-pulse"><Timer size={10} /> {analysis.totalTime}</div>}</div><div className="grid grid-cols-2 gap-2 text-xs">{[{l:'TỌA ĐỘ (X/Y/Z)',v:`${displayPos.x.toFixed(1)} / ${displayPos.y.toFixed(1)} / ${displayPos.z.toFixed(1)}`,c:'text-slate-300'},{l:'TỐC ĐỘ (FEED)',v:`${currentCmd.f || 0} mm/min`,c:'text-orange-400'},{l:'SPINDLE (S)',v:`${currentCmd.s || 0} RPM`,c:'text-blue-400'},{l:'QUÃNG ĐƯỜNG CẮT',v:`${analysis ? (analysis.totalCutDistance/1000).toFixed(2) : 0} m`,c:'text-emerald-400'}].map(i=>(<div key={i.l} className="bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">{i.l}</div><div className={`font-mono text-sm ${i.c}`}>{i.v}</div></div>))}<div className="col-span-2 bg-black/40 p-2 rounded-lg border border-white/5"><div className="text-slate-500 mb-1 font-bold text-[10px]">PHẠM VI BAO (BOUNDS)</div><div className="font-mono text-slate-400 text-[10px]">X: {analysis ? `${analysis.minX.toFixed(0)}~${analysis.maxX.toFixed(0)}` : '-'} | Y: {analysis ? `${analysis.minY.toFixed(0)}~${analysis.maxY.toFixed(0)}` : '-'}</div></div></div></div><div className="flex-1 bg-gradient-to-b from-purple-900/10 to-slate-900/50 rounded-xl border border-purple-500/20 p-4 flex flex-col relative overflow-hidden min-h-[200px]"><div className="flex items-center justify-between mb-3 text-purple-400 shrink-0"><div className="flex items-center gap-2"><Cpu size={14} className={isAnalyzing ? 'animate-pulse' : ''} /><span className="text-xs font-black uppercase tracking-widest">KẾT QUẢ PHÂN TÍCH</span></div>
 
-{videoExportState === 'rendering' && (
-    <div className="w-full mb-3 p-2 bg-black/50 border border-white/10 rounded-xl overflow-hidden shadow-inner flex flex-col items-center gap-1">
-        <div className="w-full aspect-video bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center relative" ref={videoPreviewRef}>
-            <Activity className="animate-spin text-slate-500 absolute" size={24} />
-        </div>
-        <div className="text-[9px] text-slate-400 font-mono tracking-widest mt-1 animate-pulse">LIVE PREVIEW</div>
-    </div>
-)}
+
 <div className="flex flex-col items-center gap-1">
+<div className="flex items-center gap-1">
 <button 
     onClick={handleVideoExport} 
     disabled={videoExportState === 'rendering' || videoExportState === 'uploading' || !analysis} 
@@ -1975,10 +1819,54 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 >
     {videoExportState === 'idle' && <><Share2 size={12} /> <span className="text-[10px] font-bold uppercase">Gửi Video</span></>}
     {videoExportState === 'rendering' && <><Activity size={12} className="animate-spin" /> <span className="text-[10px] font-bold uppercase">Đang tạo video ({Math.round(videoExportProgress * 100)}%)</span></>}
-    {videoExportState === 'uploading' && <><Upload size={12} className="animate-pulse" /> <span className="text-[10px] font-bold uppercase">Đang tải lên Discord...</span></>}
+    {videoExportState === 'uploading' && <><Upload size={12} className="animate-pulse" /> <span className="text-[10px] font-bold uppercase">Đang tải lên {videoPlatform === 'discord' ? 'Discord' : videoPlatform === 'telegram' ? 'Telegram' : '...'}...</span></>}
     {videoExportState === 'done' && <><Check size={12} /> <span className="text-[10px] font-bold uppercase">Gửi thành công!</span></>}
     {videoExportState === 'error' && <><AlertCircle size={12} /> <span className="text-[10px] font-bold uppercase">Lỗi gửi báo cáo</span></>}
 </button>
+<div className="relative">
+    <button 
+        onClick={() => setShowPlatformMenu(!showPlatformMenu)}
+        className="bg-slate-800/80 hover:bg-slate-700 border border-white/10 px-2 py-1.5 rounded-lg flex items-center gap-1 transition-all"
+        title="Chọn nền tảng gửi"
+    >
+        {videoPlatform === 'discord' && <Globe size={12} className="text-indigo-400" />}
+        {videoPlatform === 'telegram' && <Send size={12} className="text-sky-400" />}
+        {videoPlatform === 'auto' && <Zap size={12} className="text-amber-400" />}
+        <ChevronDown size={10} className="text-slate-400" />
+    </button>
+    {showPlatformMenu && (
+        <div className="absolute right-0 top-full mt-1 bg-slate-900/95 border border-white/10 rounded-lg shadow-xl z-50 min-w-[140px] py-1 backdrop-blur-sm">
+            <button 
+                onClick={() => { setVideoPlatform('auto'); setShowPlatformMenu(false); localStorage.setItem('vjp26_gc_video_platform', 'auto'); }}
+                className={`w-full px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-colors ${videoPlatform === 'auto' ? 'text-amber-400' : 'text-slate-300'}`}
+            >
+                <Zap size={14} />
+                <span className="text-[11px] font-medium">Tự động</span>
+                {videoPlatform === 'auto' && <Check size={12} className="ml-auto" />}
+            </button>
+            <button 
+                onClick={() => { setVideoPlatform('discord'); setShowPlatformMenu(false); localStorage.setItem('vjp26_gc_video_platform', 'discord'); }}
+                className={`w-full px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-colors ${videoPlatform === 'discord' ? 'text-indigo-400' : 'text-slate-300'}`}
+            >
+                <Globe size={14} />
+                <span className="text-[11px] font-medium">Discord</span>
+                {videoPlatform === 'discord' && <Check size={12} className="ml-auto" />}
+            </button>
+            <button 
+                onClick={() => { setVideoPlatform('telegram'); setShowPlatformMenu(false); localStorage.setItem('vjp26_gc_video_platform', 'telegram'); }}
+                className={`w-full px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-colors ${videoPlatform === 'telegram' ? 'text-sky-400' : 'text-slate-300'}`}
+            >
+                <Send size={14} />
+                <span className="text-[11px] font-medium">Telegram</span>
+                {videoPlatform === 'telegram' && <Check size={12} className="ml-auto" />}
+            </button>
+            <div className="border-t border-white/5 mt-1 pt-1 px-3 py-1">
+                <span className="text-[9px] text-slate-500">Auto: ≤8MB→Discord, &gt;8MB→Telegram</span>
+            </div>
+        </div>
+    )}
+</div>
+</div>
 {videoExportState === 'error' && videoExportErrorMessageState && (
     <div className="text-red-400 text-[10px] mt-1 text-center max-w-[150px] leading-tight break-words">
         {videoExportErrorMessageState}
@@ -1994,40 +1882,41 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
 ) : aiAnalysis ? (
     <div className="flex flex-col gap-4">
         <div className="whitespace-pre-wrap">{aiAnalysis}</div>
-        <div className="bg-black/50 rounded-lg border border-white/10 p-2 overflow-hidden aspect-video relative flex items-center justify-center group mt-4">
-            {!isPlaying ? (
-                <button onClick={() => { simState.current.index = 0; simState.current.progress = 0; setCurrentIndex(0); setIsPlaying(true); }} className="absolute z-10 w-12 h-12 bg-blue-600/80 hover:bg-blue-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all group-hover:scale-110">
-                    <Play size={20} className="ml-1" fill="currentColor" />
-                </button>
-            ) : (
-                <button onClick={() => setIsPlaying(false)} className="absolute z-10 w-12 h-12 bg-red-600/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:scale-110">
-                    <Pause size={20} fill="currentColor" />
-                </button>
+        <div className="bg-black/50 rounded-lg border border-white/10 p-2 overflow-hidden aspect-video relative flex items-center justify-center mt-4">
+            {videoExportState === 'rendering' && (
+                <div className="absolute top-2 right-2 z-10 bg-black/80 px-2 py-1 rounded text-[8px] font-mono text-emerald-400 flex items-center gap-1 border border-emerald-500/30">
+                    <Activity size={10} className="animate-spin" />
+                    EXPORTING: {Math.floor(videoExportProgress * 100)}%
+                </div>
             )}
-            {isPlaying && (
+            {isPlaying && videoExportState !== 'rendering' && (
                 <div className="absolute top-2 left-2 z-10 bg-black/60 px-2 py-1 rounded text-[8px] font-mono text-green-400 flex items-center gap-1 border border-white/10">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
                     PLAYING: {Math.floor((currentIndex / Math.max(1, commands.length)) * 100)}%
                 </div>
             )}
-            <div className="absolute inset-0 rounded-lg overflow-hidden" style={{ pointerEvents: 'auto' }}>
-                <Canvas 
-                    camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} 
-                    dpr={1} 
-                    gl={{ powerPreference: gpuPreference, antialias: true, stencil: false, depth: true }}
-                >
-                    <color attach="background" args={[theme.background]} />
-                    <UpdateMiniCamera cameraRef={miniCameraRef} />
-                    <SceneContent orbitParams={{ zoomSpeed: 0.5, panSpeed: 0.5, rotateSpeed: 0.5 }} 
-                        commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} 
-                        theme={theme} toolConfig={toolConfig} showGrid={showGrid} snapMode={snapMode} 
-                        measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} 
-                        viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} 
-                        zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={false} 
-                    />
-                </Canvas>
+            <div ref={videoPreviewRef} className="absolute inset-0 rounded-lg overflow-hidden" style={{ pointerEvents: 'auto' }}>
+                {videoExportState !== 'rendering' && (
+                  <Canvas 
+                      camera={{ position: [50, -50, 50], fov: 45, far: 100000, near: 0.1 }} 
+                      dpr={1} 
+                      gl={{ powerPreference: gpuPreference, antialias: true, stencil: false, depth: true }}
+                  >
+                      <color attach="background" args={[theme.background]} />
+                      <UpdateMiniCamera cameraRef={miniCameraRef} />
+                      <SceneContent orbitParams={{ zoomSpeed: 0.5, panSpeed: 0.5, rotateSpeed: 0.5 }} 
+                          commands={commands} currentCmd={currentCmd} interpolatedPosRef={interpolatedPosRef} 
+                          theme={theme} toolConfig={toolConfig} showGrid={showGrid} snapMode={snapMode} 
+                          measurePoints={[]} setMeasurePoints={() => {}} currentIndex={currentIndex} 
+                          viewMode={viewMode} viewOptions={viewOptions} starMode={starMode} 
+                          zoomFitTrigger={zoomFitTrigger} onSegmentClick={() => {}} isLiteMode={false} 
+                      />
+                  </Canvas>
+                )}
             </div>
-            <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-75 pointer-events-none" style={{ width: `${(currentIndex / Math.max(1, commands.length)) * 100}%` }}></div>
+            {videoExportState !== 'rendering' && (
+              <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-75 pointer-events-none" style={{ width: `${(currentIndex / Math.max(1, commands.length)) * 100}%` }}></div>
+            )}
         </div>
     </div>
 ) : (

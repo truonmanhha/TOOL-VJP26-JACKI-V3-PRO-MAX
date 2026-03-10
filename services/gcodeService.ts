@@ -289,3 +289,11 @@ export class GCodeService {
     };
   }
 }
+
+export function getExportSnapshot(commands: GCodeCommand[], analysis: GCodeAnalysisReport, rawText: string): ExportDataSnapshot {
+  return {
+    commands: JSON.parse(JSON.stringify(commands)),
+    analysis: JSON.parse(JSON.stringify(analysis)),
+    rawText
+  };
+}
