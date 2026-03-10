@@ -1185,6 +1185,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
           showRapid: exportSnapshot.viewOptions.showRapid,
           showCutting: exportSnapshot.viewOptions.showCutting
         },
+        cameraSnapshot: exportSnapshot.camera,
         gpuPreference: gpuPreference,
         previewContainer: videoPreviewRef.current,
         onProgress: (progress: TurboExportProgress) => {

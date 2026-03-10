@@ -14,13 +14,23 @@ import { MP4Encoder, MP4EncoderConfig } from './MP4Encoder';
 
 export type VideoFormat = 'webm' | 'mp4';
 
+export interface CameraSnapshot {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  up: THREE.Vector3;
+  fov: number;
+  near: number;
+  far: number;
+}
+
 export interface TurboExportConfig {
   commands: GCodeCommand[];
-  speedMultiplier: number;      // User's selected speed (e.g., 25 for x25)
-  targetFps: number;            // Output video fps (e.g., 60)
+  speedMultiplier: number;
+  targetFps: number;
   width?: number;
   height?: number;
-  format?: VideoFormat;         // 'webm' (default) or 'mp4'
+  format?: VideoFormat;
+  cameraSnapshot?: CameraSnapshot | null;
   theme: {
     background: string;
     g0: string;
@@ -97,8 +107,8 @@ const DEFAULT_TOOL_CONFIG = {
 // ============ MAIN ENGINE ============
 
 export class TurboExportEngine {
-  private config: Required<Omit<TurboExportConfig, 'onProgress' | 'encoderConfig' | 'previewContainer' | 'format'>> & 
-    Pick<TurboExportConfig, 'onProgress' | 'encoderConfig' | 'previewContainer'> &
+  private config: Required<Omit<TurboExportConfig, 'onProgress' | 'encoderConfig' | 'previewContainer' | 'format' | 'cameraSnapshot'>> & 
+    Pick<TurboExportConfig, 'onProgress' | 'encoderConfig' | 'previewContainer' | 'cameraSnapshot'> &
     { format: VideoFormat };
   
   private bakedGeometry: BakedGeometry | null = null;
@@ -119,6 +129,7 @@ export class TurboExportEngine {
       height: DEFAULT_HEIGHT,
       toolConfig: DEFAULT_TOOL_CONFIG,
       format: 'webm',
+      cameraSnapshot: null,
       ...config,
       theme: {
         arc: config.theme.g1,
@@ -545,19 +556,32 @@ export class TurboExportEngine {
     const maxDim = Math.max(size.x, size.y, size.z) || 100;
     const distance = maxDim * 1.8;
     
-    this.camera = new THREE.PerspectiveCamera(
-      50, 
-      this.config.width / this.config.height, 
-      0.1, 
-      maxDim * 10
-    );
-    this.camera.position.set(
-      center.x + distance * 0.7,
-      center.y - distance * 0.7,
-      center.z + distance * 0.6
-    );
-    this.camera.up.set(0, 0, 1);
-    this.camera.lookAt(center);
+    const snap = this.config.cameraSnapshot;
+    if (snap) {
+      this.camera = new THREE.PerspectiveCamera(
+        snap.fov,
+        this.config.width / this.config.height,
+        snap.near,
+        snap.far
+      );
+      this.camera.position.copy(snap.position);
+      this.camera.quaternion.copy(snap.quaternion);
+      this.camera.up.copy(snap.up);
+    } else {
+      this.camera = new THREE.PerspectiveCamera(
+        50, 
+        this.config.width / this.config.height, 
+        0.1, 
+        maxDim * 10
+      );
+      this.camera.position.set(
+        center.x + distance * 0.7,
+        center.y - distance * 0.7,
+        center.z + distance * 0.6
+      );
+      this.camera.up.set(0, 0, 1);
+      this.camera.lookAt(center);
+    }
     
     // ============ GHOST LINE (toàn bộ path, mờ) ============
     const ghostGeo = new THREE.BufferGeometry();
@@ -784,6 +808,7 @@ export interface LegacyExportConfig {
   width?: number;
   height?: number;
   format?: VideoFormat;
+  cameraSnapshot?: CameraSnapshot | null;
   theme: {
     background: string;
     g0: string;
@@ -809,6 +834,7 @@ export async function turboExportVideoLegacy(config: LegacyExportConfig): Promis
     width: config.width,
     height: config.height,
     format: config.format || 'webm',
+    cameraSnapshot: config.cameraSnapshot,
     theme: {
       ...config.theme,
       arc: config.theme.g1
