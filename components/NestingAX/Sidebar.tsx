@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NestList, Part } from './services/db';
 
 interface SidebarProps {
@@ -12,6 +12,10 @@ interface SidebarProps {
   activePartId: string | null;
   nestingMethod: string;
   onUpdatePart?: (partId: string, updates: Partial<Part>) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  collapsedNestLists?: Record<string, boolean>;
+  onToggleNestListCollapse?: (listId: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -24,7 +28,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSelectPart,
   activePartId,
   nestingMethod,
-  onUpdatePart
+  onUpdatePart,
+  isCollapsed = false,
+  onToggleCollapse,
+  collapsedNestLists = {},
+  onToggleNestListCollapse
 }) => {
   // Local state for editing values
   const [editingPartId, setEditingPartId] = useState<string | null>(null);
@@ -93,6 +101,53 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
   };
 
+  if (isCollapsed) {
+    return (
+      <div className="w-14 bg-slate-800 border-r border-slate-700 flex flex-col h-full overflow-hidden select-none">
+        <div className="p-2 border-b border-slate-700 bg-slate-900/50 flex flex-col items-center gap-2">
+          <button
+            onClick={onToggleCollapse}
+            className="w-8 h-8 rounded border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
+            title="Expand sidebar"
+          >
+            <span className="material-symbols-outlined text-sm">keyboard_double_arrow_right</span>
+          </button>
+          <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
+            {nestLists.length}
+          </span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-1.5 space-y-2 custom-scrollbar">
+          {nestLists.map((list) => {
+            const isActive = list.id === activeListId;
+            return (
+              <button
+                key={list.id}
+                onClick={() => onSelectNestList(list.id)}
+                onContextMenu={(e) => onContextMenu(e, list.id)}
+                title={list.name}
+                className={`w-full h-10 rounded border flex items-center justify-center transition-all ${
+                  isActive
+                    ? 'bg-cyan-500/25 border-cyan-500 text-cyan-300'
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:border-slate-600'
+                }`}
+              >
+                <span className="material-symbols-outlined text-lg">folder</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="p-2 border-t border-slate-700 bg-slate-900/30 flex flex-col items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+          <span className="text-[8px] text-cyan-400 font-mono [writing-mode:vertical-rl] rotate-180 tracking-wider">
+            {nestingMethod}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col h-full overflow-hidden select-none">
       <div className="p-3 border-b border-slate-700 bg-slate-900/50 flex items-center justify-between">
@@ -100,9 +155,18 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span className="material-symbols-outlined text-sm mr-1.5 text-cyan-500">list_alt</span>
           Nest Lists
         </h2>
-        <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
-          {nestLists.length}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
+            {nestLists.length}
+          </span>
+          <button
+            onClick={onToggleCollapse}
+            className="w-6 h-6 rounded border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
+            title="Collapse sidebar"
+          >
+            <span className="material-symbols-outlined text-xs">keyboard_double_arrow_left</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
@@ -114,6 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           nestLists.map((list) => {
             const isActive = list.id === activeListId;
+            const isListCollapsed = collapsedNestLists[list.id] ?? false;
             const listParts = isActive ? parts : [];
             
             return (
@@ -146,10 +211,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </span>
                     </div>
                   </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleNestListCollapse?.(list.id);
+                    }}
+                    className="ml-2 w-6 h-6 rounded border border-slate-600 bg-slate-800/70 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
+                    title={isListCollapsed ? 'Expand Nest List' : 'Collapse Nest List'}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {isListCollapsed ? 'chevron_right' : 'expand_more'}
+                    </span>
+                  </button>
                 </div>
 
                 {/* Display Parts under the active list */}
-                {isActive && listParts.length > 0 && (
+                {isActive && !isListCollapsed && listParts.length > 0 && (
                   <div className="ml-6 mt-2 space-y-1">
                     {listParts.map(part => {
                       const isPartActive = activePartId === part.id;
@@ -163,7 +241,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           const points = entity.points || [];
                           if (points.length < 2) return;
                           hasPoints = true;
-                          points.forEach((pt, i) => {
+                          points.forEach((pt: { x: number; y: number }, i: number) => {
                             minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
                             minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
                             if (i === 0) svgPathData += `M ${pt.x} ${pt.y} `;

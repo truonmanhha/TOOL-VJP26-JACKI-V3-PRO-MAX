@@ -334,6 +334,8 @@ const extractCode = (text: string): string | null => {
 
 const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettings }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [enableAI, setEnableAI] = useState<boolean>(() => localStorage.getItem('vjp26_ai_enabled') !== 'false');
+  const [autoOpenAI, setAutoOpenAI] = useState<boolean>(() => localStorage.getItem('vjp26_ai_auto_open') === 'true');
   const [showSettings, setShowSettings] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [input, setInput] = useState('');
@@ -409,6 +411,30 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
      }
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('vjp26_ai_enabled', String(enableAI));
+    if (!enableAI) {
+      setIsOpen(false);
+      setShowSettings(false);
+    }
+  }, [enableAI]);
+
+  useEffect(() => {
+    localStorage.setItem('vjp26_ai_auto_open', String(autoOpenAI));
+  }, [autoOpenAI]);
+
+  useEffect(() => {
+    if (!enableAI || !autoOpenAI) return;
+    const timer = window.setTimeout(() => {
+      setIsOpen(true);
+      setIsSleeping(false);
+      setIsSharingan(false);
+      setPersonality('pleasant');
+      lastInteractionTimeRef.current = Date.now();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [enableAI, autoOpenAI]);
+
   // --- PERSIST CAMERA STATE ---
   useEffect(() => {
       localStorage.setItem('vjp26_ai_camera_enabled', String(isCameraEnabled));
@@ -441,7 +467,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 
   // --- SURVEILLANCE CAMERA LOGIC ---
   const runSurveillanceCheck = useCallback(async (forced = false) => {
-     if (!isCameraEnabled && !forced) return; // Camera Disabled Check
+      if (!enableAI) return;
+      if (!isCameraEnabled && !forced) return; // Camera Disabled Check
      if ((isRecording || isOpen || isSleeping) && !forced) return; 
      
      // Random chance (30%) if not forced
@@ -549,7 +576,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
      const nextDelay = Math.random() * 120000 + 60000;
      surveillanceTimerRef.current = setTimeout(() => runSurveillanceCheck(), nextDelay);
 
-  }, [isRecording, isOpen, isSleeping, isCameraEnabled]);
+   }, [isRecording, isOpen, isSleeping, isCameraEnabled, enableAI]);
 
 
   useEffect(() => {
@@ -1091,7 +1118,31 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 </div>
 <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">TÙY CHỌN TRỢ LÝ</div>
 <div className="px-3">
-<div className="rounded-xl overflow-hidden mb-6">
+               <div className="rounded-xl overflow-hidden mb-6">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setEnableAI(!enableAI)}>
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-emerald-600 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">smart_toy</span>
+</div>
+<span className="text-[17px]">Enable AI</span>
+</div>
+<div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enableAI ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+<span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${enableAI ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
+</div>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setAutoOpenAI(!autoOpenAI)}>
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-cyan-600 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">door_open</span>
+</div>
+<span className="text-[17px]">Auto-open</span>
+</div>
+<div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${autoOpenAI ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+<span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${autoOpenAI ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
+</div>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
 <div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setPersonalization(!personalization)}>
 <div className="flex items-center gap-3">
 <div className="size-7 rounded-full bg-purple-500 flex items-center justify-center">
@@ -1161,16 +1212,27 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
 <div className="px-4 pb-1.5 text-[12px] uppercase text-white/40 tracking-tight">GIAO DIỆN</div>
 <div className="px-3">
 <div className="rounded-xl overflow-hidden mb-6">
-<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors">
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setEnableAI(!enableAI)}>
 <div className="flex items-center gap-3">
-<div className="size-7 rounded-full bg-blue-600 flex items-center justify-center">
-<span className="material-symbols-outlined !text-[18px] text-white">palette</span>
+<div className="size-7 rounded-full bg-emerald-600 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">smart_toy</span>
 </div>
-<span className="text-[17px]">Thông tin cá nhân</span>
+<span className="text-[17px]">Bật AI</span>
 </div>
-<div className="flex items-center gap-1">
-<span className="text-[17px] text-white/40">Thông tin cá nhân</span>
-<span className="material-symbols-outlined !text-[20px] text-white/20">chevron_right</span>
+<div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enableAI ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+<span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${enableAI ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
+</div>
+</div>
+<div className="h-[0.5px] bg-white/10 ml-12"></div>
+<div className="flex items-center justify-between px-3 py-2.5 bg-[#1C1C1E] active:bg-neutral-800 transition-colors cursor-pointer" onClick={() => setAutoOpenAI(!autoOpenAI)}>
+<div className="flex items-center gap-3">
+<div className="size-7 rounded-full bg-cyan-600 flex items-center justify-center">
+<span className="material-symbols-outlined !text-[18px] text-white">door_open</span>
+</div>
+<span className="text-[17px]">Tự mở ChatBot</span>
+</div>
+<div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${autoOpenAI ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}>
+<span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${autoOpenAI ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}></span>
 </div>
 </div>
 </div>
@@ -1317,7 +1379,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ lang, onAutoProcessDxf, currentSettin
       </AnimatePresence>
 
       {/* Launcher */}
-      {!isOpen && (
+      {!isOpen && enableAI && (
         <div className="relative flex flex-col items-center z-[150]">
           <AnimatePresence>
             {showIdleBubble && (

@@ -2645,7 +2645,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   }, [activeDrawTool, selectedEntities, transformEditState, applyTransformToSelected, cloneSelectedWithTransform, onCancelDraw]);
 
   // --- Input Handlers ---
+  const wheelTimeout = useRef<number | null>(null);
   const handleWheel = React.useCallback((e: React.WheelEvent) => {
+    if (wheelTimeout.current) return; // simple throttle
+    wheelTimeout.current = window.setTimeout(() => {
+        wheelTimeout.current = null;
+    }, 16); // 60fps cap
+
     e.preventDefault(); // Prevent page scrolling
     if (!containerRef.current) return;
     const scaleFactor = 1.1;
@@ -2890,7 +2896,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     setIsDragging(false);
   }, [isWindowSelecting, selectionStart, selectionEnd, cadEntities, isSelecting, parts, onAddPart, draggingSheet, pendingDeleteMode, draggingPart, sheets]);
 
+
   const handleMouseMoveInternal = React.useCallback((e: React.MouseEvent) => {
+
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -3382,7 +3390,17 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   const viewBottom = viewOffset.y - (height / pixelsPerUnit);
   const xTicks = useMemo(() => generateTicks(viewLeft, viewRight, false), [viewLeft, viewRight, pixelsPerUnit, width]);
   const yTicks = useMemo(() => generateTicks(viewBottom, viewTop, true), [viewBottom, viewTop, pixelsPerUnit, height]);
-  const gridSizeUnits = 1000; 
+  // Adaptive grid: prevents subpixel pattern fill that kills GPU when zoomed way out
+  // Adaptive grid logic
+  let gridSizeUnits = 100;
+  // Increase grid size dramatically when zoomed out to prevent pattern lag
+  if (pixelsPerUnit < 0.1) gridSizeUnits = 10000;
+  else if (pixelsPerUnit < 1) gridSizeUnits = 1000;
+  else if (pixelsPerUnit < 5) gridSizeUnits = 500;
+  
+  while (gridSizeUnits * pixelsPerUnit < 50 && gridSizeUnits < 10000000) {
+    gridSizeUnits *= 10;
+  } 
   const gridSizePx = gridSizeUnits * pixelsPerUnit;
   const gridOffsetX = -(viewOffset.x % gridSizeUnits) * pixelsPerUnit;
   const gridOffsetY = (viewOffset.y % gridSizeUnits) * pixelsPerUnit;
@@ -3428,7 +3446,85 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   }, [cadEntities, layers, viewOffset, pixelsPerUnit]);
 
 
-   const renderCadEntities = () => {
+   
+  
+  // === CANVAS 2D RENDERER FOR PERFORMANCE ===
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  
+  React.useEffect(() => {
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Set styles
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.9;
+    
+    // Begin path
+    ctx.beginPath();
+    
+    // Only draw unselected, non-active basic geometry (SVG handles the rest for interactions)
+    const useCanvas = cadEntities.length > 300; // Trigger threshold
+    
+    if (useCanvas) {
+      const activePart = parts.find(p => p.id === activePartId);
+      
+      for (const ent of visibleCadEntities) {
+        const isSelected = selectedEntities.has(ent.id);
+        const isPartActive = activePart?.cadEntities?.some((ce: any) => ce.id === ent.id || ce.properties?.originalId === ent.id);
+        
+        if (isSelected || isPartActive) continue; // Let SVG draw highlights
+        
+        if (ent.type === 'line' && ent.points.length >= 2) {
+          const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
+          const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+        }
+        else if (ent.type === 'polyline' && ent.points.length > 1) {
+          const isClosed = ent.properties?.closed;
+          let pts = ent.points;
+          if (!isClosed && pts.length === 4) {
+             pts = [...pts, pts[0]]; // auto-close rectangle fix
+          }
+          const p0 = worldToScreen(pts[0].x, pts[0].y);
+          ctx.moveTo(p0.x, p0.y);
+          for (let i = 1; i < pts.length; i++) {
+            const p = worldToScreen(pts[i].x, pts[i].y);
+            ctx.lineTo(p.x, p.y);
+          }
+          if (isClosed) {
+            ctx.lineTo(p0.x, p0.y);
+          }
+        }
+        else if (ent.type === 'rect') {
+          const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
+          const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
+          const x = Math.min(p1.x, p2.x);
+          const y = Math.min(p1.y, p2.y);
+          const w = Math.abs(p2.x - p1.x);
+          const h = Math.abs(p2.y - p1.y);
+          ctx.rect(x, y, w, h);
+        }
+        else if (ent.type === 'circle') {
+          const center = worldToScreen(ent.points[0].x, ent.points[0].y);
+          const radius = (ent.properties?.radius || 0) * pixelsPerUnit;
+          // We must stroke immediately for circles as they interrupt current path in some ways
+          ctx.moveTo(center.x + radius, center.y);
+          ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        }
+      }
+      
+      // Draw everything
+      ctx.stroke();
+    }
+  }, [visibleCadEntities, selectedEntities, activePartId, parts, viewOffset, pixelsPerUnit, width, height]);
+
+  const renderCadEntities = () => {
       // console.log('🎨 Rendering CAD Entities. Count:', cadEntities.length);
       const visibleEntities = visibleCadEntities;
       return (
@@ -3451,6 +3547,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                 const opacity = (isPartActive || isSelected) ? "1" : "0.9";
                 const filter = isPartActive ? "url(#glow)" : "none";
                 const className = isPartActive ? "animate-pulse" : "";
+                
+                
+                const useCanvas = cadEntities.length > 300;
+                const isBasicGeometry = ['line', 'polyline', 'rect', 'circle'].includes(ent.type);
+                if (useCanvas && isBasicGeometry && !isSelected && !isPartActive) {
+                    return null; // Canvas 2D draws this!
+                }
                 
                 if (ent.type === 'line') {
                     const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
@@ -3701,7 +3804,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         <line x1={(p1.x + p2.x) / 2} y1={(p1.y + p2.y) / 2} x2={textPos.x} y2={textPos.y} stroke={dimColor} strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
                         {/* Dimension text */}
                         <rect x={textPos.x - 25} y={textPos.y - 10} width={50} height={16} rx={2} fill="rgba(0,0,0,0.7)" style={{ pointerEvents: 'none' }} />
-                        <text x={textPos.x} y={textPos.y + 3} fill={dimColor} fontSize="11" fontFamily="Noto Sans, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none' }}>
+                        <text x={textPos.x} y={textPos.y + 3} fill={dimColor} fontSize="11" fontFamily="Arial, Helvetica, Tahoma, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none' }}>
                           {value} {unit}
                         </text>
                         {isSelected && (
@@ -3715,9 +3818,11 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     );
                 }
                 if (ent.type === 'text') {
+                    if (isDragging) return null; // Đóng băng/ẩn text khi kéo màn hình để chống lag
                     const pos = worldToScreen(ent.points[0].x, ent.points[0].y);
                     const textStr = ent.properties?.text || '';
-                    const fontSize = ent.properties?.fontSize || 14;
+                    const fontSizeWorld = ent.properties?.fontSize || 14;
+                    const fontSizeScreen = fontSizeWorld * pixelsPerUnit;
                     const rotation = ent.properties?.rotation || 0;
                     const textColor = isSelected ? "#00ff00" : "#fbbf24";
                     
@@ -3727,8 +3832,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                           x={pos.x} 
                           y={pos.y} 
                           fill={textColor} 
-                          fontSize={fontSize} 
-                          fontFamily="Noto Sans, sans-serif" 
+                          fontSize={fontSizeScreen} 
+                          fontFamily="Arial, Helvetica, Tahoma, sans-serif" 
                           dominantBaseline="middle"
                           style={{ userSelect: 'none' }}
                         >
@@ -3739,9 +3844,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                             <circle cx={pos.x} cy={pos.y} r="4" fill="#00ff00" />
                             <rect 
                               x={pos.x - 2} 
-                              y={pos.y - fontSize * 0.6} 
-                              width={textStr.length * fontSize * 0.6 + 4} 
-                              height={fontSize * 1.2} 
+                              y={pos.y - fontSizeScreen * 0.6} 
+                              width={textStr.length * fontSizeScreen * 0.6 + 4} 
+                              height={fontSizeScreen * 1.2} 
                               fill="none" 
                               stroke="#00ff00" 
                               strokeWidth="1" 
@@ -3789,7 +3894,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                         {textStr && (
                           <>
                             <line x1={lastPt.x} y1={lastPt.y} x2={lastPt.x + 30} y2={lastPt.y} stroke={leaderColor} strokeWidth="1" />
-                            <text x={lastPt.x + 33} y={lastPt.y + 4} fill={leaderColor} fontSize="12" fontFamily="Noto Sans, sans-serif">
+                            <text x={lastPt.x + 33} y={lastPt.y + 4} fill={leaderColor} fontSize="12" fontFamily="Arial, Helvetica, Tahoma, sans-serif">
                               {textStr}
                             </text>
                           </>
@@ -4712,6 +4817,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       </div>
 
       {/* Render CAD Entities (Geometry Layer) */}
+      <canvas ref={canvasRef} width={width} height={height} className="absolute inset-0 pointer-events-none z-10" />
       {renderCadEntities()}
 
       {/* Selection Window Box (AutoCAD Style) */}

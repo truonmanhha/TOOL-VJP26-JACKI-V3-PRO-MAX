@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   NewNestListIcon, PartLibraryIcon, NestPartsIcon, ManualNestIcon, NestingInfoIcon,
   SaveOffCutIcon, ImportProjectIcon, ExportProjectIcon, ImportDXFIcon, SheetDatabaseIcon,
@@ -73,6 +73,29 @@ const Header: React.FC<HeaderProps> = ({
   isManualNesting,
   onOptimizeEntities
 }) => {
+  const [now, setNow] = useState(() => new Date());
+  const [temperatureC, setTemperatureC] = useState<number>(() => {
+    const hour = new Date().getHours();
+    return 28 + Math.round(Math.sin((hour / 24) * Math.PI * 2) * 4);
+  });
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const next = new Date();
+      setNow(next);
+      if (next.getSeconds() === 0) {
+        const drift = Math.random() > 0.5 ? 1 : -1;
+        setTemperatureC(prev => Math.max(18, Math.min(42, prev + drift)));
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const timeStr = useMemo(
+    () => now.toLocaleTimeString('en-GB', { hour12: false }),
+    [now]
+  );
+
   return (
     <header className="h-[67px] bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-2 select-none shadow-lg">
       <div className="flex items-start p-1 space-x-0.5 h-full">
@@ -213,6 +236,12 @@ const Header: React.FC<HeaderProps> = ({
                 <span className="text-xs font-bold text-gray-200 tracking-wider">NESTING AX 2025</span>
             </div>
             <span className="text-[9px] text-gray-500 font-mono">v3.0.PRO-MAX</span>
+            <div className="mt-0.5 flex flex-col items-center font-mono leading-tight">
+              <span className="text-[13px] font-black text-red-500 tracking-[0.2em] drop-shadow-[0_0_6px_rgba(239,68,68,0.75)]">
+                {timeStr}
+              </span>
+              <span className="text-[10px] text-red-300/90 font-bold">TEMP {temperatureC}°C</span>
+            </div>
         </div>
       </div>
     </header>

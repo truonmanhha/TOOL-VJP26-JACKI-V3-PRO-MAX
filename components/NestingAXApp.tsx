@@ -8,7 +8,7 @@ import RadialMenu from './NestingAX/RadialMenu';
 import PerformingNest from './NestingAX/PerformingNest';
 import LayerPanel from './NestingAX/LayerPanel';
 import { db, NestList, Part, Sheet, AppSettings, Layer, CadEntity } from './NestingAX/services/db';
-import { nestingService, configFromSettings } from './NestingAX/services/nesting';
+import { configFromSettings } from './NestingAX/services/nesting';
 import { SnapMode } from './NestingAX/services/snapService';
 import { layerManager } from './NestingAX/services/layerManager';
 import { undoManager } from './NestingAX/services/undoManager';
@@ -40,14 +40,7 @@ function NestingAXApp() {
   const [currentSheets, setCurrentSheets] = useState<Sheet[]>([]);
 
   // Real-Time Selection Preview State (for PREVIEW 2)
-  const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set());
   const [allCadEntities, setAllCadEntities] = useState<CadEntity[]>([]);
-
-  // Compute selected geometry for Preview 2
-  const selectedGeometry = React.useMemo(() => {
-    if (selectedEntityIds.size === 0) return [];
-    return allCadEntities.filter(entity => selectedEntityIds.has(entity.id));
-  }, [selectedEntityIds, allCadEntities]);
 
   // UI State
   const [showModal, setShowModal] = useState(false);
@@ -98,6 +91,8 @@ function NestingAXApp() {
   const [layers, setLayers] = useState<Layer[]>(() => layerManager.getLayers());
   const [activeLayerId, setActiveLayerId] = useState<string>(() => layerManager.getActiveLayerId());
   const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [collapsedNestLists, setCollapsedNestLists] = useState<Record<string, boolean>>({});
 
   const handleToggleSnap = useCallback(() => {
     setSnapEnabled(prev => !prev);
@@ -120,8 +115,8 @@ function NestingAXApp() {
   }, []);
 
   // Handle selection change from Workspace (for Preview 2)
-  const handleSelectionChange = useCallback((selectedIds: Set<string>, allEntities: CadEntity[]) => {
-    setSelectedEntityIds(selectedIds);
+  const handleSelectionChange = useCallback((_selectedIds: Set<string>, allEntities: CadEntity[]) => {
+    void _selectedIds;
     setAllCadEntities(allEntities);
   }, []);
 
@@ -377,8 +372,8 @@ function NestingAXApp() {
   }, [isNesting]);
 
   // --- Geometry Optimization Handler ---
-  const handleOptimizeEntities = useCallback(async (selectedEntityIds: Set<string>) => {
-    if (selectedEntityIds.size === 0) {
+  const handleOptimizeEntities = useCallback(async (entityIds: Set<string>) => {
+    if (entityIds.size === 0) {
       showToast('⚠ No entities selected');
       return;
     }
@@ -398,7 +393,7 @@ function NestingAXApp() {
 
     try {
       // Get selected entities from state
-      const selectedEntities = allCadEntities.filter(e => selectedEntityIds.has(e.id));
+      const selectedEntities = allCadEntities.filter(e => entityIds.has(e.id));
 
       if (selectedEntities.length === 0) {
         showToast('⚠ No valid entities to optimize');
@@ -493,6 +488,7 @@ function NestingAXApp() {
     setActiveListId(id);
     setShowModal(true);
     setIsManualNesting(false); 
+    setCollapsedNestLists(prev => ({ ...prev, [id]: false }));
   };
 
   // --- Part Workflow ---
@@ -615,18 +611,13 @@ function NestingAXApp() {
       handleToggleSnap();
       return;
     }
-    if (tool === 'layer_panel') {
-      // For now just toggle a simple state or ignore, since we don't have complex UI
-      console.log('Layer panel triggered');
+    if (tool === 'layers' || tool === 'layer_panel') {
+      setShowLayerPanel(prev => !prev);
       return;
     }
     if (tool === 'trim' || tool === 'extend' || tool === 'offset') {
       // Enable command mode in Workspace
       setActiveDrawTool(tool);
-      return;
-    }
-    if (tool === 'layer_panel') {
-      setShowLayerPanel(prev => !prev);
       return;
     }
     if (tool === 'fireworks') {
@@ -791,10 +782,16 @@ function NestingAXApp() {
           activePartId={activePartId}
           nestingMethod={nestingMethod}
           onUpdatePart={handleUpdatePart}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+          collapsedNestLists={collapsedNestLists}
+          onToggleNestListCollapse={(listId) => {
+            setCollapsedNestLists(prev => ({ ...prev, [listId]: !(prev[listId] ?? false) }));
+          }}
         />
 
         {showLayerPanel && (
-          <div className="absolute left-16 top-16 z-50">
+          <div className={`absolute ${isSidebarCollapsed ? 'left-16' : 'left-72'} top-16 z-50`}>
             <LayerPanel 
               layers={layers}
               activeLayerId={activeLayerId}

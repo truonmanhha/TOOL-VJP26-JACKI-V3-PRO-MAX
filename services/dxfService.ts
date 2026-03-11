@@ -135,6 +135,42 @@ export class DxfService {
             rawPaths.push({ points: splinePoints, originalType: "SPLINE" });
           }
           break;
+        case "TEXT": {
+          const textStr = (entity.text || '').toString().trim();
+          if (textStr) {
+            const pos = entity.startPoint || entity.insertionPoint || entity.position || entity.firstAlignmentPoint || entity.vertices?.[0];
+            if (pos) {
+              const p = this.snap({ x: pos.x ?? 0, y: pos.y ?? 0 });
+              results.push({
+                id: `TEXT-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                type: 'TEXT',
+                area: 0,
+                verticesCount: 1,
+                isClosed: false,
+                geometry: [p]
+              });
+            }
+          }
+          break;
+        }
+        case "MTEXT": {
+          const textStr = (entity.text || '').toString().trim();
+          if (textStr) {
+            const pos = entity.insertionPoint || entity.position || entity.startPoint || entity.vertices?.[0];
+            if (pos) {
+              const p = this.snap({ x: pos.x ?? 0, y: pos.y ?? 0 });
+              results.push({
+                id: `MTEXT-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                type: 'MTEXT',
+                area: 0,
+                verticesCount: 1,
+                isClosed: false,
+                geometry: [p]
+              });
+            }
+          }
+          break;
+        }
       }
     });
 

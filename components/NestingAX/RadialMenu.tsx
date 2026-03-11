@@ -24,7 +24,7 @@ const MENU_DATA = [
     { name: "Điểm/Tâm", icon: "icon-point", action: "point", color: "#FF1744" },
     { name: "Văn bản", icon: "icon-text", action: "text", color: "#FFEA00" }
   ]},
-  { name: "Lớp (Layers)", icon: "icon-layer", action: "layer_panel", color: "#FFD600", sub: null },
+  { name: "Lớp (Layers)", icon: "icon-layer", action: "layers", color: "#FFD600", sub: null },
   { name: "Xóa (Del)", icon: "icon-del", action: "delete", color: "#FF1744", sub: null },
   { name: "Chỉnh sửa", icon: "icon-edit", action: null, color: "#00E676", sub: [
     { name: "Trim", icon: "icon-trim", action: "trim", color: "#FF5252" },

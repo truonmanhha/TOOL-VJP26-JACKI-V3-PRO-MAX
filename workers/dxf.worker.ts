@@ -484,20 +484,64 @@ self.onmessage = async (e: MessageEvent) => {
               break;
             }
 
+            case 'TEXT': {
+              const textValue = (entity.text || '').toString().trim();
+              if (textValue) {
+                // store in entity object so later we can extract properties
+                entity.__textValue = textValue;
+                entity.__fontSize = entity.textHeight || 12;
+                entity.__rotation = (entity.rotation || 0) * 180 / Math.PI;
+              }
+              if (textValue) {
+                const pos = entity.startPoint || entity.insertionPoint || entity.position || entity.firstAlignmentPoint || entity.vertices?.[0];
+                if (pos) {
+                  points = [{ x: pos.x || 0, y: pos.y || 0 }];
+                  isClosed = false;
+                }
+              }
+              break;
+            }
+
+            case 'MTEXT': {
+              const mtextValue = (entity.text || '').toString().trim();
+              if (mtextValue) {
+                entity.__textValue = mtextValue;
+                entity.__fontSize = entity.textHeight || entity.height || 12;
+                entity.__rotation = (entity.rotation || 0) * 180 / Math.PI;
+              }
+              if (mtextValue) {
+                const pos = entity.insertionPoint || entity.position || entity.startPoint || entity.vertices?.[0];
+                if (pos) {
+                  points = [{ x: pos.x || 0, y: pos.y || 0 }];
+                  isClosed = false;
+                }
+              }
+              break;
+            }
+
             default:
               // Unsupported entity type
               return;
           }
 
-          if (points.length >= 2) {
+          if (points.length >= 2 || ((entityType === 'TEXT' || entityType === 'MTEXT') && points.length >= 1)) {
             const area = calculatePolygonArea(points);
+            const extraProps = {};
+            if ((entityType === 'TEXT' || entityType === 'MTEXT') && entity.__textValue) {
+               extraProps.properties = {
+                 text: entity.__textValue,
+                 fontSize: entity.__fontSize,
+                 rotation: entity.__rotation
+               };
+            }
             parsedEntities.push({
               id: `${fileName}-${entityType}-${index}-${Date.now()}`,
               type: entityType,
               area,
               verticesCount: points.length,
               isClosed,
-              geometry: points
+              geometry: points,
+              ...extraProps
             });
           }
         } catch (entityErr) {
