@@ -9,7 +9,7 @@ import PerformingNest from './NestingAX/PerformingNest';
 import LayerPanel from './NestingAX/LayerPanel';
 import { db, NestList, Part, Sheet, AppSettings, Layer, CadEntity } from './NestingAX/services/db';
 import { configFromSettings } from './NestingAX/services/nesting';
-import { SnapMode } from './NestingAX/services/snapService';
+import { SnapMode, ALL_SNAP_MODES } from './NestingAX/services/snapService';
 import { layerManager } from './NestingAX/services/layerManager';
 import { undoManager } from './NestingAX/services/undoManager';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +33,43 @@ function NestingAXApp() {
   const [wsCrosshairSize, setWsCrosshairSize] = useState(100);
   const [wsShowDynInput, setWsShowDynInput] = useState(true);
   
+  // Command Input export states
+  const [commandInput, setCommandInput] = useState('');
+  const setCommandInputRef = React.useRef<((val: string | ((prev: string) => string)) => void) | null>(null);
+  const commandInputKeyDownRef = React.useRef<((e: React.KeyboardEvent<HTMLInputElement>) => void) | null>(null);
+  const commandInputDOMRef = React.useRef<HTMLInputElement>(null);
+
+  // Focus command input on key down if not focused
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if already typing in an input/textarea
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      
+      // Focus on standard letter keys
+      if (/^[a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        commandInputDOMRef.current?.focus();
+      }
+    };
+    
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Workspace integration with global input
+  const handleCommandInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const input = commandInput.trim().toUpperCase();
+      if (input === 'OP' || input === 'OPTIONS' || input === 'OPTION') {
+        setShowOptionsModal(true);
+        setCommandInput('');
+        return;
+      }
+    }
+    if (commandInputKeyDownRef.current) {
+      commandInputKeyDownRef.current(e);
+    }
+  };
+
   // Data State
   const [nestLists, setNestLists] = useState<NestList[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
@@ -45,6 +82,7 @@ function NestingAXApp() {
   // UI State
   const [showModal, setShowModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; listId?: string } | null>(null);
   const [radialMenu, setRadialMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -84,7 +122,7 @@ function NestingAXApp() {
 
   // Snap & Ortho State
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [activeSnaps, setActiveSnaps] = useState<Set<SnapMode>>(() => new Set(['point', 'midpoint', 'center'] as SnapMode[]));
+  const [activeSnaps, setActiveSnaps] = useState<Set<SnapMode>>(() => new Set(['point', 'intersection', 'center', 'midpoint'] as SnapMode[]));
   const [orthoEnabled, setOrthoEnabled] = useState(false);
 
   // Layers State (Task 18)
@@ -129,6 +167,7 @@ function NestingAXApp() {
   const handleCloseOverlays = useCallback(() => {
     setShowModal(false);
     setShowSettingsModal(false);
+    setShowOptionsModal(false);
     setContextMenu(null);
     setRadialMenu(null);
     setShowPartParamsModal(false);
@@ -771,24 +810,30 @@ function NestingAXApp() {
         onOptimizeEntities={() => setActiveDrawTool('lag_reduce')}
       />
       <div className="flex flex-1 overflow-hidden relative gap-0 min-h-0" ref={workspaceRef}>
-        <Sidebar 
-          nestLists={nestLists} 
-          activeListId={activeListId}
-          onSelectNestList={handleSelectList}
-          parts={currentParts} 
-          onContextMenu={handleContextMenu}
-          onPartContextMenu={handlePartContextMenu}
-          onSelectPart={handleSelectPart}
-          activePartId={activePartId}
-          nestingMethod={nestingMethod}
-          onUpdatePart={handleUpdatePart}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-          collapsedNestLists={collapsedNestLists}
-          onToggleNestListCollapse={(listId) => {
-            setCollapsedNestLists(prev => ({ ...prev, [listId]: !(prev[listId] ?? false) }));
-          }}
-        />
+        <motion.div
+          className="h-full shrink-0 overflow-hidden"
+          animate={{ width: isSidebarCollapsed ? 56 : 256 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 20, mass: 1 }}
+        >
+          <Sidebar 
+            nestLists={nestLists} 
+            activeListId={activeListId}
+            onSelectNestList={handleSelectList}
+            parts={currentParts} 
+            onContextMenu={handleContextMenu}
+            onPartContextMenu={handlePartContextMenu}
+            onSelectPart={handleSelectPart}
+            activePartId={activePartId}
+            nestingMethod={nestingMethod}
+            onUpdatePart={handleUpdatePart}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+            collapsedNestLists={collapsedNestLists}
+            onToggleNestListCollapse={(listId) => {
+              setCollapsedNestLists(prev => ({ ...prev, [listId]: !(prev[listId] ?? false) }));
+            }}
+          />
+        </motion.div>
 
         {showLayerPanel && (
           <div className={`absolute ${isSidebarCollapsed ? 'left-16' : 'left-72'} top-16 z-50`}>
@@ -809,6 +854,9 @@ function NestingAXApp() {
           showSettingsModal={showSettingsModal}
           onOpenSettings={() => setShowSettingsModal(true)}
           onCloseSettings={() => { setShowSettingsModal(false); setNestingMethod(db.getSettings().nestingMethod); }}
+          showOptionsModal={showOptionsModal}
+          onOpenOptions={() => setShowOptionsModal(true)}
+          onCloseOptions={() => setShowOptionsModal(false)}
           onContextMenu={handleWorkspaceContextMenu}
           
           // Nesting Trigger
@@ -869,6 +917,11 @@ function NestingAXApp() {
           onCrosshairSizeChange={setWsCrosshairSize}
           onDynInputChange={setWsShowDynInput}
           onSetCrosshairSize={(fn) => { setCrosshairSizeRef.current = fn; }}
+          
+          // Command Input Sync
+          onCommandInputChange={setCommandInput}
+          onSetCommandInput={(fn) => { setCommandInputRef.current = fn; }}
+          onCommandInputKeyDown={(fn) => { commandInputKeyDownRef.current = fn; }}
         />
         
         {contextMenu && (
@@ -992,91 +1045,10 @@ function NestingAXApp() {
         )}
       </AnimatePresence>
       
-      {/* ════════════════════════════════════════════════════════════════
-      
-      {/* ════════════════════════════════════════════════════════════════
-          FOOTER 1 — Status Bar (AutoCAD 2022 Style)
-          ════════════════════════════════════════════════════════════════ */}
-      <div className="flex-none w-full h-7 bg-slate-900/95 border-t border-slate-700 flex items-center justify-between px-2 z-10 pointer-events-auto select-none" onWheel={e => e.preventDefault()}>
-        {/* Left: Coordinates + Zoom */}
-        <div className="flex items-center gap-3 text-[11px] font-mono">
-          <div className="flex items-center gap-1 text-white/80">
-            <span className="text-cyan-400 font-bold">X:</span>
-            <span className="w-20 text-green-400">{mouseWorldPos.x.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center gap-1 text-white/80">
-            <span className="text-cyan-400 font-bold">Y:</span>
-            <span className="w-20 text-green-400">{mouseWorldPos.y.toFixed(2)}</span>
-          </div>
-          <div className="h-4 w-px bg-slate-600"></div>
-          <div className="flex items-center gap-1 text-white/60">
-            <span>Zoom:</span>
-            <span className="text-yellow-400">{Math.round(wsZoom * 100)}%</span>
-          </div>
-        </div>
-
-        {/* Center: DYN + Crosshair indicators */}
-        <div className="flex items-center gap-1 text-[10px]">
-          {/* DYN indicator — read only */}
-          <div
-            className={`px-1.5 py-0.5 rounded-sm border font-bold select-none ${
-              wsShowDynInput
-                ? 'bg-blue-600/30 border-blue-500 text-blue-300'
-                : 'bg-slate-800 border-slate-600 text-slate-500'
-            }`}
-            title="Dynamic Input (F12)"
-          >
-            DYN
-          </div>
-          {/* Crosshair (+) indicator — read only */}
-          <div
-            className={`px-1.5 py-0.5 rounded-sm border font-bold select-none ${
-              wsShowCrosshair
-                ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
-                : 'bg-slate-800 border-slate-600 text-slate-500'
-            }`}
-            title="Crosshair (F6)"
-          >
-            +
-          </div>
-        </div>
-
-        {/* Right: Crosshair size slider + Close button */}
-        <div className="flex items-center gap-2">
-          {/* Crosshair size slider — only visible when crosshair is ON */}
-          {wsShowCrosshair && (
-            <div className="flex items-center gap-1 text-[10px] text-white/60">
-              <span className="material-icons-outlined text-[12px]">straighten</span>
-              <input
-                type="number" className="w-12 h-5 bg-slate-200 border border-slate-400 rounded px-1 text-center text-black font-bold outline-none focus:border-emerald-500 focus:bg-white text-[10px]" 
-                min={10}
-                max={100}
-                value={wsCrosshairSize}
-                onChange={e => {
-                  const size = Number(e.target.value);
-                  setWsCrosshairSize(size);
-                  setCrosshairSizeRef.current?.(size);
-                }}
-                
-                title={`Crosshair size: ${wsCrosshairSize}%`}
-              />
-              <span className="text-emerald-400 w-7">{wsCrosshairSize}%</span>
-            </div>
-          )}
-          {/* Close all overlays */}
-          <button
-            onClick={handleCloseOverlays}
-            className="px-1.5 py-0.5 rounded-sm border border-slate-600 bg-slate-800 hover:bg-red-900/40 hover:border-red-500 text-slate-400 hover:text-red-300 text-[11px] transition-colors"
-            title="Close all panels"
-          >
-            <span className="material-icons-outlined text-[12px]">close</span>
-          </button>
-        </div>
-      </div>
-      
       <Footer 
-        x={coords.x} 
-        y={coords.y} 
+        x={mouseWorldPos.x} 
+        y={mouseWorldPos.y} 
+        zoom={wsZoom}
         snapEnabled={snapEnabled}
         onToggleSnap={handleToggleSnap}
         activeSnaps={activeSnaps}
@@ -1085,6 +1057,21 @@ function NestingAXApp() {
         onToggleOrtho={handleToggleOrtho}
         activeTool={activeDrawTool}
         onExport={exportHandlerRef.current ?? undefined}
+        commandInput={commandInput}
+        onCommandInputChange={(val) => {
+          setCommandInput(val);
+          setCommandInputRef.current?.(val);
+        }}
+        onCommandInputKeyDown={handleCommandInputKeyDown}
+        showDynInput={wsShowDynInput}
+        showCrosshair={wsShowCrosshair}
+        crosshairSize={wsCrosshairSize}
+        onCrosshairSizeChange={(size) => {
+          setWsCrosshairSize(size);
+          setCrosshairSizeRef.current?.(size);
+        }}
+        onCloseAllOverlays={handleCloseOverlays}
+        selectionCount={allCadEntities.filter(e => e.selected).length}
       />
     </div>
   );

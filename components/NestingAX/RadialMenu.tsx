@@ -594,10 +594,20 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, onClose, onSelectTool }) 
         onCloseRef.current();
       }
     };
+
+    // Click outside to close
+    const handleMouseDownOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onCloseRef.current();
+      }
+    };
+
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDownOutside);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDownOutside);
       if (typewriterTimeoutRef.current) clearTimeout(typewriterTimeoutRef.current);
     };
   }, [])

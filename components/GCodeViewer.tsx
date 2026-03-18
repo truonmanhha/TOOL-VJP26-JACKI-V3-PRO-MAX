@@ -1120,6 +1120,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
   const viewCubeControllerRef = useRef<any>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const videoPreviewRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const miniCameraRef = useRef<THREE.Camera>(null);
 
 
@@ -1130,6 +1131,8 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     if (isRendering || isUploading || !analysis || commands.length === 0) return;
 
     setVideoExportErrorMessageState('');
+    if (abortControllerRef.current) { abortControllerRef.current.abort(); }
+    abortControllerRef.current = new AbortController();
 
     const exportDataSnapshot: ExportDataSnapshot = {
       commands: commands.map(cmd => ({ ...cmd })),
@@ -1188,6 +1191,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
         cameraSnapshot: exportSnapshot.camera,
         gpuPreference: gpuPreference,
         previewContainer: videoPreviewRef.current,
+        signal: abortControllerRef.current.signal,
         onProgress: (progress: TurboExportProgress) => {
           const clampedProgress = Math.max(0, Math.min(1, progress.progress));
           const bucket = progress.phase === 'done' ? 10 : Math.floor(clampedProgress * 10);
@@ -1227,6 +1231,7 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
       formData.append('platform', videoPlatform);
 
       const uploadRes = await fetch('/api/discord-video', {
+        signal: abortControllerRef.current?.signal,
         method: 'POST',
         body: formData
       });
@@ -1824,6 +1829,24 @@ const GCodeViewer: React.FC<GCodeViewerProps> = ({ lang, isLiteMode, setIsLiteMo
     {videoExportState === 'done' && <><Check size={12} /> <span className="text-[10px] font-bold uppercase">Gửi thành công!</span></>}
     {videoExportState === 'error' && <><AlertCircle size={12} /> <span className="text-[10px] font-bold uppercase">Lỗi gửi báo cáo</span></>}
 </button>
+{/* Nút Reset Video */}
+{true && (
+    <button 
+        onClick={() => {
+            if (abortControllerRef.current) {
+               abortControllerRef.current.abort();
+               abortControllerRef.current = null;
+            }
+            setVideoExportState('idle');
+            setVideoExportProgress(0);
+            setVideoExportErrorMessageState('');
+        }}
+        className="px-2 py-1.5 rounded-lg border border-slate-600/50 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-1 transition-all ml-1"
+        title="Tạo video mới"
+    >
+        <RotateCcw size={12} /> <span className="text-[10px] font-bold uppercase">Reset</span>
+    </button>
+)}
 <div className="relative">
     <button 
         onClick={() => setShowPlatformMenu(!showPlatformMenu)}

@@ -33,7 +33,7 @@ export const RightPanel: React.FC = () => {
                     </div>
                     <div className="bg-slate-800 p-2 rounded">
                         <div className="text-slate-500 text-xs">Parts</div>
-                        <div className="font-bold text-lg text-white">{results.placedParts.length}</div>
+                        <div className="font-bold text-lg text-white">{results.partsPlaced}</div>
                     </div>
                 </div>
 

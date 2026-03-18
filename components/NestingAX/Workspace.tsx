@@ -4,7 +4,7 @@ import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react'
 import { Part, Sheet, StockSheet, db, AppSettings, Layer, CadEntity } from './services/db';
 import { createPartFromSelection, getSelectionBox, getEntitiesInSelection } from './AutoPartCreation';
 import VectorPreview, { cadEntitiesToGeometry } from '../nesting/NewNestList/VectorPreview';
-import { SnapMode, SnapResult, findNearestSnapPoint, applyOrthoConstraint, SNAP_INDICATOR_COLORS, SNAP_INDICATOR_LABELS } from './services/snapService';
+import { SnapMode, SnapResult, findBestSnap, applyOrthoConstraint, SNAP_INDICATOR_COLORS, SNAP_INDICATOR_LABELS, ALL_SNAP_MODES } from './services/snapService';
 import { undoManager, UndoAction } from './services/undoManager';
 import { dxfService } from './services/dxfService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2690,7 +2690,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       }
       if (snapEnabled && activeSnaps.size > 0) {
         const threshold = 20 / pixelsPerUnit;
-        const snap = findNearestSnapPoint(snappedPos, cadEntities, activeSnaps, threshold);
+        const snap = findBestSnap(snappedPos, cadEntities, activeSnaps, threshold);
         if (snap) {
           snappedPos = { x: snap.x, y: snap.y };
         }
@@ -2943,7 +2943,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
             rafMouseMoveRef.current = requestAnimationFrame(() => {
               rafMouseMoveRef.current = null;
               const threshold = 20 / pixelsPerUnit;
-              const snap = findNearestSnapPoint(finalPos, cadEntitiesRef.current, activeSnaps, threshold);
+              const snap = findBestSnap(finalPos, cadEntitiesRef.current, activeSnaps, threshold);
               setCurrentSnap(snap);
             });
           }
@@ -3828,17 +3828,20 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                     
                     return (
                       <g key={ent.id} transform={rotation ? `rotate(${-rotation}, ${pos.x}, ${pos.y})` : undefined}>
-                        <text 
-                          x={pos.x} 
-                          y={pos.y} 
-                          fill={textColor} 
-                          fontSize={fontSizeScreen} 
-                          fontFamily="Arial, Helvetica, Tahoma, sans-serif" 
-                          dominantBaseline="middle"
-                          style={{ userSelect: 'none' }}
-                        >
-                          {textStr}
-                        </text>
+                        {/* Bypass browser minimum font size by rendering large and scaling down */}
+                        <g transform={`translate(${pos.x}, ${pos.y}) scale(${fontSizeScreen / 100})`}>
+                          <text 
+                            x={0} 
+                            y={0} 
+                            fill={textColor} 
+                            fontSize={100} 
+                            fontFamily="Arial, Helvetica, Tahoma, sans-serif" 
+                            dominantBaseline="middle"
+                            style={{ userSelect: 'none' }}
+                          >
+                            {textStr}
+                          </text>
+                        </g>
                         {isSelected && (
                           <>
                             <circle cx={pos.x} cy={pos.y} r="4" fill="#00ff00" />

@@ -33,9 +33,7 @@ const App: React.FC = () => {
   const [bootText, setBootText] = useState<string[]>([]);
   
   // Lite Mode State (Global Performance Mode)
-  const [isLiteMode, setIsLiteMode] = useState(() => {
-    return localStorage.getItem('vjp26_gc_litemode') === 'true';
-  });
+  const [isLiteMode, setIsLiteMode] = useState(false);
 
   // Calculator State
   const [calcInput, setCalcInput] = useState<string>('');

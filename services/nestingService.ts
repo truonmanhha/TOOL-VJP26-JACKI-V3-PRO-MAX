@@ -80,6 +80,7 @@ export class NestingService {
           height: sheetInstance.height,
           placedParts: placed,
           efficiency: (usedArea / sheetArea) * 100,
+          utilization: (usedArea / sheetArea) * 100,
           usedArea
         });
         sheetIndex++;
@@ -104,14 +105,18 @@ export class NestingService {
     const totalSheetArea = usedSheets.reduce((sum, s) => sum + s.width * s.height, 0);
     const totalUsedArea = usedSheets.reduce((sum, s) => sum + s.usedArea, 0);
     const wasteArea = totalSheetArea - totalUsedArea;
+    const partsPlaced = instances.length - remainingInstances.length;
     
     return {
       sheets: usedSheets,
       totalEfficiency: totalSheetArea > 0 ? (totalUsedArea / totalSheetArea) * 100 : 0,
+      utilization: totalSheetArea > 0 ? (totalUsedArea / totalSheetArea) * 100 : 0,
       totalUsedArea,
       totalSheetArea,
       unplacedParts,
       sheetsUsed: usedSheets.length,
+      partsPlaced,
+      partsRemaining: remainingInstances.length,
       wasteArea,
       wastePercentage: totalSheetArea > 0 ? (wasteArea / totalSheetArea) * 100 : 0
     };

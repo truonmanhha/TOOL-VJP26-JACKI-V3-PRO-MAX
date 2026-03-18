@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <canvas id="c" width="800" height="600" style="border:1px solid black"></canvas>
+  <script>
+    const ctx = document.getElementById('c').getContext('2d');
+    
+    // Giả lập ma trận CAD: phóng to để vẽ nét CAD
+    ctx.translate(400, 300);
+    // Ví dụ bản vẽ DXF rộng 1000mm, viewState scale phải thu nhỏ xuống 0.5 để fit màn hình
+    const scale = 0.5;
+    ctx.scale(scale, -scale);
+    
+    // Vẽ khung CAD 100x50
+    ctx.strokeStyle = 'white';
+    ctx.strokeRect(0, 0, 100, 50);
+    
+    // Vẽ chữ theo kiểu VinaCAD / AutoCAD (Kỹ thuật thu phóng nghịch đảo - Inverse Scale)
+    // Tọa độ CAD: (10, 10), chiều cao: 5
+    const x = 10;
+    const y = 10;
+    const height = 5;
+    const angle = 0;
+    
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    
+    // Lật Y để chữ không ngược
+    ctx.scale(1, -1);
+    
+    // Kỹ thuật đặt font lớn rồi thu nhỏ
+    const BIG_FONT_SIZE = 100;
+    ctx.font = `${BIG_FONT_SIZE}px "Segoe UI", Arial`;
+    
+    const scaleFactor = height / BIG_FONT_SIZE;
+    ctx.scale(scaleFactor, scaleFactor);
+    
+    ctx.fillStyle = 'yellow';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText("HELLO WORLD (H=5)", 0, 0);
+    ctx.restore();
+    
+  </script>
+</body>
+</html>

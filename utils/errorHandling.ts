@@ -11,7 +11,7 @@ export function getVideoExportErrorMessage(error: any): string {
   }
   
   if (lowerMessage.includes('fetch') || lowerMessage.includes('network')) {
-    return 'Lỗi mạng khi tải video lên. Vui lòng thử lại.';
+    return 'Lỗi mạng: Không thể kết nối tới máy chủ phụ. Vui lòng mở Terminal và chạy lệnh: node server.js để bật server nhé.';
   }
   
   if (lowerMessage.includes('discord')) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { DXFEntityResult, ManualLine } from '../types';
-import { ZoomIn, ZoomOut, Maximize, MousePointer2, Info, X, Pencil, Trash2, Scissors, SquareMousePointer, Merge, Undo2, Redo2, Smartphone, Check, Hash, Box, Layers, Database } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, MousePointer2, Info, X, Pencil, Trash2, Scissors, SquareMousePointer, Merge, Undo2, Redo2, Smartphone, Check, Hash, Box, Layers, Database, Eye, EyeOff } from 'lucide-react';
 import { FORMAT_NUMBER } from '../constants';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -19,7 +19,7 @@ interface DxfPreviewProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  onSelectionChange?: (selectedIds: string[]) => void; // New callback for selection tracking
+  onSelectionChange?: (selectedIds: string[]) => void;
 }
 
 interface ViewState {
@@ -72,6 +72,54 @@ const DxfPreview: React.FC<DxfPreviewProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingPoint, setPendingPoint] = useState<{ x: number, y: number } | null>(null);
   const [hoveredGap, setHoveredGap] = useState<{ x: number, y: number } | null>(null);
+  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set());
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+
+  // Extract unique layers from entities
+  const availableLayers = useMemo(() => {
+    const layers = new Set<string>();
+    entities.forEach(entity => {
+      if (entity.layer) {
+        layers.add(entity.layer);
+      }
+    });
+    return Array.from(layers).sort();
+  }, [entities]);
+
+  // Initialize all layers as visible
+  useEffect(() => {
+    if (availableLayers.length > 0 && visibleLayers.size === 0) {
+      setVisibleLayers(new Set(availableLayers));
+    }
+  }, [availableLayers]);
+
+  // Filter entities based on layer visibility
+  const filteredEntities = useMemo(() => {
+    if (visibleLayers.size === 0 || visibleLayers.size === availableLayers.length) {
+      return entities;
+    }
+    return entities.filter(entity => !entity.layer || visibleLayers.has(entity.layer));
+  }, [entities, visibleLayers, availableLayers]);
+
+  const toggleLayer = useCallback((layerName: string) => {
+    setVisibleLayers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(layerName)) {
+        newSet.delete(layerName);
+      } else {
+        newSet.add(layerName);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const showAllLayers = useCallback(() => {
+    setVisibleLayers(new Set(availableLayers));
+  }, [availableLayers]);
+
+  const hideAllLayers = useCallback(() => {
+    setVisibleLayers(new Set());
+  }, []);
 
   // Notify parent when selection changes
   useEffect(() => {
@@ -128,7 +176,7 @@ const DxfPreview: React.FC<DxfPreviewProps> = ({
   }, [entities]);
 
   const preparedEntities = useMemo<PreparedEntity[]>(() => {
-    return entities.map(entity => {
+    return filteredEntities.map(entity => {
       const path = new Path2D();
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       if (entity.geometry && entity.geometry.length >= 2) {
@@ -172,7 +220,7 @@ const DxfPreview: React.FC<DxfPreviewProps> = ({
 
   const allGaps = useMemo(() => {
     const gaps: { x: number, y: number }[] = [];
-    entities.forEach(entity => {
+    filteredEntities.forEach(entity => {
       if (!entity.isClosed && entity.geometry && entity.geometry.length > 0) {
         gaps.push(entity.geometry[0]);
         gaps.push(entity.geometry[entity.geometry.length - 1]);
@@ -445,13 +493,117 @@ const DxfPreview: React.FC<DxfPreviewProps> = ({
       ctx.setLineDash([5 / viewState.scale, 5 / viewState.scale]);
       ctx.beginPath(); ctx.moveTo(line.start.x, line.start.y); ctx.lineTo(line.end.x, line.end.y); ctx.stroke();
     });
-    ctx.setLineDash([]);
-
+      ctx.setLineDash([]); // Reset for manual lines
+    
     preparedEntities.forEach(item => {
       const isS = selectedIds.includes(item.id);
-      ctx.strokeStyle = isS ? '#f97316' : (item.isJoined ? '#3b82f6' : '#0ea5e9');
+      ctx.strokeStyle = isS ? '#f97316' : item.original.color || (item.isJoined ? '#3b82f6' : '#0ea5e9');
       ctx.lineWidth = (isS ? 3 : (item.isJoined ? 1.5 : 1)) / viewState.scale;
+      
+      // Apply linetype pattern if available
+      if (item.original.linetypePattern && item.original.linetypePattern.length > 0) {
+        ctx.setLineDash(item.original.linetypePattern.map(segment => segment / viewState.scale));
+      } else {
+        ctx.setLineDash([]); // Ensure solid line if no pattern or empty pattern
+      }
+
       ctx.stroke(item.path);
+      ctx.setLineDash([]); // Reset after drawing each entity
+    });
+
+    // Draw TEXT and MTEXT entities
+    entities.forEach(entity => {
+      if ((entity.type === 'TEXT' || entity.type === 'MTEXT') && entity.text && entity.geometry && entity.geometry.length > 0) {
+        const p = entity.geometry[0];
+        const angle = (entity.rotation || 0) * Math.PI / 180;
+        const height = entity.textHeight || 10; // Default height if not specified
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(angle);
+        
+        // Phương án 5: VinaCAD dùng WebGL để bypass các giới hạn Canvas 2D. 
+        // Với Canvas 2D, cách TỐT NHẤT để text không bị biến dạng và tỉ lệ chuẩn AutoCAD:
+        // Đặt một giá trị font khổng lồ CỐ ĐỊNH, sau đó dùng hàm scale để ép nó về tỉ lệ.
+        // Điều này bypass hoàn toàn cơ chế "minimum font size" (10px/12px) của Chrome/Edge.
+        
+        ctx.scale(1, -1); // Lật trục Y trước
+        
+        const BIG_FONT_SIZE = 1000;
+        ctx.font = `${BIG_FONT_SIZE}px Arial`;
+        
+        // AutoCAD thường dùng font dạng nét đơn (stroke), font Arial (TrueType) thường mập hơn
+        // Ta scale hệ tọa độ sao cho 1000px = đúng chiều cao thực của DXF
+        const scaleToRealWorld = height / BIG_FONT_SIZE;
+        ctx.scale(scaleToRealWorld, scaleToRealWorld);
+        
+        ctx.fillStyle = entity.color || '#FFFFFF';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(entity.text, 0, 0);
+        ctx.restore();
+      } else if (entity.type === 'DIMENSION') {
+        // Draw Dimension Extension Lines
+        ctx.strokeStyle = entity.color || '#FFFFFF';
+        ctx.lineWidth = 1 / viewState.scale;
+        
+        if (entity.extLine1Start && entity.extLine1End) {
+          ctx.beginPath();
+          ctx.moveTo(entity.extLine1Start.x, entity.extLine1Start.y);
+          ctx.lineTo(entity.extLine1End.x, entity.extLine1End.y);
+          ctx.stroke();
+        }
+        if (entity.extLine2Start && entity.extLine2End) {
+          ctx.beginPath();
+          ctx.moveTo(entity.extLine2Start.x, entity.extLine2Start.y);
+          ctx.lineTo(entity.extLine2End.x, entity.extLine2End.y);
+          ctx.stroke();
+        }
+
+        // Draw Dimension Line
+        if (entity.dimLineStart && entity.dimLineEnd) {
+          ctx.beginPath();
+          ctx.moveTo(entity.dimLineStart.x, entity.dimLineStart.y);
+          ctx.lineTo(entity.dimLineEnd.x, entity.dimLineEnd.y);
+          ctx.stroke();
+        }
+
+        // Draw Dimension Text
+        if (entity.textPosition && (entity.mtext || entity.text)) {
+          const text = entity.mtext || entity.text;
+          const p = entity.textPosition;
+          const angle = (entity.rotation || 0) * Math.PI / 180;
+          const height = entity.textHeight || 10; // Default height if not specified
+
+          
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(angle);
+        
+        // Luôn lật Y để chữ không bị lộn ngược do ma trận Canvas lật
+        ctx.scale(1, -1);
+        
+        // Bí quyết của các web CAD (giống VinaCAD):
+        // Chữ trong bản vẽ thường chỉ cao 2.5 hoặc 5 đơn vị. 
+        // Trình duyệt cấm vẽ font < 10px. 
+        // Ta set font = 100px (an toàn), sau đó scale không gian vẽ lại tương ứng.
+        const FONT_SAFE_SIZE = 100;
+        const scaleFactor = height / FONT_SAFE_SIZE;
+        
+        ctx.scale(scaleFactor, scaleFactor);
+        
+        // Font nét đơn giống CAD nhất có thể
+        ctx.font = `${FONT_SAFE_SIZE}px "Segoe UI", Arial, sans-serif`;
+        ctx.fillStyle = entity.color || '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(entity.text, 0, 0);
+        
+        ctx.restore();
+
+
+        }
+      }
     });
 
     allGaps.forEach(gap => {
@@ -512,11 +664,69 @@ const DxfPreview: React.FC<DxfPreviewProps> = ({
         <button 
           onClick={() => { setIsDrawMode(!isDrawMode); setPendingPoint(null); }} 
           className={`p-4 rounded-xl border border-white/10 shadow-lg transition-all active:scale-95 ${isDrawMode ? 'bg-amber-500 text-white ring-4 ring-amber-500/20' : 'bg-slate-900/95 text-slate-400'}`}
-          title="Nối 2 điểm đỏ"
+          title="Noi 2 diem do"
         >
           <Pencil size={24} />
         </button>
+        <div className="h-px bg-white/10 my-1" />
+        <button 
+          onClick={() => setShowLayerPanel(!showLayerPanel)} 
+          className={`p-4 rounded-xl border border-white/10 shadow-lg transition-all active:scale-95 ${showLayerPanel ? 'bg-purple-600 text-white' : 'bg-slate-900/95 text-slate-400'}`}
+          title="Quan ly lop"
+        >
+          <Layers size={24} />
+        </button>
       </div>
+
+      {/* Layer Panel */}
+      <AnimatePresence>
+        {showLayerPanel && availableLayers.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute top-4 left-24 w-56 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 shadow-2xl pointer-events-auto max-h-[450px] overflow-y-auto z-20"
+          >
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-2 text-purple-400">
+                <Layers size={16} />
+                <span className="text-white font-black text-[10px] uppercase tracking-widest">Lop (Layers)</span>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={showAllLayers} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-green-400" title="Hien tat ca">
+                  <Eye size={14} />
+                </button>
+                <button onClick={hideAllLayers} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-red-400" title="An tat ca">
+                  <EyeOff size={14} />
+                </button>
+                <button onClick={() => setShowLayerPanel(false)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              {availableLayers.map(layer => (
+                <button
+                  key={layer}
+                  onClick={() => toggleLayer(layer)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all ${
+                    visibleLayers.has(layer) 
+                      ? 'bg-white/10 text-white hover:bg-white/15' 
+                      : 'bg-slate-800/50 text-slate-500 hover:bg-slate-800'
+                  }`}
+                >
+                  {visibleLayers.has(layer) ? (
+                    <Eye size={14} className="text-green-400" />
+                  ) : (
+                    <EyeOff size={14} className="text-slate-600" />
+                  )}
+                  <span className="text-[11px] font-bold truncate">{layer}</span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Selected Item Info Panel */}
       <AnimatePresence>

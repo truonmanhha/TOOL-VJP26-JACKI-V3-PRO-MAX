@@ -78,8 +78,8 @@ const CADViewerWithBatching: React.FC<CADViewerWithBatchingProps> = ({
     // ============================================================
 
     const cadBatch = new CADBatchedRenderer({
-      maxInstanceCount: 10000,
-      maxVertexCount: 10000000,
+      maxInstances: 10000,
+      maxVertices: 10000000,
       lineWidth: 1,
     });
 

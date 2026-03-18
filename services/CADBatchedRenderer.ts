@@ -1,5 +1,17 @@
 import * as THREE from 'three';
 
+export interface BatchedCADEntity {
+  id: string;
+  type?: string;
+  position?: THREE.Vector3;
+  rotation?: THREE.Euler;
+  scale?: THREE.Vector3;
+  visible?: boolean;
+  geometry: THREE.BufferGeometry;
+  color?: THREE.Color;
+  matrix?: THREE.Matrix4;
+}
+
 /**
  * 🚀 HIGH-PERFORMANCE BATCHED RENDERER FOR CAD
  * Uses THREE.BatchedMesh for GPU-side matrix transformations.
@@ -10,14 +22,17 @@ export class CADBatchedRenderer {
     private geometries: THREE.BufferGeometry[] = [];
     private objectIds: string[] = [];
     private instanceIndices: number[] = [];
+    private boundingBox: THREE.Box3 = new THREE.Box3();
 
-    constructor(maxInstances: number = 10000, maxVertices: number = 5000000) {
+    constructor(config: {maxInstances?: number, maxVertices?: number, lineWidth?: number} = {}) {
+        const { maxInstances = 10000, maxVertices = 5000000, lineWidth = 1 } = config;
         // Material with vertex colors for different part colors in same draw call
         const material = new THREE.LineBasicMaterial({ 
             vertexColors: true, 
             transparent: true,
             opacity: 0.8,
-            depthWrite: false
+            depthWrite: false,
+            linewidth: lineWidth,
         });
         
         // @ts-ignore - BatchedMesh is available in modern Three.js
@@ -45,6 +60,27 @@ export class CADBatchedRenderer {
         this.objectIds.push(id);
         this.instanceIndices.push(instanceIndex);
 
+        geometry.computeBoundingBox();
+        if (geometry.boundingBox) {
+            this.boundingBox.union(geometry.boundingBox);
+        }
+
+        return instanceIndex;
+    }
+
+    addEntity(entity: BatchedCADEntity) {
+        const instanceIndex = this.mesh!.addGeometry(entity.geometry);
+        this.geometries.push(entity.geometry);
+        this.objectIds.push(entity.id);
+        this.instanceIndices.push(instanceIndex);
+        this.mesh!.setMatrixAt(instanceIndex, entity.matrix);
+        
+        entity.geometry.computeBoundingBox();
+        if (entity.geometry.boundingBox) {
+            const bbox = entity.geometry.boundingBox.clone().applyMatrix4(entity.matrix);
+            this.boundingBox.union(bbox);
+        }
+        
         return instanceIndex;
     }
 
@@ -53,6 +89,36 @@ export class CADBatchedRenderer {
         matrix.makeRotationZ((rotation * Math.PI) / 180);
         matrix.setPosition(x, y, 0);
         this.mesh!.setMatrixAt(index, matrix);
+    }
+
+    updateMatrices() {
+        // Required for BatchedMesh updates if matrices changed directly
+    }
+
+    panEntities(delta: {x: number, y: number} | THREE.Vector3) {
+        if (!this.mesh) return;
+        this.mesh.position.x += delta.x;
+        this.mesh.position.y += delta.y;
+        this.mesh.updateMatrixWorld();
+    }
+
+    zoomEntities(factor: number, center: {x: number, y: number} | THREE.Vector3) {
+        if (!this.mesh) return;
+        this.mesh.position.x = center.x - (center.x - this.mesh.position.x) * factor;
+        this.mesh.position.y = center.y - (center.y - this.mesh.position.y) * factor;
+        this.mesh.scale.multiplyScalar(factor);
+        this.mesh.updateMatrixWorld();
+    }
+
+    fitToView(): THREE.Box3 {
+        return this.boundingBox;
+    }
+
+    getStats() {
+        return {
+            instanceCount: this.objectIds.length,
+            vertexCount: this.geometries.reduce((sum, g) => sum + (g.attributes.position?.count || 0), 0)
+        };
     }
 
     getMesh() {

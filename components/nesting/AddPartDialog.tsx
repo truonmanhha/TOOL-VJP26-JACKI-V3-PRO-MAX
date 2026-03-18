@@ -86,7 +86,7 @@ const AddPartDialog: React.FC<AddPartDialogProps> = ({ isOpen, onClose, onAdd, e
             rotationAllowed: rotation === 'any',
             rotation: rotation === 'any' ? undefined : parseInt(rotation) || 0,
             isSmallPart,
-            kitNumber: kitNumber ? parseInt(kitNumber) : undefined,
+            kitNumber: kitNumber || undefined,
             color,
             enabled: true,
         };

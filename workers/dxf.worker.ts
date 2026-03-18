@@ -397,22 +397,119 @@ self.onmessage = async (e: MessageEvent) => {
         return;
       }
 
+      // Pre-calculate Linetype and Layer definitions just like in dxfService.ts
+      const linetypeDefinitions = new Map<string, number[]>();
+      if (dxf.tables && (dxf.tables as any).ltypes) {
+        for (const linetypeName in (dxf.tables as any).ltypes) {
+          const linetype = (dxf.tables as any).ltypes[linetypeName];
+          if (linetype && linetype.pattern) {
+            const canvasPattern: number[] = [];
+            linetype.pattern.forEach((segment: number) => {
+              if (segment !== 0) {
+                canvasPattern.push(Math.abs(segment));
+              }
+            });
+            if (canvasPattern.length === 0) {
+              linetypeDefinitions.set(linetype.name, []);
+            } else {
+              linetypeDefinitions.set(linetype.name, canvasPattern);
+            }
+          }
+        }
+      }
+
+      const layerDefinitions = new Map<string, any>();
+      if (dxf.tables && (dxf.tables as any).layers) {
+        for (const layerName in (dxf.tables as any).layers) {
+          const layer = (dxf.tables as any).layers[layerName];
+          if (layer) {
+            layerDefinitions.set(layer.name, {
+              colorIndex: layer.colorIndex,
+              visible: layer.visible !== false
+            });
+          }
+        }
+      }
+
       const parsedEntities: DxfEntity[] = [];
 
-      dxf.entities.forEach((entity: any, index: number) => {
+      // Pre-parse BLOCK definitions for INSERT expansion
+      const blockDefinitions = new Map<string, any>();
+      if (dxf.blocks) {
+        for (const blockName in dxf.blocks) {
+          if (dxf.blocks.hasOwnProperty(blockName)) {
+            blockDefinitions.set(blockName, dxf.blocks[blockName]);
+          }
+        }
+      }
+
+      // Helper to process entities with optional transformation (for BLOCK/INSERT)
+      const processEntity = (entity: any, index: number, transform?: { x: number, y: number, rotation?: number, scaleX?: number, scaleY?: number }) => {
         let points: { x: number; y: number }[] = [];
         let isClosed = false;
         let entityType = entity.type || 'UNKNOWN';
+        const currentLinetype = entity.linetype || 'BYLAYER';
+        const entityLayer = entity.layer || '0';
+        
+        const layerProps = layerDefinitions.get(entityLayer);
+        const colorIndex = entity.colorIndex !== undefined && entity.colorIndex !== 256 ? entity.colorIndex : layerProps?.colorIndex;
+        
+        // Apply transformation if present
+        const tx = transform?.x || 0;
+        const ty = transform?.y || 0;
+        const tr = transform?.rotation || 0;
+        const sx = transform?.scaleX || 1;
+        const sy = transform?.scaleY || 1;
+
+        const transformPoint = (p: { x: number, y: number }) => {
+          if (!transform) return p;
+          // Apply scale
+          let x = p.x * sx;
+          let y = p.y * sy;
+          // Apply rotation
+          if (tr !== 0) {
+            const rad = tr * Math.PI / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const rx = x * cos - y * sin;
+            const ry = x * sin + y * cos;
+            x = rx;
+            y = ry;
+          }
+          // Apply translation
+          return { x: x + tx, y: y + ty };
+        };
 
         try {
           switch (entityType) {
+            case 'INSERT': {
+              const block = blockDefinitions.get(entity.block);
+              if (block && block.entities) {
+                const insertX = entity.position?.x || 0;
+                const insertY = entity.position?.y || 0;
+                const insertRotation = entity.rotation || 0;
+                const insertScaleX = entity.xscale || 1;
+                const insertScaleY = entity.yscale || 1;
+                
+                block.entities.forEach((blockEntity: any, blockIdx: number) => {
+                  processEntity(blockEntity, index * 1000 + blockIdx, {
+                    x: insertX,
+                    y: insertY,
+                    rotation: insertRotation,
+                    scaleX: insertScaleX,
+                    scaleY: insertScaleY
+                  });
+                });
+              }
+              return; 
+            }
+
             case 'LWPOLYLINE':
             case 'POLYLINE': {
               if (entity.vertices && entity.vertices.length > 0) {
-                points = entity.vertices.map((v: any) => ({ x: v.x || 0, y: v.y || 0 }));
+                points = entity.vertices.map((v: any) => transformPoint({ x: v.x || 0, y: v.y || 0 }));
                 isClosed = (entity.flags & 1) === 1 || entity.closed === true;
                 
-                // Ensure closed polygons have closing point
                 if (isClosed && points.length > 2) {
                   const first = points[0];
                   const last = points[points.length - 1];
@@ -423,7 +520,6 @@ self.onmessage = async (e: MessageEvent) => {
                   }
                 }
                 
-                // Simplify high-vertex polylines
                 if (points.length > 10) {
                   points = simplifyPolygon(points, SIMPLIFICATION_TOLERANCE);
                 }
@@ -436,8 +532,8 @@ self.onmessage = async (e: MessageEvent) => {
               const p2 = entity.end || entity.vertices?.[1];
               if (p1 && p2) {
                 points = [
-                  { x: p1.x || 0, y: p1.y || 0 },
-                  { x: p2.x || 0, y: p2.y || 0 }
+                  transformPoint({ x: p1.x || 0, y: p1.y || 0 }),
+                  transformPoint({ x: p2.x || 0, y: p2.y || 0 })
                 ];
               }
               isClosed = false;
@@ -446,9 +542,10 @@ self.onmessage = async (e: MessageEvent) => {
 
             case 'CIRCLE': {
               if (entity.center && entity.radius) {
+                const center = transformPoint(entity.center);
                 points = arcToPoints({
-                  center: entity.center,
-                  radius: entity.radius,
+                  center: center,
+                  radius: entity.radius * ((transform?.scaleX || 1) + (transform?.scaleY || 1)) / 2,
                   startAngle: 0,
                   endAngle: 2 * Math.PI,
                   type: 'CIRCLE'
@@ -460,9 +557,10 @@ self.onmessage = async (e: MessageEvent) => {
 
             case 'ARC': {
               if (entity.center && entity.radius !== undefined) {
+                const center = transformPoint(entity.center);
                 points = arcToPoints({
-                  center: entity.center,
-                  radius: entity.radius,
+                  center: center,
+                  radius: entity.radius * ((transform?.scaleX || 1) + (transform?.scaleY || 1)) / 2,
                   startAngle: entity.startAngle || 0,
                   endAngle: entity.endAngle || (2 * Math.PI),
                   type: 'ARC'
@@ -474,8 +572,7 @@ self.onmessage = async (e: MessageEvent) => {
 
             case 'SPLINE': {
               if (entity.controlPoints && entity.controlPoints.length >= 2) {
-                // Basic spline approximation: connect control points with simplified curve
-                points = entity.controlPoints.map((p: any) => ({ x: p.x || 0, y: p.y || 0 }));
+                points = entity.controlPoints.map((p: any) => transformPoint({ x: p.x || 0, y: p.y || 0 }));
                 if (points.length > 10) {
                   points = simplifyPolygon(points, SIMPLIFICATION_TOLERANCE);
                 }
@@ -487,15 +584,16 @@ self.onmessage = async (e: MessageEvent) => {
             case 'TEXT': {
               const textValue = (entity.text || '').toString().trim();
               if (textValue) {
-                // store in entity object so later we can extract properties
                 entity.__textValue = textValue;
-                entity.__fontSize = entity.textHeight || 12;
-                entity.__rotation = (entity.rotation || 0) * 180 / Math.PI;
+                let th = entity.textHeight || entity.nominalHeight || entity.height || 2.5;
+                // Bỏ dòng nhân th *= 40 để giữ nguyên kích thước chuẩn từ DXF
+                entity.__fontSize = th;
+                entity.__rotation = (entity.rotation || 0);
               }
               if (textValue) {
                 const pos = entity.startPoint || entity.insertionPoint || entity.position || entity.firstAlignmentPoint || entity.vertices?.[0];
                 if (pos) {
-                  points = [{ x: pos.x || 0, y: pos.y || 0 }];
+                  points = [transformPoint({ x: pos.x || 0, y: pos.y || 0 })];
                   isClosed = false;
                 }
               }
@@ -506,33 +604,113 @@ self.onmessage = async (e: MessageEvent) => {
               const mtextValue = (entity.text || '').toString().trim();
               if (mtextValue) {
                 entity.__textValue = mtextValue;
-                entity.__fontSize = entity.textHeight || entity.height || 12;
-                entity.__rotation = (entity.rotation || 0) * 180 / Math.PI;
+                let th = entity.textHeight || entity.nominalHeight || entity.height || 2.5;
+                // Bỏ dòng nhân th *= 40 để giữ nguyên kích thước chuẩn từ DXF
+                entity.__fontSize = th;
+                entity.__rotation = (entity.rotation || 0);
               }
               if (mtextValue) {
                 const pos = entity.insertionPoint || entity.position || entity.startPoint || entity.vertices?.[0];
                 if (pos) {
-                  points = [{ x: pos.x || 0, y: pos.y || 0 }];
+                  points = [transformPoint({ x: pos.x || 0, y: pos.y || 0 })];
                   isClosed = false;
                 }
               }
               break;
             }
 
+            case 'ELLIPSE': {
+              if (entity.center && entity.majorAxisEndPoint) {
+                const center = transformPoint(entity.center);
+                const majorAxis = transformPoint(entity.majorAxisEndPoint);
+                const ratio = entity.axisRatio;
+                
+                const a = Math.sqrt(majorAxis.x * majorAxis.x + majorAxis.y * majorAxis.y);
+                const rotation = Math.atan2(majorAxis.y, majorAxis.x);
+                const b = a * ratio;
+                
+                const startAngle = entity.startAngle !== undefined ? entity.startAngle : 0;
+                let endAngle = entity.endAngle !== undefined ? entity.endAngle : 2 * Math.PI;
+                if (endAngle < startAngle) endAngle += 2 * Math.PI;
+                
+                const numSegments = 64;
+                let angleIncrement = (endAngle - startAngle) / numSegments;
+                
+                for (let i = 0; i <= numSegments; i++) {
+                  const theta = startAngle + i * angleIncrement;
+                  const xLocal = a * Math.cos(theta);
+                  const yLocal = b * Math.sin(theta);
+                  const xRotated = xLocal * Math.cos(rotation) - yLocal * Math.sin(rotation);
+                  const yRotated = xLocal * Math.sin(rotation) + yLocal * Math.cos(rotation);
+                  points.push({
+                    x: center.x + xRotated,
+                    y: center.y + yRotated
+                  });
+                }
+                isClosed = Math.abs(endAngle - startAngle - 2 * Math.PI) < 0.01;
+              }
+              break;
+            }
+
+            case 'DIMENSION': {
+              const dimText = entity.text || entity.mtext || '';
+              if (dimText) {
+                entity.__textValue = dimText;
+                let th = entity.textHeight || entity.dimTextHeight || 2.5;
+                // Bỏ dòng nhân th *= 40
+                entity.__fontSize = th;
+                entity.__rotation = entity.textRotation || entity.rotation || 0;
+                
+                const pos = entity.textPosition;
+                if (pos) {
+                  points = [transformPoint({ x: pos.x || 0, y: pos.y || 0 })];
+                  isClosed = false;
+                  entity.__isDim = true;
+                  entityType = 'TEXT';
+                }
+              }
+              break;
+            }
+
+            case 'HATCH': {
+              if (entity.edges && entity.edges.length > 0) {
+                const firstEdgeList = entity.edges[0];
+                if (firstEdgeList && firstEdgeList.length > 0) {
+                  firstEdgeList.forEach((edge: any) => {
+                    if (edge.type === 'line') {
+                      points.push(transformPoint({ x: edge.start.x, y: edge.start.y }));
+                      points.push(transformPoint({ x: edge.end.x, y: edge.end.y }));
+                    } else if (edge.type === 'arc') {
+                      points.push(...arcToPoints({ ...edge, type: 'ARC' }));
+                    }
+                  });
+                  isClosed = true;
+                }
+              }
+              break;
+            }
+
+            case 'LEADER': {
+              if (entity.vertices && entity.vertices.length > 0) {
+                points = entity.vertices.map((v: any) => transformPoint({ x: v.x || 0, y: v.y || 0 }));
+              }
+              break;
+            }
+
             default:
-              // Unsupported entity type
               return;
           }
 
           if (points.length >= 2 || ((entityType === 'TEXT' || entityType === 'MTEXT') && points.length >= 1)) {
             const area = calculatePolygonArea(points);
-            const extraProps = {};
+            const extraProps: any = {};
             if ((entityType === 'TEXT' || entityType === 'MTEXT') && entity.__textValue) {
-               extraProps.properties = {
-                 text: entity.__textValue,
-                 fontSize: entity.__fontSize,
-                 rotation: entity.__rotation
-               };
+              extraProps.properties = {
+                text: entity.__textValue,
+                fontSize: entity.__fontSize,
+                rotation: entity.__rotation,
+                isDimension: entity.__isDim || false
+              };
             }
             parsedEntities.push({
               id: `${fileName}-${entityType}-${index}-${Date.now()}`,
@@ -541,13 +719,21 @@ self.onmessage = async (e: MessageEvent) => {
               verticesCount: points.length,
               isClosed,
               geometry: points,
+              layer: entityLayer,
+              linetype: currentLinetype,
+              linetypePattern: linetypeDefinitions.get(currentLinetype) || [],
+              colorIndex: colorIndex,
               ...extraProps
             });
           }
         } catch (entityErr) {
           console.error(`[dxf.worker] Error processing entity ${index} (${entityType}):`, entityErr);
         }
-      });
+      };
+
+      if (dxf.entities) {
+        dxf.entities.forEach((entity: any, index: number) => processEntity(entity, index));
+      }
 
       console.log(`[dxf.worker] ✓ Parsed ${parsedEntities.length} entities from ${fileName}`);
       self.postMessage({ type: 'success', payload: { entities: parsedEntities, fileName } });

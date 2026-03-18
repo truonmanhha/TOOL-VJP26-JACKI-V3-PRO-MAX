@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { FileUp, Copy, AlertCircle, LayoutGrid, Merge, Loader2, Zap, Trash2, Eye, Wrench, CheckCircle2 } from 'lucide-react';
+import { FileUp, Copy, AlertCircle, LayoutGrid, Merge, Loader2, Zap, Trash2, Eye, Wrench, CheckCircle2, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DxfService } from '../services/dxfService';
 import { DXFEntityResult, ManualLine } from '../types';
@@ -48,6 +48,7 @@ const DxfTool: React.FC<DxfToolProps> = ({
   const [joinTolerance, setJoinTolerance] = useState(0.5); 
   const [showSuccess, setShowSuccess] = useState(false);
   const [manualLines, setManualLines] = useState<ManualLine[]>([]);
+  const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [future, setFuture] = useState<HistoryState[]>([]);
@@ -137,6 +138,7 @@ const DxfTool: React.FC<DxfToolProps> = ({
         setError(t.dxfError);
       }
       setResults(data);
+      setHiddenLayers(new Set()); // Reset hidden layers on new file
       console.log(`✓ DXF import complete: ${data.length} entities, simplified to 0.1mm tolerance`);
     } catch (err) {
       console.error('Import error:', err);
@@ -204,6 +206,27 @@ const DxfTool: React.FC<DxfToolProps> = ({
   const totalArea = results.reduce((sum, item) => sum + item.area, 0);
   const openProfilesCount = results.filter(r => !r.isClosed).length;
 
+  const availableLayers = React.useMemo(() => {
+    const layers = new Set<string>();
+    results.forEach(r => {
+      if (r.layer) layers.add(r.layer);
+    });
+    return Array.from(layers).sort();
+  }, [results]);
+
+  const visibleResults = React.useMemo(() => {
+    return results.filter(r => !r.layer || !hiddenLayers.has(r.layer));
+  }, [results, hiddenLayers]);
+
+  const toggleLayer = (layer: string) => {
+    setHiddenLayers(prev => {
+      const next = new Set(prev);
+      if (next.has(layer)) next.delete(layer);
+      else next.add(layer);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-8 pb-20">
       <motion.div className="glass-panel border-2 border-dashed border-blue-500/20 rounded-[2.5rem] p-16 text-center group transition-all relative overflow-hidden">
@@ -261,9 +284,34 @@ const DxfTool: React.FC<DxfToolProps> = ({
           </div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            <div className="flex items-center gap-3"><Eye className="w-5 h-5 text-blue-400" /><span className="font-black text-slate-100 uppercase tracking-widest text-sm">{t.dxfPreview}</span></div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Eye className="w-5 h-5 text-blue-400" />
+                <span className="font-black text-slate-100 uppercase tracking-widest text-sm">{t.dxfPreview}</span>
+              </div>
+              
+              {availableLayers.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 bg-slate-900/50 p-2 rounded-xl border border-white/5">
+                  <span className="text-[10px] font-black text-slate-500 uppercase px-2"><Layers size={12} className="inline mr-1"/>Layers:</span>
+                  {availableLayers.map(layer => (
+                    <button
+                      key={layer}
+                      onClick={() => toggleLayer(layer)}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-colors border ${
+                        hiddenLayers.has(layer) 
+                          ? 'bg-slate-800 text-slate-500 border-white/5' 
+                          : 'bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30'
+                      }`}
+                    >
+                      {layer}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <DxfPreview 
-                entities={results} manualLines={manualLines} onAddManualLine={handleAddManualLine} onClearManualLines={() => { pushToHistory(); setManualLines([]); }}
+                entities={visibleResults} manualLines={manualLines} onAddManualLine={handleAddManualLine} onClearManualLines={() => { pushToHistory(); setManualLines([]); }}
                 onDeleteEntity={handleDeleteEntity} onDeleteEntities={handleDeleteEntities} onDeleteManualLine={handleDeleteManualLine}
                 onExplodeEntity={handleExplodeEntity} onExplodeEntities={handleExplodeEntities} onJoinEntities={handleJoinSelected}
                 onUndo={handleUndo} onRedo={handleRedo} canUndo={history.length > 0} canRedo={future.length > 0}

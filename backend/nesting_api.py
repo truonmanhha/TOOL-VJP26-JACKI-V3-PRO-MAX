@@ -1,6 +1,6 @@
 import numpy as np
 import ezdxf
-from ezdxf.render import flattening
+from ezdxf import flatten
 import io
 import base64
 from fastapi import FastAPI, UploadFile, File, HTTPException
@@ -30,7 +30,7 @@ async def parse_dxf_clean(file: UploadFile = File(...)):
             try:
                 # 🚀 SỬ DỤNG THUẬT TOÁN FLATTEN TRỰC TIẾP (Chính xác hơn cho Arc)
                 # distance=0.01mm đảm bảo mượt mà nhưng không quá nặng
-                points = list(flattening.flatten(entity, distance=0.01))
+                points = list(flatten(entity, distance=0.01))
                 
                 if len(points) < 2: continue
                 

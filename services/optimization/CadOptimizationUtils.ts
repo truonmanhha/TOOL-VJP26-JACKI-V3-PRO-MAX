@@ -307,10 +307,10 @@ export async function optimizeGcodeGeometry(
 
   const stats = {
     originalTriangles,
-    optimizedTriangles: optimizedTriangles
+    optimizedTriangles: (optimizedGeometry.index?.count || 0) / 3
   };
 
-  console.log(`✅ Optimization complete: ${optimizedTriangles.toLocaleString()} triangles (${(optimizedTriangles / originalTriangles * 100).toFixed(1)}%)`);
+  console.log(`✅ Optimization complete: ${stats.optimizedTriangles.toLocaleString()} triangles (${(stats.optimizedTriangles / originalTriangles * 100).toFixed(1)}%)`);
 
   return {
     optimizedGeometry,

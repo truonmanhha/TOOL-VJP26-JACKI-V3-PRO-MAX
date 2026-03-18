@@ -7,9 +7,9 @@ export const LeftPanel: React.FC = () => {
 
     const addDemoParts = () => {
         setParts([ // Demo data as requested
-            { id: 'P01', name: 'Rect 1', width: 120, height: 80, quantity: 2, rotationAllowed: true, priority: 1, enabled: true },
-            { id: 'P02', name: 'Rect 2', width: 200, height: 60, quantity: 1, rotationAllowed: true, priority: 2, enabled: true },
-            { id: 'P03', name: 'Poly L', width: 100, height: 100, quantity: 1, rotationAllowed: true, priority: 1, enabled: true, geometry: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 50, y: 100 }, { x: 50, y: 50 }, { x: 0, y: 50 }] }
+            { id: 'P01', name: 'Rect 1', label: 'R1', color: '#3b82f6', width: 120, height: 80, quantity: 2, rotationAllowed: true, priority: 1, enabled: true },
+            { id: 'P02', name: 'Rect 2', label: 'R2', color: '#ef4444', width: 200, height: 60, quantity: 1, rotationAllowed: true, priority: 2, enabled: true },
+            { id: 'P03', name: 'Poly L', label: 'L', color: '#22c55e', width: 100, height: 100, quantity: 1, rotationAllowed: true, priority: 1, enabled: true, geometry: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 50, y: 100 }, { x: 50, y: 50 }, { x: 0, y: 50 }] }
         ]);
     };
 
@@ -48,7 +48,7 @@ export const LeftPanel: React.FC = () => {
                     {sheets.length === 0 && <span className="text-slate-500 italic text-sm p-2 block">No sheets (Using Default)</span>}
                 </div>
                 <div className="flex gap-2">
-                    <button className="flex-1 bg-slate-700 hover:bg-slate-600 text-white rounded p-1.5 text-sm font-bold flex items-center justify-center gap-1" onClick={() => setSheets([{ id: 'S01', name: 'Sheet 1', width: 2440, height: 1220, quantity: 10, enabled: true }])}>
+                     <button className="flex-1 bg-slate-700 hover:bg-slate-600 text-white rounded p-1.5 text-sm font-bold flex items-center justify-center gap-1" onClick={() => setSheets([{ id: 'S01', name: 'Sheet 1', width: 2440, height: 1220, quantity: 10, margin: 10, material: 'MDF' }])}>
                         <Database size={14} /> Add Standard
                     </button>
                 </div>

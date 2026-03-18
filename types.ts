@@ -51,6 +51,24 @@ export interface DXFEntityResult {
   scale?: number;
   layer?: string;
   color?: string;
+  text?: string;
+  textHeight?: number;
+  originalDxfData?: any;
+
+  // Dimension-specific properties
+  dimensionType?: string;
+  mtext?: string;
+  textPosition?: Point;
+  extLine1Start?: Point;
+  extLine1End?: Point;
+  extLine2Start?: Point;
+  extLine2End?: Point;
+  dimLineStart?: Point;
+  dimLineEnd?: Point;
+  arrowheadType?: string;
+  measurement?: number;
+  linetype?: string;
+  linetypePattern?: number[];
 }
 
 export interface ManualLine {
@@ -118,6 +136,9 @@ export interface NestingPart {
   y?: number;
   rotation?: number;
   mirror?: boolean;
+  mirrorAllowed?: boolean;
+  isSmallPart?: boolean;
+  kitNumber?: string;
   rotationStep?: '0' | '90' | '180' | '270' | 'Free';
   material?: string;
   thickness?: number;
@@ -161,8 +182,11 @@ export interface Layer {
 
 export interface NestingSettings {
   gap: number;
+  partGap: number;
+  edgeMargin: number;
   allowRotation: boolean;
   rotationSteps: number[];
+  rotationStep: number;
   sortStrategy: SortStrategy;
   placementStrategy: PlacementStrategy;
   sheetMargin: number;
@@ -170,6 +194,8 @@ export interface NestingSettings {
   allowMirror: boolean;
   fillDirection: FillDirection;
   grainDirection: boolean;
+  multiSheet: boolean;
+  priorityEnabled: boolean;
 }
 
 export interface NestingResult {
@@ -281,15 +307,20 @@ export const DEFAULT_COLORS = [
 
 export const DEFAULT_NESTING_SETTINGS: NestingSettings = {
   gap: 5,
+  partGap: 5,
+  edgeMargin: 10,
   allowRotation: true,
   rotationSteps: [0, 90],
+  rotationStep: 90,
   sortStrategy: 'AREA_DESC',
   placementStrategy: 'BEST_SHORT_SIDE',
   sheetMargin: 10,
   partMargin: 0,
   allowMirror: false,
   fillDirection: 'BOTTOM_TO_TOP',
-  grainDirection: false
+  grainDirection: false,
+  multiSheet: true,
+  priorityEnabled: false,
 };
 
 export interface DiscordVideoUploadPayload {

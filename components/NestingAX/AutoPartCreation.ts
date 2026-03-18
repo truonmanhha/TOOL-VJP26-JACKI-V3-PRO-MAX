@@ -132,28 +132,75 @@ export function isEntityInSelectionBox(
   maxY: number,
   isCrossing: boolean = false
 ): boolean {
-  
-  // Check all points of entity
-  for (const point of entity.points) {
-    const inBox = (
-      point.x >= minX &&
-      point.x <= maxX &&
-      point.y >= minY &&
-      point.y <= maxY
-    );
+  const isPointInBox = (point: { x: number; y: number }) => (
+    point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY
+  );
 
-    if (isCrossing) {
-      // Crossing mode: any point touching = select
-      if (inBox) return true;
-    } else {
-      // Window mode: all points must be inside
-      if (!inBox) return false;
+  const segmentIntersectsBox = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    if (isPointInBox(a) || isPointInBox(b)) return true;
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    let t0 = 0;
+    let t1 = 1;
+
+    const clip = (p: number, q: number) => {
+      if (Math.abs(p) < 1e-12) return q >= 0;
+      const r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+      return true;
+    };
+
+    if (!clip(-dx, a.x - minX)) return false;
+    if (!clip(dx, maxX - a.x)) return false;
+    if (!clip(-dy, a.y - minY)) return false;
+    if (!clip(dy, maxY - a.y)) return false;
+
+    return t1 >= t0;
+  };
+
+  if (!isCrossing) {
+    for (const point of entity.points) {
+      if (!isPointInBox(point)) return false;
+    }
+    return true;
+  }
+
+  for (const point of entity.points) {
+    if (isPointInBox(point)) return true;
+  }
+
+  const segments: Array<[{ x: number; y: number }, { x: number; y: number }]> = [];
+
+  if (entity.type === 'rect' && entity.points.length >= 2) {
+    const p1 = entity.points[0];
+    const p2 = entity.points[1];
+    const corners = [
+      { x: p1.x, y: p1.y },
+      { x: p2.x, y: p1.y },
+      { x: p2.x, y: p2.y },
+      { x: p1.x, y: p2.y }
+    ];
+    for (let i = 0; i < 4; i++) {
+      segments.push([corners[i], corners[(i + 1) % 4]]);
+    }
+  } else {
+    for (let i = 0; i < entity.points.length - 1; i++) {
+      segments.push([entity.points[i], entity.points[i + 1]]);
     }
   }
 
-  // Window mode: return true if we didn't find any point outside
-  // Crossing mode: return false if we didn't find any point inside
-  return !isCrossing;
+  for (const [a, b] of segments) {
+    if (segmentIntersectsBox(a, b)) return true;
+  }
+
+  return false;
 }
 
 /**
