@@ -45,6 +45,7 @@ interface HeaderProps {
   onExportProject?: () => void;
   onPartLibrary?: () => void;
   onImportDXF?: () => void;
+  onImportDWG?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -66,6 +67,7 @@ const Header: React.FC<HeaderProps> = ({
   onExportProject,
   onPartLibrary,
   onImportDXF,
+  onImportDWG,
   onUndo,
   onRedo,
   canUndo = false,
@@ -159,9 +161,15 @@ const Header: React.FC<HeaderProps> = ({
             />
             <ToolbarButton
               icon={<ImportDXFIcon className="w-full h-full text-cyan-400" />}
-              label={`Import\nDXF/DWG`}
+              label={`Import\nDXF`}
               color="text-cyan-400"
               onClick={onImportDXF}
+            />
+            <ToolbarButton
+              icon={<ImportDXFIcon className="w-full h-full text-sky-400" />}
+              label={`Import\nDWG`}
+              color="text-sky-400"
+              onClick={onImportDWG}
             />
             <ToolbarButton 
               icon={<SheetDatabaseIcon className="w-full h-full text-yellow-400" />}

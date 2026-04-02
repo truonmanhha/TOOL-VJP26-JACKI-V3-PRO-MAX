@@ -1,25 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Header from './NestingAX/Header';
-import Sidebar from './NestingAX/Sidebar';
-import Workspace from './NestingAX/Workspace';
-import Footer from './NestingAX/Footer';
-import ContextMenu from './NestingAX/ContextMenu';
-import RadialMenu from './NestingAX/RadialMenu';
-import PerformingNest from './NestingAX/PerformingNest';
-import LayerPanel from './NestingAX/LayerPanel';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { db, NestList, Part, Sheet, AppSettings, Layer, CadEntity } from './NestingAX/services/db';
 import { configFromSettings } from './NestingAX/services/nesting';
 import { SnapMode, ALL_SNAP_MODES } from './NestingAX/services/snapService';
 import { layerManager } from './NestingAX/services/layerManager';
 import { undoManager } from './NestingAX/services/undoManager';
-import { motion, AnimatePresence } from 'framer-motion';
+import { DxfService } from './NestingAX/services/dxfService';
+import Header from './NestingAX/Header';
+import Workspace from './NestingAX/Workspace';
+import Footer from './NestingAX/Footer';
+import ContextMenu from './NestingAX/ContextMenu';
+import RadialMenu from './NestingAX/RadialMenu';
+import PerformingNest from './NestingAX/PerformingNest';
+import SidebarPanels, { SidebarPanelTab } from './NestingAX/SidebarPanels';
+import { DimensionStyleOverrides } from './NestingAX/services/dimensionStyles';
+import { AXDrawingDocument, createEmptyAXDocument } from './NestingAX/services/axSceneModel';
+import { buildAXDocumentFromCadEntities } from './NestingAX/services/axImportAdapter';
+import { AXEngineDocument } from './NestingAX/engine/scene/types';
+import { buildAXEngineDocumentFromCadEntities } from './NestingAX/engine/import/buildDocument';
+import { axEngineDocumentToLegacyCad } from './NestingAX/engine/render/toLegacyCad';
+import { AXDocumentStore, buildAXDocumentStore } from './NestingAX/engine/database/documentStore';
+import { AXObjectGraph, buildAXObjectGraph } from './NestingAX/engine/objectGraph/relations';
+import { AXMigrationController, createAXMigrationController } from './NestingAX/engine/migration/controller';
+import { AXPerformanceRuntime, createAXPerformanceRuntime } from './NestingAX/engine/performance/runtime';
+import { getAXValidationSamples, runAXValidationSample } from './NestingAX/engine/validation';
+import { AX_KNOWN_DEGRADATIONS } from './NestingAX/engine/validation/knownDegradations';
+import { AXValidationRunResult } from './NestingAX/engine/validation/resultStore';
+import { AXValidationRunRegistry, createAXValidationRunRegistry } from './NestingAX/engine/validation/runRegistry';
 import FireworksHighTech from './FireworksHighTech';
 import WorkerManager from '@/services/WorkerManager';
 
 
 function NestingAXApp() {
+  const dxfService = React.useMemo(() => new DxfService(), []);
   const workspaceRef = React.useRef<HTMLDivElement>(null);
   const dxfImportHandlerRef = React.useRef<(() => void) | null>(null);
+  const dwgImportHandlerRef = React.useRef<(() => void) | null>(null);
   const exportHandlerRef = React.useRef<((format: 'dxf' | 'svg' | 'pdf') => void) | null>(null);
   const workerManagerRef = React.useRef<WorkerManager | null>(null);
   const currentNestingTaskRef = React.useRef<Promise<any> | null>(null);
@@ -32,6 +48,10 @@ function NestingAXApp() {
   const [wsShowCrosshair, setWsShowCrosshair] = useState(true);
   const [wsCrosshairSize, setWsCrosshairSize] = useState(100);
   const [wsShowDynInput, setWsShowDynInput] = useState(true);
+  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarPanelTab>('properties');
+  const [dimensionStyleOverrides, setDimensionStyleOverrides] = useState<DimensionStyleOverrides>({});
   
   // Command Input export states
   const [commandInput, setCommandInput] = useState('');
@@ -78,6 +98,14 @@ function NestingAXApp() {
 
   // Real-Time Selection Preview State (for PREVIEW 2)
   const [allCadEntities, setAllCadEntities] = useState<CadEntity[]>([]);
+  const [axDocument, setAxDocument] = useState<AXDrawingDocument>(() => createEmptyAXDocument('untitled'));
+  const [axEngineDocument, setAxEngineDocument] = useState<AXEngineDocument | null>(null);
+  const [axDocumentStore, setAxDocumentStore] = useState<AXDocumentStore | null>(null);
+  const [axObjectGraph, setAxObjectGraph] = useState<AXObjectGraph | null>(null);
+  const [axMigrationController] = useState<AXMigrationController>(() => createAXMigrationController());
+  const [axPerformanceRuntime] = useState<AXPerformanceRuntime>(() => createAXPerformanceRuntime());
+  const [validationRunRegistry, setValidationRunRegistry] = useState<AXValidationRunRegistry>(() => createAXValidationRunRegistry());
+  const [lastValidationRunAt, setLastValidationRunAt] = useState<string | null>(null);
 
   // UI State
   const [showModal, setShowModal] = useState(false);
@@ -131,6 +159,28 @@ function NestingAXApp() {
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [collapsedNestLists, setCollapsedNestLists] = useState<Record<string, boolean>>({});
+  const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set());
+  const [blockDefinitions, setBlockDefinitions] = useState<Array<{ id: string; name: string; entities: unknown[] }>>([]);
+  const [blockInstances] = useState<Array<{ id: string; blockId: string }>>([]);
+  const validationSamples = React.useMemo(() => getAXValidationSamples(), []);
+  const knownDegradations = React.useMemo(() => AX_KNOWN_DEGRADATIONS, []);
+  const xrefs = React.useMemo<Array<{ id: string; name?: string; path?: string }>>(() => {
+    const unsupportedDomainCount = axDocument?.diagnostics.unsupportedByDomain?.xref ?? 0;
+    const xrefDegradation = knownDegradations.find(item => item.domain === 'xref');
+    const sourceName = axDocument?.sourceFileName || axEngineDocument?.sourceFileName || 'current-drawing';
+
+    if (!xrefDegradation && unsupportedDomainCount === 0) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'ax-xref-runtime',
+        name: `${sourceName} runtime xref state`,
+        path: unsupportedDomainCount > 0 ? `unsupported-domain:xref:${unsupportedDomainCount}` : xrefDegradation?.issue,
+      },
+    ];
+  }, [axDocument, axEngineDocument, knownDegradations]);
 
   const handleToggleSnap = useCallback(() => {
     setSnapEnabled(prev => !prev);
@@ -154,9 +204,173 @@ function NestingAXApp() {
 
   // Handle selection change from Workspace (for Preview 2)
   const handleSelectionChange = useCallback((_selectedIds: Set<string>, allEntities: CadEntity[]) => {
-    void _selectedIds;
+    setSelectedEntityIds(new Set(_selectedIds));
     setAllCadEntities(allEntities);
   }, []);
+
+  const selectedCadEntities = allCadEntities.filter(entity => selectedEntityIds.has(entity.id));
+
+  useEffect(() => {
+    if (!axEngineDocument) {
+      setAxDocument(buildAXDocumentFromCadEntities(allCadEntities, 'nesting-ax-live-scene'));
+      setAxEngineDocument(buildAXEngineDocumentFromCadEntities(allCadEntities, 'nesting-ax-live-scene'));
+      return;
+    }
+
+    setAxDocumentStore(buildAXDocumentStore(axEngineDocument));
+    setAxObjectGraph(buildAXObjectGraph(axEngineDocument));
+
+    const legacyEntities = axEngineDocumentToLegacyCad(axEngineDocument);
+    setAllCadEntities(legacyEntities);
+    setAxDocument(buildAXDocumentFromCadEntities(legacyEntities, axEngineDocument.sourceFileName || 'nesting-ax-live-scene'));
+  }, [axEngineDocument]);
+
+  const handleLayerAdd = useCallback((name: string, color: string) => {
+    layerManager.addLayer(name || `Layer ${layers.length + 1}`, color);
+    setLayers([...layerManager.getLayers()]);
+    setActiveLayerId(layerManager.getActiveLayerId());
+  }, [layers.length]);
+
+  const handleLayerRename = useCallback((id: string, name: string) => {
+    layerManager.renameLayer(id, name);
+    setLayers([...layerManager.getLayers()]);
+    setActiveLayerId(layerManager.getActiveLayerId());
+  }, []);
+
+  const handleLayerColor = useCallback((id: string, color: string) => {
+    layerManager.setColor(id, color);
+    setLayers([...layerManager.getLayers()]);
+    setActiveLayerId(layerManager.getActiveLayerId());
+  }, []);
+
+  const handleLayerVisibility = useCallback((id: string) => {
+    layerManager.toggleVisible(id);
+    setLayers([...layerManager.getLayers()]);
+    setActiveLayerId(layerManager.getActiveLayerId());
+  }, []);
+
+  const handleLayerLock = useCallback((id: string) => {
+    layerManager.toggleLocked(id);
+    setLayers([...layerManager.getLayers()]);
+    setActiveLayerId(layerManager.getActiveLayerId());
+  }, []);
+
+  const handleLayerActive = useCallback((id: string) => {
+    layerManager.setActiveLayer(id);
+    setLayers([...layerManager.getLayers()]);
+    setActiveLayerId(layerManager.getActiveLayerId());
+  }, []);
+
+  const handleEntityLayerAssign = useCallback((entityIds: string[], layerId: string) => {
+    setAllCadEntities(prev => prev.map(entity => entityIds.includes(entity.id) ? { ...entity, layerId } : entity));
+  }, []);
+
+  const handleUpdateSelectedProperties = useCallback((updates: Record<string, unknown>) => {
+    setAllCadEntities(prev => prev.map(entity => selectedEntityIds.has(entity.id)
+      ? { ...entity, properties: { ...(entity.properties || {}), ...updates } }
+      : entity));
+  }, [selectedEntityIds]);
+
+  const handleUpdateDimensionStyle = useCallback((styleName: string, updates: Record<string, unknown>) => {
+    setDimensionStyleOverrides(prev => ({
+      ...prev,
+      [styleName]: {
+        ...(prev[styleName] || {}),
+        ...updates,
+      },
+    }));
+  }, []);
+
+  const handleAddBlock = useCallback((name: string) => {
+    if (!name.trim()) return;
+    setBlockDefinitions(prev => [...prev, { id: crypto.randomUUID(), name: name.trim(), entities: [] }]);
+  }, []);
+
+  const runValidationSnapshot = useCallback(() => {
+    const documentDiagnostics = axDocument?.diagnostics;
+    const unsupportedByDomain = documentDiagnostics?.unsupportedByDomain || {};
+    const degradedBySubtype = documentDiagnostics?.degradedBySubtype || {};
+    const warnings = documentDiagnostics?.warnings || [];
+    const blockCount = axDocumentStore?.blocks.allNames.length ?? 0;
+    const insertRelations = axObjectGraph?.insertRelations ?? [];
+    const annotationRelations = axObjectGraph?.annotationRelations ?? [];
+    const entityKinds = new Set(axEngineDocument?.entities.map(entity => entity.kind) || []);
+
+    const hasTextDegradation = Boolean(unsupportedByDomain.text) || Object.keys(degradedBySubtype).some(key => key.startsWith('MTEXT') || key.startsWith('ATTRIB') || key.includes('TEXTSTYLE'));
+    const hasBlockDegradation = Boolean(unsupportedByDomain.block) || Object.keys(degradedBySubtype).some(key => key.includes('INSERT'));
+    const hasHatchDegradation = Boolean(unsupportedByDomain.hatch) || Object.keys(degradedBySubtype).some(key => key.includes('HATCH'));
+    const hasCurveDegradation = Object.keys(degradedBySubtype).some(key => key.includes('SPLINE') || key.includes('ELLIPSE') || key.includes('BULGE') || key.includes('ARC'));
+    const hasStyleDegradation = warnings.some(warning => warning.toLowerCase().includes('style') || warning.toLowerCase().includes('lineweight') || warning.toLowerCase().includes('linetype'));
+
+    const runs: AXValidationRunResult[] = validationSamples.map(sample => {
+      const answers: Partial<Record<string, boolean>> = {};
+      const notes: Partial<Record<string, string>> = {};
+
+      for (const check of sample.requiredChecks) {
+        const lower = check.toLowerCase();
+        let passed = false;
+        let note = '';
+
+        if (sample.domain === 'dim') {
+          if (lower.includes('entity imported')) passed = entityKinds.has('dimension');
+          else if (lower.includes('text shown')) passed = annotationRelations.some(relation => relation.styleName !== undefined);
+          else if (lower.includes('dimstyle applied')) passed = annotationRelations.some(relation => Boolean(relation.styleName));
+          else if (lower.includes('diagnostics clear')) passed = !warnings.some(warning => warning.toLowerCase().includes('dim'));
+        } else if (sample.domain === 'text') {
+          if (lower.includes('text imported')) passed = entityKinds.has('text');
+          else if (lower.includes('mtext flagged')) passed = Object.keys(degradedBySubtype).some(key => key.includes('MTEXT')) || (axEngineDocument?.entities.some(entity => entity.kind === 'text' && Boolean(entity.metadata?.isMText)) ?? false);
+          else if (lower.includes('attachment preserved')) passed = axEngineDocument?.entities.some(entity => entity.kind === 'text' && typeof entity.attachment === 'number') ?? false;
+          else if (lower.includes('style visible')) passed = annotationRelations.some(relation => Boolean(relation.textStyle));
+        } else if (sample.domain === 'block') {
+          if (lower.includes('insert imported')) passed = entityKinds.has('insert');
+          else if (lower.includes('block registry populated')) passed = blockCount > 0;
+          else if (lower.includes('nested insert counted')) passed = insertRelations.some(relation => (relation.nestedInsertCount ?? 0) > 0);
+          else if (lower.includes('canvas shows inserts')) passed = insertRelations.length > 0;
+        } else if (sample.domain === 'hatch') {
+          if (lower.includes('hatch imported')) passed = entityKinds.has('hatch');
+          else if (lower.includes('loops preserved')) passed = axEngineDocument?.entities.some(entity => entity.kind === 'hatch' && entity.loops.length > 0) ?? false;
+          else if (lower.includes('pattern rendered')) passed = axEngineDocument?.entities.some(entity => entity.kind === 'hatch' && Boolean(entity.pattern)) ?? false;
+          else if (lower.includes('diagnostics clear')) passed = !hasHatchDegradation;
+        } else if (sample.domain === 'style') {
+          if (lower.includes('layer color respected')) passed = axDocument?.layers.some(layer => Boolean(layer.color)) ?? false;
+          else if (lower.includes('by-block fallback respected')) passed = axEngineDocument?.entities.some(entity => Boolean(entity.style.byBlockColor)) ?? false;
+          else if (lower.includes('linetype visible')) passed = axEngineDocument?.entities.some(entity => Boolean(entity.style.lineType)) ?? false;
+          else if (lower.includes('lineweight visible')) passed = axEngineDocument?.entities.some(entity => typeof entity.style.lineWeight === 'number') ?? false;
+        } else if (sample.domain === 'curves') {
+          if (lower.includes('arc shown')) passed = entityKinds.has('arc');
+          else if (lower.includes('bulge shown as curve')) passed = axEngineDocument?.entities.some(entity => entity.kind === 'polyline' && Array.isArray(entity.bulges) && entity.bulges.some(value => value !== 0)) ?? false;
+          else if (lower.includes('ellipse shown')) passed = entityKinds.has('ellipse');
+          else if (lower.includes('spline imported')) passed = entityKinds.has('spline');
+        } else if (sample.domain === 'leader') {
+          if (lower.includes('leader imported')) passed = entityKinds.has('leader');
+          else if (lower.includes('leader text preserved')) passed = axEngineDocument?.entities.some(entity => entity.kind === 'leader' && Boolean(entity.text)) ?? false;
+          else if (lower.includes('leader displayed')) passed = entityKinds.has('leader');
+        } else if (sample.domain === 'unsupportedVisual') {
+          if (lower.includes('unsupported visual placeholder created')) passed = entityKinds.has('unsupportedVisual');
+          else if (lower.includes('diagnostics report subtype')) passed = Object.keys(degradedBySubtype).length > 0 || Object.keys(axDocumentStore?.diagnostics.unsupportedTypes || {}).length > 0;
+        }
+
+        if (lower.includes('diagnostics emitted if degraded')) {
+          if (sample.domain === 'text') passed = hasTextDegradation ? Object.keys(degradedBySubtype).length > 0 || warnings.length > 0 : true;
+          else if (sample.domain === 'block') passed = hasBlockDegradation ? Object.keys(degradedBySubtype).length > 0 || warnings.length > 0 : true;
+          else if (sample.domain === 'hatch') passed = hasHatchDegradation ? Object.keys(degradedBySubtype).length > 0 || warnings.length > 0 : true;
+          else if (sample.domain === 'style') passed = hasStyleDegradation ? warnings.length > 0 : true;
+          else if (sample.domain === 'curves') passed = hasCurveDegradation ? Object.keys(degradedBySubtype).length > 0 || warnings.length > 0 : true;
+        }
+
+        answers[check] = passed;
+        if (!passed) {
+          note = `No runtime evidence for: ${check}`;
+          notes[check] = note;
+        }
+      }
+
+      return runAXValidationSample(sample, answers, notes);
+    });
+
+    setValidationRunRegistry(createAXValidationRunRegistry(runs));
+    setLastValidationRunAt(new Date().toISOString());
+  }, [axDocument, axDocumentStore, axEngineDocument, axObjectGraph, validationSamples]);
 
   const handleLayerChange = useCallback(() => {
     setLayers([...layerManager.getLayers()]);
@@ -304,6 +518,10 @@ function NestingAXApp() {
       alert("Please create or select a Nest List first.");
     }
   };
+
+  const handleDWGImportFile = useCallback(() => {
+    dwgImportHandlerRef.current?.();
+  }, []);
 
   // --- 1.1.1 -> 1.1.5 NESTING WORKFLOW ---
   // --- 1.1.1 -> 1.1.5 NESTING WORKFLOW ---
@@ -800,6 +1018,7 @@ function NestingAXApp() {
         onFullScreen={handleFullScreen}
         isManualNesting={isManualNesting}
         onImportDXF={handleDXFImportFile}
+        onImportDWG={handleDWGImportFile}
         onUndo={() => undoManager.undo()}
         onRedo={() => undoManager.redo()}
         canUndo={undoManager.canUndo()}
@@ -810,42 +1029,39 @@ function NestingAXApp() {
         onOptimizeEntities={() => setActiveDrawTool('lag_reduce')}
       />
       <div className="flex flex-1 overflow-hidden relative gap-0 min-h-0" ref={workspaceRef}>
-        <motion.div
-          className="h-full shrink-0 overflow-hidden"
-          animate={{ width: isSidebarCollapsed ? 56 : 256 }}
-          transition={{ type: 'spring', stiffness: 120, damping: 20, mass: 1 }}
-        >
-          <Sidebar 
-            nestLists={nestLists} 
-            activeListId={activeListId}
-            onSelectNestList={handleSelectList}
-            parts={currentParts} 
-            onContextMenu={handleContextMenu}
-            onPartContextMenu={handlePartContextMenu}
-            onSelectPart={handleSelectPart}
-            activePartId={activePartId}
-            nestingMethod={nestingMethod}
-            onUpdatePart={handleUpdatePart}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-            collapsedNestLists={collapsedNestLists}
-            onToggleNestListCollapse={(listId) => {
-              setCollapsedNestLists(prev => ({ ...prev, [listId]: !(prev[listId] ?? false) }));
-            }}
-          />
-        </motion.div>
-
-        {showLayerPanel && (
-          <div className={`absolute ${isSidebarCollapsed ? 'left-16' : 'left-72'} top-16 z-50`}>
-            <LayerPanel 
-              layers={layers}
-              activeLayerId={activeLayerId}
-              onLayerChange={handleLayerChange}
-              entities={[]}
-              onEntitiesUpdate={() => {}}
-            />
-          </div>
-        )}
+        <SidebarPanels
+          isOpen={isSidebarOpen}
+          onToggleOpen={() => setIsSidebarOpen(prev => !prev)}
+          activeTab={activeSidebarTab}
+          onTabChange={setActiveSidebarTab}
+          allEntities={allCadEntities}
+          selectedEntities={selectedCadEntities}
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onLayerAdd={handleLayerAdd}
+          onLayerRename={handleLayerRename}
+          onLayerColor={handleLayerColor}
+          onLayerVisibility={handleLayerVisibility}
+          onLayerLock={handleLayerLock}
+          onLayerActive={handleLayerActive}
+          onEntityLayerAssign={handleEntityLayerAssign}
+          onUpdateSelectedProperties={handleUpdateSelectedProperties}
+          dimensionStyleOverrides={dimensionStyleOverrides}
+          onUpdateDimensionStyle={handleUpdateDimensionStyle}
+          blockDefinitions={blockDefinitions}
+          blockInstances={blockInstances}
+          xrefs={xrefs}
+          onAddBlock={handleAddBlock}
+          axDocumentStore={axDocumentStore}
+          axObjectGraph={axObjectGraph}
+          axMigrationController={axMigrationController}
+          axPerformanceRuntime={axPerformanceRuntime}
+          validationSamples={validationSamples}
+          knownDegradations={knownDegradations}
+          validationRunRegistry={validationRunRegistry}
+          lastValidationRunAt={lastValidationRunAt}
+          onRunValidationSnapshot={runValidationSnapshot}
+        />
         <Workspace
           onMouseMove={handleMouseMove} 
           showModal={showModal} 
@@ -854,9 +1070,6 @@ function NestingAXApp() {
           showSettingsModal={showSettingsModal}
           onOpenSettings={() => setShowSettingsModal(true)}
           onCloseSettings={() => { setShowSettingsModal(false); setNestingMethod(db.getSettings().nestingMethod); }}
-          showOptionsModal={showOptionsModal}
-          onOpenOptions={() => setShowOptionsModal(true)}
-          onCloseOptions={() => setShowOptionsModal(false)}
           onContextMenu={handleWorkspaceContextMenu}
           
           // Nesting Trigger
@@ -902,12 +1115,18 @@ function NestingAXApp() {
           onToggleOrtho={handleToggleOrtho}
           onSelectionChange={handleSelectionChange}
           onOptimizeEntities={handleOptimizeEntities}
+          axDocument={axDocument}
+          axEngineDocument={axEngineDocument}
+          onAxDocumentImported={setAxDocument}
+          axMigrationController={axMigrationController}
+          axPerformanceRuntime={axPerformanceRuntime}
 
           // Layer System
           layers={layers}
           activeLayerId={activeLayerId}
           onLayerChange={handleLayerChange}
           onStoreDXFHandler={(handler) => { dxfImportHandlerRef.current = handler; }}
+          onStoreDWGHandler={(handler) => { dwgImportHandlerRef.current = handler; }}
           onStoreExportHandler={(handler) => { exportHandlerRef.current = handler; }}
           onMouseWorldPos={handleMouseWorldPos}
 
@@ -918,10 +1137,6 @@ function NestingAXApp() {
           onDynInputChange={setWsShowDynInput}
           onSetCrosshairSize={(fn) => { setCrosshairSizeRef.current = fn; }}
           
-          // Command Input Sync
-          onCommandInputChange={setCommandInput}
-          onSetCommandInput={(fn) => { setCommandInputRef.current = fn; }}
-          onCommandInputKeyDown={(fn) => { commandInputKeyDownRef.current = fn; }}
         />
         
         {contextMenu && (
@@ -1071,7 +1286,7 @@ function NestingAXApp() {
           setCrosshairSizeRef.current?.(size);
         }}
         onCloseAllOverlays={handleCloseOverlays}
-        selectionCount={allCadEntities.filter(e => e.selected).length}
+        selectionCount={selectedEntityIds.size}
       />
     </div>
   );

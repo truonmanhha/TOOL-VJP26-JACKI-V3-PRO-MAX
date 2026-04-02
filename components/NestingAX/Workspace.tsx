@@ -7,6 +7,18 @@ import VectorPreview, { cadEntitiesToGeometry } from '../nesting/NewNestList/Vec
 import { SnapMode, SnapResult, findBestSnap, applyOrthoConstraint, SNAP_INDICATOR_COLORS, SNAP_INDICATOR_LABELS, ALL_SNAP_MODES } from './services/snapService';
 import { undoManager, UndoAction } from './services/undoManager';
 import { dxfService } from './services/dxfService';
+import { AXDrawingDocument } from './services/axSceneModel';
+import { axDocumentToCadEntities } from './services/axRenderAdapter';
+import { AXEngineDocument } from './engine/scene/types';
+import { AXMigrationController } from './engine/migration/controller';
+import { AXPerformanceRuntime } from './engine/performance/runtime';
+import { axEngineDocumentToLegacyCad } from './engine/render/toLegacyCad';
+import { renderDimensionEntity, renderInsertEntity, renderHatchEntity, renderTextEntity, renderEllipseEntity, renderSplineEntity, renderLeaderEntity, renderPolygonEntity, renderSlotEntity, renderObroundEntity, renderArcEntity, renderPolylineEntity, renderCircleEntity, renderLineEntity, renderRectEntity } from './engine/render/displayEngine';
+import { filterCadEntitiesForViewport } from './services/axViewportUtils';
+import { getCadAnnotationScale, getCadDimensionText } from './services/axAnnotationUtils';
+import { getCadStrokeColor, getCadStrokeDasharray, getCadStrokeWidth } from './services/axLineStyleUtils';
+import { buildBulgedPolylinePath } from './services/axBulgeUtils';
+import { preprocessImportedEntities } from './engine/import/preprocessImport';
 import { motion, AnimatePresence } from 'framer-motion';
 import LayerPanel from './LayerPanel';
 import { FireworksOverlay } from './FireworksOverlay';
@@ -21,6 +33,7 @@ interface WorkspaceProps {
   onCloseSettings?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   onStoreDXFHandler?: (handler: () => void) => void;
+  onStoreDWGHandler?: (handler: () => void) => void;
   onStoreDXFAsPartHandler?: (handler: () => void) => void;
   onStoreExportHandler?: (handler: (format: 'dxf' | 'svg' | 'pdf') => void) => void;
   
@@ -86,6 +99,11 @@ interface WorkspaceProps {
   onSelectionChange?: (selectedIds: Set<string>, allEntities: CadEntity[]) => void;
   onOptimizeEntities?: (entityIds: Set<string>) => void;
   activePartId?: string | null;
+  axDocument?: AXDrawingDocument;
+  axEngineDocument?: AXEngineDocument | null;
+  onAxDocumentImported?: (document: AXDrawingDocument) => void;
+  axMigrationController?: AXMigrationController;
+  axPerformanceRuntime?: AXPerformanceRuntime;
 }
 
 // REMOVE duplicate CadEntity if exists and use import
@@ -106,6 +124,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   onCloseSettings,
   onContextMenu,
   onStoreDXFHandler,
+  onStoreDWGHandler,
   onStoreDXFAsPartHandler,
   onStoreExportHandler,
   onStartNesting,
@@ -153,6 +172,11 @@ const Workspace: React.FC<WorkspaceProps> = ({
   onSelectionChange,
   onOptimizeEntities,
   activePartId,
+  axDocument,
+  axEngineDocument,
+  onAxDocumentImported,
+  axMigrationController,
+  axPerformanceRuntime,
 
   // Layer System
   layers = [],
@@ -163,6 +187,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dxfImportRef = useRef<HTMLInputElement>(null);
+  const dwgImportRef = useRef<HTMLInputElement>(null);
   const dxfAsPartImportRef = useRef<HTMLInputElement>(null);
   
   // Snap State (current active snap point for rendering)
@@ -349,6 +374,40 @@ const Workspace: React.FC<WorkspaceProps> = ({
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importStatusText, setImportStatusText] = useState('');
+
+  const formatAXImportDiagnostics = useCallback((document: AXDrawingDocument) => {
+    const { diagnostics } = document;
+    const unsupportedSummary = Object.entries(diagnostics.unsupportedTypes)
+      .map(([type, count]) => `${type}:${count}`)
+      .join(', ');
+    const unsupportedDomainSummary = Object.entries(diagnostics.unsupportedByDomain || {})
+      .map(([type, count]) => `${type}:${count}`)
+      .join(', ');
+    const degradedSubtypeSummary = Object.entries(diagnostics.degradedBySubtype || {})
+      .map(([type, count]) => `${type}:${count}`)
+      .join(', ');
+
+    const warningSummary = diagnostics.warnings.slice(0, 2).join(' | ');
+    const parts: string[] = [];
+
+    if (diagnostics.skippedCount > 0) {
+      parts.push(`skipped ${diagnostics.skippedCount}`);
+    }
+    if (unsupportedSummary) {
+      parts.push(`unsupported ${unsupportedSummary}`);
+    }
+    if (unsupportedDomainSummary) {
+      parts.push(`domains ${unsupportedDomainSummary}`);
+    }
+    if (degradedSubtypeSummary) {
+      parts.push(`degraded ${degradedSubtypeSummary}`);
+    }
+    if (warningSummary) {
+      parts.push(warningSummary);
+    }
+
+    return parts.length > 0 ? ` — ${parts.join(' · ')}` : '';
+  }, []);
 
 
   const getVisibleEntities = useCallback((): CadEntity[] => {
@@ -706,6 +765,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     }
   }, [onStoreDXFHandler]);
 
+  useEffect(() => {
+    if (onStoreDWGHandler) {
+      onStoreDWGHandler(() => handleDWGImportFile());
+    }
+  }, [onStoreDWGHandler]);
+
   // Register DXF→Part import handler with parent component
   useEffect(() => {
     if (onStoreDXFAsPartHandler) {
@@ -741,6 +806,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     dxfImportRef.current?.click();
   };
 
+  const handleDWGImportFile = () => {
+    dwgImportRef.current?.click();
+  };
+
   const handleDXFFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -768,14 +837,18 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         return;
       }
 
+       const preprocessed = preprocessImportedEntities(result.entities, result.fileName);
+
+      onAxDocumentImported?.(result.document);
+
       setCadEntitiesWithUndo(
-        prev => [...prev, ...result.entities],
+        prev => [...prev, ...preprocessed.legacyEntities],
         `Import ${result.fileType.toUpperCase()} file: ${result.fileName}`,
         'draw',
-        result.entities.map(e => e.id)
+        preprocessed.legacyEntities.map(e => e.id)
       );
       
-      showToast(`✅ Imported ${result.entities.length} entities from ${result.fileName}`);
+      showToast(`✅ Imported ${result.entities.length} entities from ${result.fileName}${formatAXImportDiagnostics(result.document)}`, 6500);
     } catch (err) {
       showToast(`❌ Import error: ${err instanceof Error ? err.message : 'Unknown'}`, 5000);
     } finally {
@@ -809,6 +882,8 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         if (dxfAsPartImportRef.current) dxfAsPartImportRef.current.value = '';
         return;
       }
+
+      onAxDocumentImported?.(result.document);
 
       // Compute bounding box across all entity points + circle/arc radii
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -865,7 +940,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       setDxfImportedGeometry(normalizedEntities); // Store for Part Modal preview
       setIsDxfPreFilled(true); // Flag to prevent useEffect from overwriting pre-filled data
 
-      showToast(`📐 ${result.entities.length} entities loaded: ${Math.round(width)}×${Math.round(height)}mm`, 3000);
+      showToast(`📐 ${result.entities.length} entities loaded: ${Math.round(width)}×${Math.round(height)}mm${formatAXImportDiagnostics(result.document)}`, 6500);
 
       // Open Part Params modal directly (no canvas selection needed)
       // Use a tiny delay so state updates are applied before modal opens
@@ -3081,6 +3156,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         try {
           const result = await dxfService.parseImportFile(file, activeLayerId);
           if (result.entities.length > 0) {
+            onAxDocumentImported?.(result.document);
             const importedEntities = result.entities;
             const entityIds = importedEntities.map(e => e.id);
             setCadEntitiesWithUndo(
@@ -3405,17 +3481,65 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   const gridOffsetX = -(viewOffset.x % gridSizeUnits) * pixelsPerUnit;
   const gridOffsetY = (viewOffset.y % gridSizeUnits) * pixelsPerUnit;
 
+  const toCadAnnotationScale = useCallback((worldHeight?: number) => {
+    return getCadAnnotationScale(pixelsPerUnit, worldHeight);
+  }, [pixelsPerUnit]);
+
+  const renderSourceCacheRef = useRef<{
+    engineDoc: AXEngineDocument | null;
+    legacyCompatibility: boolean;
+    cached: CadEntity[];
+  } | null>(null);
+
+  const viewportFilterCacheRef = useRef<{
+    key: string;
+    entities: CadEntity[];
+  } | null>(null);
+
+  const renderSourceEntities = React.useMemo(() => {
+    const useEngineRender = axMigrationController?.useEngineRender ?? true;
+    const useLegacyCompatibility = axMigrationController?.useLegacyCompatibility ?? true;
+
+    if (useEngineRender && axEngineDocument && axEngineDocument.entities.length > 0) {
+      if (useLegacyCompatibility) {
+        const cached = renderSourceCacheRef.current;
+        if (cached && cached.engineDoc === axEngineDocument && cached.legacyCompatibility === useLegacyCompatibility) {
+          return cached.cached;
+        }
+
+        const converted = axEngineDocumentToLegacyCad(axEngineDocument);
+        renderSourceCacheRef.current = {
+          engineDoc: axEngineDocument,
+          legacyCompatibility: useLegacyCompatibility,
+          cached: converted,
+        };
+        return converted;
+      }
+
+      return cadEntities;
+    }
+
+    if (axDocument && axDocument.entities.length > 0) {
+      return axDocumentToCadEntities(axDocument);
+    }
+
+    return cadEntities;
+  }, [axDocument, axEngineDocument, axMigrationController?.useEngineRender, axMigrationController?.useLegacyCompatibility, cadEntities]);
+
   // --- Render CAD Entities (Drawn Geometry) ---
   // Memoize visible entities with viewport culling for large datasets
   const visibleCadEntities = React.useMemo(() => {
     // First filter by layer visibility
-    const layerVisible = cadEntities.filter(entity => {
+    const layerVisible = renderSourceEntities.filter(entity => {
       const layer = layers.find(l => l.id === entity.layerId);
       return !layer || layer.visible;
     });
 
-    // Viewport culling only for large datasets (200+ entities)
-    if (layerVisible.length < 200 || !containerRef.current) return layerVisible;
+    const cullingThreshold = axPerformanceRuntime?.spatialIndexEnabled ? 100 : 200;
+    const canCull = layerVisible.length >= cullingThreshold
+      && Boolean(containerRef.current)
+      && ((axPerformanceRuntime?.dirtyRedrawEnabled ?? false) || (axPerformanceRuntime?.spatialIndexEnabled ?? false));
+    if (!canCull || !containerRef.current) return layerVisible;
 
     const cw = containerRef.current.clientWidth;
     const ch = containerRef.current.clientHeight;
@@ -3425,25 +3549,37 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     const vpBottom = viewOffset.y - (ch / pixelsPerUnit);
     const margin = 50 / pixelsPerUnit; // 50px margin for partially visible entities
 
-    return layerVisible.filter(ent => {
-      // Quick bounding box check
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (const p of ent.points) {
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-      }
-      // For circles, expand bounds by radius
-      if (ent.type === 'circle' && ent.properties?.radius) {
-        const r = ent.properties.radius;
-        minX -= r; maxX += r; minY -= r; maxY += r;
-      }
-      // Check intersection with viewport (with margin)
-      return maxX >= (vpLeft - margin) && minX <= (vpRight + margin) &&
-             maxY >= (vpBottom - margin) && minY <= (vpTop + margin);
+    const cacheKey = [
+      layerVisible.length,
+      vpLeft.toFixed(2),
+      vpRight.toFixed(2),
+      vpTop.toFixed(2),
+      vpBottom.toFixed(2),
+      margin.toFixed(2),
+      pixelsPerUnit.toFixed(3),
+    ].join('|');
+
+    if (axPerformanceRuntime?.renderCacheEnabled && viewportFilterCacheRef.current?.key === cacheKey) {
+      return viewportFilterCacheRef.current.entities;
+    }
+
+    const filtered = filterCadEntitiesForViewport(layerVisible, {
+      left: vpLeft,
+      right: vpRight,
+      top: vpTop,
+      bottom: vpBottom,
+      margin,
     });
-  }, [cadEntities, layers, viewOffset, pixelsPerUnit]);
+
+    if (axPerformanceRuntime?.renderCacheEnabled) {
+      viewportFilterCacheRef.current = {
+        key: cacheKey,
+        entities: filtered,
+      };
+    }
+
+    return filtered;
+  }, [axPerformanceRuntime?.dirtyRedrawEnabled, axPerformanceRuntime?.renderCacheEnabled, axPerformanceRuntime?.spatialIndexEnabled, renderSourceEntities, layers, viewOffset, pixelsPerUnit]);
 
 
    
@@ -3459,25 +3595,31 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
     
-    // Set styles
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.9;
-    
-    // Begin path
-    ctx.beginPath();
-    
     // Only draw unselected, non-active basic geometry (SVG handles the rest for interactions)
-    const useCanvas = cadEntities.length > 300; // Trigger threshold
+    const useCanvas = renderSourceEntities.length > 300; // Trigger threshold
     
     if (useCanvas) {
       const activePart = parts.find(p => p.id === activePartId);
       
       for (const ent of visibleCadEntities) {
+        const layer = layers.find(l => l.id === ent.layerId);
         const isSelected = selectedEntities.has(ent.id);
         const isPartActive = activePart?.cadEntities?.some((ce: any) => ce.id === ent.id || ce.properties?.originalId === ent.id);
         
         if (isSelected || isPartActive) continue; // Let SVG draw highlights
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = getCadStrokeColor(ent, false, false, layer?.color);
+        ctx.lineWidth = getCadStrokeWidth(ent, false, false);
+        ctx.globalAlpha = 0.9;
+
+        const dash = getCadStrokeDasharray(ent);
+        if (dash) {
+          ctx.setLineDash(dash.split(' ').map(value => Number(value)).filter(value => Number.isFinite(value)));
+        } else {
+          ctx.setLineDash([]);
+        }
         
         if (ent.type === 'line' && ent.points.length >= 2) {
           const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
@@ -3487,10 +3629,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         }
         else if (ent.type === 'polyline' && ent.points.length > 1) {
           const isClosed = ent.properties?.closed;
-          let pts = ent.points;
-          if (!isClosed && pts.length === 4) {
-             pts = [...pts, pts[0]]; // auto-close rectangle fix
-          }
+          const pts = ent.points;
           const p0 = worldToScreen(pts[0].x, pts[0].y);
           ctx.moveTo(p0.x, p0.y);
           for (let i = 1; i < pts.length; i++) {
@@ -3513,14 +3652,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         else if (ent.type === 'circle') {
           const center = worldToScreen(ent.points[0].x, ent.points[0].y);
           const radius = (ent.properties?.radius || 0) * pixelsPerUnit;
-          // We must stroke immediately for circles as they interrupt current path in some ways
           ctx.moveTo(center.x + radius, center.y);
           ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
         }
+
+        ctx.stroke();
+        ctx.restore();
       }
-      
-      // Draw everything
-      ctx.stroke();
     }
   }, [visibleCadEntities, selectedEntities, activePartId, parts, viewOffset, pixelsPerUnit, width, height]);
 
@@ -3541,494 +3679,175 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                 // NEW: Highlight if part is active in Sidebar
                 const activePart = parts.find(p => p.id === activePartId);
                 const isPartActive = activePart?.cadEntities?.some((ce: any) => ce.id === ent.id || ce.properties?.originalId === ent.id);
+                const layer = layers.find(l => l.id === ent.layerId);
                 
-                const strokeColor = isPartActive ? "#22d3ee" : (isSelected ? "#00ff00" : "white");
-                const strokeWidth = isPartActive ? "4" : (isSelected ? "2" : "1");
+                const strokeColor = getCadStrokeColor(ent, isSelected, Boolean(isPartActive), layer?.color);
+                const strokeWidth = String(getCadStrokeWidth(ent, isSelected, Boolean(isPartActive)));
+                const strokeDasharray = getCadStrokeDasharray(ent);
                 const opacity = (isPartActive || isSelected) ? "1" : "0.9";
                 const filter = isPartActive ? "url(#glow)" : "none";
                 const className = isPartActive ? "animate-pulse" : "";
                 
                 
-                const useCanvas = cadEntities.length > 300;
+                const useCanvas = renderSourceEntities.length > 300;
                 const isBasicGeometry = ['line', 'polyline', 'rect', 'circle'].includes(ent.type);
                 if (useCanvas && isBasicGeometry && !isSelected && !isPartActive) {
                     return null; // Canvas 2D draws this!
                 }
                 
                 if (ent.type === 'line') {
-                    const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
-                    return (
-                      <g key={ent.id}>
-                        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={p1.x} cy={p1.y} r="4" fill="#00ff00" />
-                            <circle cx={p2.x} cy={p2.y} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderLineEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      strokeDasharray,
+                      worldToScreen,
+                    });
                 }
                 if (ent.type === 'rect') {
-                    const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
-                    const x = Math.min(p1.x, p2.x);
-                    const y = Math.min(p1.y, p2.y);
-                    const w = Math.abs(p2.x - p1.x);
-                    const h = Math.abs(p2.y - p1.y);
-                    return (
-                      <g key={ent.id}>
-                        <rect x={x} y={y} width={w} height={h} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={p1.x} cy={p1.y} r="4" fill="#00ff00" />
-                            <circle cx={p2.x} cy={p2.y} r="4" fill="#00ff00" />
-                            <circle cx={p1.x} cy={p2.y} r="4" fill="#00ff00" />
-                            <circle cx={p2.x} cy={p1.y} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderRectEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      strokeDasharray,
+                      worldToScreen,
+                    });
                 }
                 if (ent.type === 'circle') {
-                    const center = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const radius = (ent.properties?.radius || 0) * pixelsPerUnit;
-                    return (
-                      <g key={ent.id}>
-                        <circle cx={center.x} cy={center.y} r={radius} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={center.x} cy={center.y} r="4" fill="#00ff00" />
-                            <circle cx={center.x} cy={center.y - radius} r="4" fill="#00ff00" />
-                            <circle cx={center.x} cy={center.y + radius} r="4" fill="#00ff00" />
-                            <circle cx={center.x - radius} cy={center.y} r="4" fill="#00ff00" />
-                            <circle cx={center.x + radius} cy={center.y} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderCircleEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      strokeDasharray,
+                      worldToScreen,
+                      pixelsPerUnit,
+                    });
                 }
-                if (ent.type === 'polyline' || ent.type === 'spline') {
-                    // Check if closed flag is true
-                    const isClosed = ent.properties?.closed === true;
-                    
-                    // Fix: Auto-close 4-point rectangles even if marked unclosed
-                    // (Common DXF import issue where rectangle has closed=false)
-                    let pointsToRender = ent.points;
-                    if (!isClosed && pointsToRender.length === 4) {
-                      // Append first point to close the rectangle
-                      pointsToRender = [...pointsToRender, pointsToRender[0]];
-                    }
-                    
-                    const pointsStr = pointsToRender.map(p => {
-                        const s = worldToScreen(p.x, p.y);
-                        return `${s.x},${s.y}`;
-                    }).join(' ');
-                    
-                    return (
-                      <g key={ent.id}>
-                        {isClosed
-                          ? <polygon points={pointsStr} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                          : <polyline points={pointsStr} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        }
-                        {isSelected && ent.points.map((pt, idx) => {
-                          const s = worldToScreen(pt.x, pt.y);
-                          return <circle key={idx} cx={s.x} cy={s.y} r="4" fill="#00ff00" />;
-                        })}
-                      </g>
-                    );
+                if (ent.type === 'spline') {
+                    return renderSplineEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      strokeDasharray,
+                      worldToScreen,
+                    });
+                }
+                if (ent.type === 'polyline') {
+                    return renderPolylineEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      strokeDasharray,
+                      worldToScreen,
+                    });
                 }
                 if (ent.type === 'arc') {
-                    // 3-point arc render using SVG arc
-                    const props = ent.properties;
-                    if (props && props.centerX !== undefined) {
-                      const cScreen = worldToScreen(props.centerX, props.centerY);
-                      const rPx = props.radius * pixelsPerUnit;
-                      const sScreen = worldToScreen(ent.points[0].x, ent.points[0].y);
-                      const eScreen = worldToScreen(ent.points[2].x, ent.points[2].y);
-                      const mScreen = worldToScreen(ent.points[1].x, ent.points[1].y);
-
-                      // Determine sweep direction using cross product
-                      const v1x = mScreen.x - sScreen.x, v1y = mScreen.y - sScreen.y;
-                      const v2x = eScreen.x - sScreen.x, v2y = eScreen.y - sScreen.y;
-                      const cross = v1x * v2y - v1y * v2x;
-                      const sweepFlag = cross > 0 ? 1 : 0;
-                      // Check if arc is more than 180 degrees
-                      const startAngle = Math.atan2(sScreen.y - cScreen.y, sScreen.x - cScreen.x);
-                      const endAngle = Math.atan2(eScreen.y - cScreen.y, eScreen.x - cScreen.x);
-                      let angleDiff = endAngle - startAngle;
-                      if (sweepFlag === 1 && angleDiff < 0) angleDiff += 2 * Math.PI;
-                      if (sweepFlag === 0 && angleDiff > 0) angleDiff -= 2 * Math.PI;
-                      const largeArcFlag = Math.abs(angleDiff) > Math.PI ? 1 : 0;
-
-                      const d = `M ${sScreen.x} ${sScreen.y} A ${rPx} ${rPx} 0 ${largeArcFlag} ${sweepFlag} ${eScreen.x} ${eScreen.y}`;
-                      return (
-                        <g key={ent.id}>
-                          <path d={d} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                          {isSelected && (
-                            <>
-                              <circle cx={sScreen.x} cy={sScreen.y} r="4" fill="#00ff00" />
-                              <circle cx={mScreen.x} cy={mScreen.y} r="4" fill="#00ff00" />
-                              <circle cx={eScreen.x} cy={eScreen.y} r="4" fill="#00ff00" />
-                              <circle cx={cScreen.x} cy={cScreen.y} r="3" fill="none" stroke="#00ff00" strokeWidth="1" />
-                            </>
-                          )}
-                        </g>
-                      );
-                    }
+                    return renderArcEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      worldToScreen,
+                      pixelsPerUnit,
+                    });
                 }
                 if (ent.type === 'ellipse') {
-                    const center = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const rx = (ent.properties?.rx || 0) * pixelsPerUnit;
-                    const ry = (ent.properties?.ry || 0) * pixelsPerUnit;
-                    return (
-                      <g key={ent.id}>
-                        <ellipse cx={center.x} cy={center.y} rx={rx} ry={ry} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={center.x} cy={center.y} r="4" fill="#00ff00" />
-                            <circle cx={center.x + rx} cy={center.y} r="4" fill="#00ff00" />
-                            <circle cx={center.x - rx} cy={center.y} r="4" fill="#00ff00" />
-                            <circle cx={center.x} cy={center.y - ry} r="4" fill="#00ff00" />
-                            <circle cx={center.x} cy={center.y + ry} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderEllipseEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      worldToScreen,
+                      pixelsPerUnit,
+                    });
                 }
                 if (ent.type === 'polygon') {
-                    const center = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const sides = ent.properties?.sides || 6;
-                    const radius = (ent.properties?.radius || 0) * pixelsPerUnit;
-                    // Calculate vertex angle offset from center to first vertex
-                    const edgePt = worldToScreen(ent.points[1].x, ent.points[1].y);
-                    const angleOffset = Math.atan2(edgePt.y - center.y, edgePt.x - center.x);
-                    const pts: string[] = [];
-                    for (let i = 0; i < sides; i++) {
-                      const angle = angleOffset + (2 * Math.PI * i) / sides;
-                      pts.push(`${center.x + radius * Math.cos(angle)},${center.y + radius * Math.sin(angle)}`);
-                    }
-                    return (
-                      <g key={ent.id}>
-                        <polygon points={pts.join(' ')} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={center.x} cy={center.y} r="4" fill="#00ff00" />
-                            {pts.map((pt, idx) => {
-                              const [px, py] = pt.split(',').map(Number);
-                              return <circle key={idx} cx={px} cy={py} r="4" fill="#00ff00" />;
-                            })}
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderPolygonEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      worldToScreen,
+                      pixelsPerUnit,
+                    });
                 }
                 if (ent.type === 'slot') {
-                    // Slot: stadium/discorectangle — two semicircles connected by lines
-                    const c1 = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const c2 = worldToScreen(ent.points[1].x, ent.points[1].y);
-                    const wPx = (ent.properties?.width || 0) * pixelsPerUnit;
-                    const halfW = wPx / 2;
-                    // Direction vector and perpendicular
-                    const dx = c2.x - c1.x;
-                    const dy = c2.y - c1.y;
-                    const len = Math.sqrt(dx * dx + dy * dy);
-                    if (len < 0.001) return null;
-                    const nx = (-dy / len) * halfW; // perpendicular
-                    const ny = (dx / len) * halfW;
-                    // Build slot path: line + arc + line + arc
-                    const d = `M ${c1.x + nx} ${c1.y + ny} L ${c2.x + nx} ${c2.y + ny} A ${halfW} ${halfW} 0 1 1 ${c2.x - nx} ${c2.y - ny} L ${c1.x - nx} ${c1.y - ny} A ${halfW} ${halfW} 0 1 1 ${c1.x + nx} ${c1.y + ny} Z`;
-                    return (
-                      <g key={ent.id}>
-                        <path d={d} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={c1.x} cy={c1.y} r="4" fill="#00ff00" />
-                            <circle cx={c2.x} cy={c2.y} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderSlotEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      worldToScreen,
+                      pixelsPerUnit,
+                    });
                 }
                 if (ent.type === 'obround') {
-                    // Obround: rectangle with rounded corners (cornerRadius = min(w,h)/2)
-                    const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
-                    const x = Math.min(p1.x, p2.x);
-                    const y = Math.min(p1.y, p2.y);
-                    const w = Math.abs(p2.x - p1.x);
-                    const h = Math.abs(p2.y - p1.y);
-                    const cornerRadius = (ent.properties?.cornerRadius || 0) * pixelsPerUnit;
-                    return (
-                      <g key={ent.id}>
-                        <rect x={x} y={y} width={w} height={h} rx={cornerRadius} ry={cornerRadius} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                        {isSelected && (
-                          <>
-                            <circle cx={p1.x} cy={p1.y} r="4" fill="#00ff00" />
-                            <circle cx={p2.x} cy={p2.y} r="4" fill="#00ff00" />
-                            <circle cx={p1.x} cy={p2.y} r="4" fill="#00ff00" />
-                            <circle cx={p2.x} cy={p1.y} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderObroundEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      strokeColor,
+                      strokeWidth,
+                      worldToScreen,
+                      pixelsPerUnit,
+                    });
                 }
                 if (ent.type === 'dimension') {
-                    // Dimension: line between start/end + perpendicular ticks + text showing distance
-                    const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
-                    const textPos = ent.points.length >= 3 ? worldToScreen(ent.points[2].x, ent.points[2].y) : { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 - 15 };
-                    const value = ent.properties?.value ?? 0;
-                    const unit = ent.properties?.unit || 'mm';
-                    
-                    // Dimension line direction
-                    const dx = p2.x - p1.x;
-                    const dy = p2.y - p1.y;
-                    const len = Math.sqrt(dx * dx + dy * dy);
-                    const tickSize = 8;
-                    const nx = len > 0 ? (-dy / len) * tickSize : 0;
-                    const ny = len > 0 ? (dx / len) * tickSize : tickSize;
-                    
-                    const dimColor = isSelected ? "#00ff00" : "#ff6b6b";
-                    
-                    return (
-                      <g key={ent.id}>
-                        {/* Dimension line */}
-                        <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={dimColor} strokeWidth={isSelected ? "2" : "1"} opacity={opacity} />
-                        {/* Start tick */}
-                        <line x1={p1.x - nx} y1={p1.y - ny} x2={p1.x + nx} y2={p1.y + ny} stroke={dimColor} strokeWidth={isSelected ? "2" : "1"} />
-                        {/* End tick */}
-                        <line x1={p2.x - nx} y1={p2.y - ny} x2={p2.x + nx} y2={p2.y + ny} stroke={dimColor} strokeWidth={isSelected ? "2" : "1"} />
-                        {/* Extension line to text */}
-                        <line x1={(p1.x + p2.x) / 2} y1={(p1.y + p2.y) / 2} x2={textPos.x} y2={textPos.y} stroke={dimColor} strokeWidth="0.5" strokeDasharray="3,3" opacity="0.5" />
-                        {/* Dimension text */}
-                        <rect x={textPos.x - 25} y={textPos.y - 10} width={50} height={16} rx={2} fill="rgba(0,0,0,0.7)" style={{ pointerEvents: 'none' }} />
-                        <text x={textPos.x} y={textPos.y + 3} fill={dimColor} fontSize="11" fontFamily="Arial, Helvetica, Tahoma, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none' }}>
-                          {value} {unit}
-                        </text>
-                        {isSelected && (
-                          <>
-                            <circle cx={p1.x} cy={p1.y} r="4" fill="#00ff00" />
-                            <circle cx={p2.x} cy={p2.y} r="4" fill="#00ff00" />
-                            <circle cx={textPos.x} cy={textPos.y} r="4" fill="#00ff00" />
-                          </>
-                        )}
-                      </g>
-                    );
+                    return renderDimensionEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      worldToScreen,
+                      toCadAnnotationScale,
+                    });
+                }
+                if (ent.type === 'insert') {
+                    return renderInsertEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      worldToScreen,
+                    });
                 }
                 if (ent.type === 'text') {
-                    if (isDragging) return null; // Đóng băng/ẩn text khi kéo màn hình để chống lag
-                    const pos = worldToScreen(ent.points[0].x, ent.points[0].y);
-                    const textStr = ent.properties?.text || '';
-                    const fontSizeWorld = ent.properties?.fontSize || 14;
-                    const fontSizeScreen = fontSizeWorld * pixelsPerUnit;
-                    const rotation = ent.properties?.rotation || 0;
-                    const textColor = isSelected ? "#00ff00" : "#fbbf24";
-                    
-                    return (
-                      <g key={ent.id} transform={rotation ? `rotate(${-rotation}, ${pos.x}, ${pos.y})` : undefined}>
-                        {/* Bypass browser minimum font size by rendering large and scaling down */}
-                        <g transform={`translate(${pos.x}, ${pos.y}) scale(${fontSizeScreen / 100})`}>
-                          <text 
-                            x={0} 
-                            y={0} 
-                            fill={textColor} 
-                            fontSize={100} 
-                            fontFamily="Arial, Helvetica, Tahoma, sans-serif" 
-                            dominantBaseline="middle"
-                            style={{ userSelect: 'none' }}
-                          >
-                            {textStr}
-                          </text>
-                        </g>
-                        {isSelected && (
-                          <>
-                            <circle cx={pos.x} cy={pos.y} r="4" fill="#00ff00" />
-                            <rect 
-                              x={pos.x - 2} 
-                              y={pos.y - fontSizeScreen * 0.6} 
-                              width={textStr.length * fontSizeScreen * 0.6 + 4} 
-                              height={fontSizeScreen * 1.2} 
-                              fill="none" 
-                              stroke="#00ff00" 
-                              strokeWidth="1" 
-                              strokeDasharray="3,3" 
-                            />
-                          </>
-                        )}
-                      </g>
-                    );
+                    if (isDragging) return null;
+                    return renderTextEntity({
+                      entity: ent,
+                      isSelected,
+                      worldToScreen,
+                      toCadAnnotationScale,
+                    });
                 }
                 if (ent.type === 'leader') {
-                    const screenPts = ent.points.map(p => worldToScreen(p.x, p.y));
-                    const leaderColor = isSelected ? "#00ff00" : "#a78bfa";
-                    const textStr = ent.properties?.text || '';
-                    
-                    // Arrowhead at first point (the arrow tip)
-                    let arrowHead = null;
-                    if (screenPts.length >= 2) {
-                      const tip = screenPts[0];
-                      const next = screenPts[1];
-                      const adx = next.x - tip.x;
-                      const ady = next.y - tip.y;
-                      const alen = Math.sqrt(adx * adx + ady * ady);
-                      if (alen > 0) {
-                        const arrowLen = 12;
-                        const arrowW = 5;
-                        const ux = adx / alen, uy = ady / alen;
-                        const px = -uy, py = ux;
-                        arrowHead = (
-                          <polygon 
-                            points={`${tip.x},${tip.y} ${tip.x + ux * arrowLen + px * arrowW},${tip.y + uy * arrowLen + py * arrowW} ${tip.x + ux * arrowLen - px * arrowW},${tip.y + uy * arrowLen - py * arrowW}`}
-                            fill={leaderColor}
-                          />
-                        );
-                      }
-                    }
-                    
-                    const pathD = screenPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                    const lastPt = screenPts[screenPts.length - 1];
-                    
-                    return (
-                      <g key={ent.id}>
-                        <path d={pathD} fill="none" stroke={leaderColor} strokeWidth={isSelected ? "2" : "1.5"} opacity={opacity} />
-                        {arrowHead}
-                        {textStr && (
-                          <>
-                            <line x1={lastPt.x} y1={lastPt.y} x2={lastPt.x + 30} y2={lastPt.y} stroke={leaderColor} strokeWidth="1" />
-                            <text x={lastPt.x + 33} y={lastPt.y + 4} fill={leaderColor} fontSize="12" fontFamily="Arial, Helvetica, Tahoma, sans-serif">
-                              {textStr}
-                            </text>
-                          </>
-                        )}
-                        {isSelected && screenPts.map((pt, idx) => (
-                          <circle key={idx} cx={pt.x} cy={pt.y} r="4" fill="#00ff00" />
-                        ))}
-                      </g>
-                    );
+                    return renderLeaderEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      worldToScreen,
+                    });
                 }
                 if (ent.type === 'hatch') {
-                    const targetId = ent.properties?.targetEntityId;
-                    const pattern = ent.properties?.pattern || 'lines';
-                    const angle = ent.properties?.angle || 45;
-                    const spacing2 = (ent.properties?.spacing || 5) * pixelsPerUnit;
-                    const hatchColor = isSelected ? "#00ff00" : "rgba(255,255,255,0.3)";
-                    
-                    const targetEntity = cadEntities.find(e => e.id === targetId);
-                    if (!targetEntity) return null;
-                    
-                    let clipPath = '';
-                    let bMinX = 0, bMinY = 0, bMaxX = 0, bMaxY = 0;
-                    
-                    if (targetEntity.type === 'rect' || targetEntity.type === 'obround') {
-                      const tp1 = worldToScreen(targetEntity.points[0].x, targetEntity.points[0].y);
-                      const tp2 = worldToScreen(targetEntity.points[1].x, targetEntity.points[1].y);
-                      bMinX = Math.min(tp1.x, tp2.x);
-                      bMinY = Math.min(tp1.y, tp2.y);
-                      bMaxX = Math.max(tp1.x, tp2.x);
-                      bMaxY = Math.max(tp1.y, tp2.y);
-                      clipPath = `M ${bMinX} ${bMinY} L ${bMaxX} ${bMinY} L ${bMaxX} ${bMaxY} L ${bMinX} ${bMaxY} Z`;
-                    } else if (targetEntity.type === 'circle') {
-                      const center = worldToScreen(targetEntity.points[0].x, targetEntity.points[0].y);
-                      const r = (targetEntity.properties?.radius || 0) * pixelsPerUnit;
-                      bMinX = center.x - r; bMinY = center.y - r;
-                      bMaxX = center.x + r; bMaxY = center.y + r;
-                      clipPath = `M ${center.x - r} ${center.y} A ${r} ${r} 0 1 0 ${center.x + r} ${center.y} A ${r} ${r} 0 1 0 ${center.x - r} ${center.y} Z`;
-                    } else if (targetEntity.type === 'ellipse') {
-                      const center = worldToScreen(targetEntity.points[0].x, targetEntity.points[0].y);
-                      const rx = (targetEntity.properties?.rx || 0) * pixelsPerUnit;
-                      const ry = (targetEntity.properties?.ry || 0) * pixelsPerUnit;
-                      bMinX = center.x - rx; bMinY = center.y - ry;
-                      bMaxX = center.x + rx; bMaxY = center.y + ry;
-                      clipPath = `M ${center.x - rx} ${center.y} A ${rx} ${ry} 0 1 0 ${center.x + rx} ${center.y} A ${rx} ${ry} 0 1 0 ${center.x - rx} ${center.y} Z`;
-                    } else if (targetEntity.type === 'polygon') {
-                      const center = worldToScreen(targetEntity.points[0].x, targetEntity.points[0].y);
-                      const sides = targetEntity.properties?.sides || 6;
-                      const radius = (targetEntity.properties?.radius || 0) * pixelsPerUnit;
-                      const edgePt = worldToScreen(targetEntity.points[1].x, targetEntity.points[1].y);
-                      const angleOff = Math.atan2(edgePt.y - center.y, edgePt.x - center.x);
-                      const verts: string[] = [];
-                      for (let i = 0; i < sides; i++) {
-                        const a = angleOff + (2 * Math.PI * i) / sides;
-                        const vx = center.x + radius * Math.cos(a);
-                        const vy = center.y + radius * Math.sin(a);
-                        verts.push(`${i === 0 ? 'M' : 'L'} ${vx} ${vy}`);
-                        if (i === 0) { bMinX = vx; bMinY = vy; bMaxX = vx; bMaxY = vy; }
-                        else { bMinX = Math.min(bMinX, vx); bMinY = Math.min(bMinY, vy); bMaxX = Math.max(bMaxX, vx); bMaxY = Math.max(bMaxY, vy); }
-                      }
-                      clipPath = verts.join(' ') + ' Z';
-                    }
-                    
-                    if (!clipPath) return null;
-                    
-                    const hatchLines: React.ReactNode[] = [];
-                    const clipId = `hatch-clip-${ent.id}`;
-                    const bW = bMaxX - bMinX;
-                    const bH = bMaxY - bMinY;
-                    const diagonal = Math.sqrt(bW * bW + bH * bH);
-                    const cx = (bMinX + bMaxX) / 2;
-                    const cy = (bMinY + bMaxY) / 2;
-                    const angleRad = (angle * Math.PI) / 180;
-                    const cosA = Math.cos(angleRad);
-                    const sinA = Math.sin(angleRad);
-                    const actualSpacing = Math.max(spacing2, 3);
-                    
-                    const numLines = Math.ceil(diagonal / actualSpacing) + 2;
-                    for (let i = -numLines; i <= numLines; i++) {
-                      const offset = i * actualSpacing;
-                      const x1 = cx + offset * cosA - diagonal * sinA;
-                      const y1 = cy + offset * sinA + diagonal * cosA;
-                      const x2 = cx + offset * cosA + diagonal * sinA;
-                      const y2 = cy + offset * sinA - diagonal * cosA;
-                      hatchLines.push(
-                        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={hatchColor} strokeWidth="0.8" />
-                      );
-                    }
-                    
-                    if (pattern === 'crosshatch') {
-                      const angleRad2 = angleRad + Math.PI / 2;
-                      const cosA2 = Math.cos(angleRad2);
-                      const sinA2 = Math.sin(angleRad2);
-                      for (let i = -numLines; i <= numLines; i++) {
-                        const offset = i * actualSpacing;
-                        const x1 = cx + offset * cosA2 - diagonal * sinA2;
-                        const y1 = cy + offset * sinA2 + diagonal * cosA2;
-                        const x2 = cx + offset * cosA2 + diagonal * sinA2;
-                        const y2 = cy + offset * sinA2 - diagonal * cosA2;
-                        hatchLines.push(
-                          <line key={`c${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={hatchColor} strokeWidth="0.8" />
-                        );
-                      }
-                    }
-                    
-                    if (pattern === 'dots') {
-                      hatchLines.length = 0;
-                      const dotSpacing = Math.max(actualSpacing, 6);
-                      for (let ix = bMinX; ix <= bMaxX; ix += dotSpacing) {
-                        for (let iy = bMinY; iy <= bMaxY; iy += dotSpacing) {
-                          hatchLines.push(
-                            <circle key={`d${ix}_${iy}`} cx={ix} cy={iy} r="1.5" fill={hatchColor} />
-                          );
-                        }
-                      }
-                    }
-                    
-                    return (
-                      <g key={ent.id}>
-                        <defs>
-                          <clipPath id={clipId}>
-                            <path d={clipPath} />
-                          </clipPath>
-                        </defs>
-                        <g clipPath={`url(#${clipId})`}>
-                          {hatchLines}
-                        </g>
-                        {isSelected && (
-                          <path d={clipPath} fill="none" stroke="#00ff00" strokeWidth="2" strokeDasharray="4,4" />
-                        )}
-                      </g>
-                    );
+                    return renderHatchEntity({
+                      entity: ent,
+                      isSelected,
+                      opacity,
+                      pixelsPerUnit,
+                      worldToScreen,
+                    });
                 }
                 return null;
             })}
@@ -6376,6 +6195,14 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         ref={dxfImportRef} 
         type="file" 
         accept=".dxf,.dwg,.svg" 
+        onChange={handleDXFFileSelected} 
+        hidden 
+      />
+
+      <input 
+        ref={dwgImportRef} 
+        type="file" 
+        accept=".dwg" 
         onChange={handleDXFFileSelected} 
         hidden 
       />
