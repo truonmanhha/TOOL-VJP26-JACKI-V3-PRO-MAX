@@ -1,0 +1,574 @@
+{
+    "MTEXT": {
+        "IPE": {
+            "MinPixelSize": "6",
+            "FixedPixelSize": "12"
+        }
+    },
+    "3DGS Configuration": {
+        "Certification": {
+            "Effects": {
+                "Software": {
+                    "ACAD_2DRetainModeLevel": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_PerPixelLighting": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_AdvancedMaterial": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_FullShadows": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_TextureCompression": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_WhipArc": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_LineSmoothing": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_LineFading": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_GlowHighlighting": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_2DRetainMode": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_GPULineType": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_GPUHatch": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_GPUText2D": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    },
+                    "ACAD_FastShaded": {
+                        "availableVal": 0,
+                        "recommendVal": 0,
+                        "usedVal": 0,
+                        "featureLevel": 0
+                    }
+                }
+            }
+        }
+    },
+    "Profiles": {
+        "<<Unnamed Profile>>": {
+            "General": {
+                "ACTRECPATH": "[ROAMINGUSERFILESFOLDER]support\\Actions",
+                "CheckDrawingSignature": "2"
+            },
+            "Editor Configuration": {
+                "MobileAtrributes": "1"
+            }
+        }
+    },
+    "AutodeskApps": {
+        "AcadOrbit": {
+            "3DClipWinRight": "300",
+            "3DClipWinTop": "0"
+        }
+    },
+    "FixedProfile": {
+        "Commands": {
+            "-ARCHIVE": {
+                "DefaultVersion": "2"
+            },
+            "-ATTDEF": {
+                "DefaultVersion": "3"
+            },
+            "ARX": {
+                "DefaultVersion": "2"
+            },
+            "-BLOCK": {
+                "DefaultVersion": "2"
+            },
+            "-COLOR": {
+                "DefaultVersion": "2"
+            },
+            "-ETRANSMIT": {
+                "DefaultVersion": "2"
+            },
+            "-GROUP": {
+                "DefaultVersion": "2"
+            },
+            "-IMAGE": {
+                "DefaultVersion": "2"
+            },
+            "-INSERT": {
+                "DefaultVersion": "2"
+            },
+            "-LAYER": {
+                "DefaultVersion": "3"
+            },
+            "-STYLE": {
+                "DefaultVersion": "2"
+            },
+            "-TABLE": {
+                "DefaultVersion": "2"
+            },
+            "-TEXT": {
+                "DefaultVersion": "3"
+            },
+            "-VIEW": {
+                "DefaultVersion": "2"
+            },
+            "-VPORTS": {
+                "DefaultVersion": "2"
+            },
+            "-WBLOCK": {
+                "DefaultVersion": "2"
+            },
+            "3DCONFIG": {
+                "DefaultVersion": "2"
+            },
+            "3DMOVE": {
+                "DefaultVersion": "2"
+            },
+            "3DOSNAP": {
+                "DefaultVersion": "2"
+            },
+            "3DROTATE": {
+                "DefaultVersion": "2"
+            },
+            "ABOUT": {
+                "DefaultVersion": "2"
+            },
+            "ARCHIVE": {
+                "DefaultVersion": "2"
+            },
+            "ARRAY": {
+                "DefaultVersion": "3"
+            },
+            "ARRAYEDIT": {
+                "DefaultVersion": "2"
+            },
+            "ARRAYRECT": {
+                "DefaultVersion": "2"
+            },
+            "ARRAYPOLAR": {
+                "DefaultVersion": "2"
+            },
+            "ARRAYPATH": {
+                "DefaultVersion": "2"
+            },
+            "ATTDEF": {
+                "DefaultVersion": "2"
+            },
+            "ATTEDIT": {
+                "DefaultVersion": "2"
+            },
+            "-ATTEDIT": {
+                "DefaultVersion": "2"
+            },
+            "ATTEXT": {
+                "DefaultVersion": "2"
+            },
+            "BCLOSE": {
+                "DefaultVersion": "2"
+            },
+            "BEDIT": {
+                "DefaultVersion": "2"
+            },
+            "BHATCH": {
+                "DefaultVersion": "2"
+            },
+            "BLOCK": {
+                "DefaultVersion": "2"
+            },
+            "BOUNDARY": {
+                "DefaultVersion": "2"
+            },
+            "BOX": {
+                "DefaultVersion": "2"
+            },
+            "BPARAMETER": {
+                "DefaultVersion": "2"
+            },
+            "BPOLY": {
+                "DefaultVersion": "2"
+            },
+            "BSAVEAS": {
+                "DefaultVersion": "2"
+            },
+            "BVSTATE": {
+                "DefaultVersion": "2"
+            },
+            "BWBLOCKAS": {
+                "DefaultVersion": "2"
+            },
+            "CHAMFER": {
+                "DefaultVersion": "3"
+            },
+            "CHAMFEREDGE": {
+                "DefaultVersion": "2"
+            },
+            "CLASSICIMAGE": {
+                "DefaultVersion": "2"
+            },
+            "CLASSICXREF": {
+                "DefaultVersion": "2"
+            },
+            "COLOR": {
+                "DefaultVersion": "2"
+            },
+            "CONVERT": {
+                "DefaultVersion": "2"
+            },
+            "CONVERTCTB": {
+                "DefaultVersion": "2"
+            },
+            "CONVERTPSTYLES": {
+                "DefaultVersion": "2"
+            },
+            "CONVTOMESH": {
+                "DefaultVersion": "2"
+            },
+            "CONVTOSOLID": {
+                "DefaultVersion": "2"
+            },
+            "CONVTOSURFACE": {
+                "DefaultVersion": "2"
+            },
+            "COPY": {
+                "DefaultVersion": "2"
+            },
+            "COPYTOLAYER": {
+                "DefaultVersion": "2"
+            },
+            "CUILOAD": {
+                "DefaultVersion": "2"
+            },
+            "CUIUNLOAD": {
+                "DefaultVersion": "2"
+            },
+            "DDEDIT": {
+                "DefaultVersion": "2"
+            },
+            "DIM": {
+                "DefaultVersion": "3"
+            },
+            "DIM1": {
+                "DefaultVersion": "2"
+            },
+            "DIMEDIT": {
+                "DefaultVersion": "2"
+            },
+            "DIMSTYLE": {
+                "DefaultVersion": "2"
+            },
+            "DTEXT": {
+                "DefaultVersion": "3"
+            },
+            "DWGCONVERT": {
+                "DefaultVersion": "2"
+            },
+            "DXFIN": {
+                "DefaultVersion": "2"
+            },
+            "DXFOUT": {
+                "DefaultVersion": "2"
+            },
+            "EDITTABLECELL": {
+                "DefaultVersion": "2"
+            },
+            "ETRANSMIT": {
+                "DefaultVersion": "2"
+            },
+            "EXECUTETOOL": {
+                "DefaultVersion": "2"
+            },
+            "EXPLODE": {
+                "DefaultVersion": "2"
+            },
+            "EXTEND": {
+                "DefaultVersion": "2"
+            },
+            "EXTRUDE": {
+                "DefaultVersion": "3"
+            },
+            "FILLET": {
+                "DefaultVersion": "3"
+            },
+            "GEOMARKLATLONG": {
+                "DefaultVersion": "2"
+            },
+            "GEOMARKME": {
+                "DefaultVersion": "2"
+            },
+            "GEOMARKPOINT": {
+                "DefaultVersion": "2"
+            },
+            "GEOMARKPOSITION": {
+                "DefaultVersion": "2"
+            },
+            "GRADIENT": {
+                "DefaultVersion": "3"
+            },
+            "GROUP": {
+                "DefaultVersion": "3"
+            },
+            "HATCH": {
+                "DefaultVersion": "3"
+            },
+            "HATCHEDIT": {
+                "DefaultVersion": "2"
+            },
+            "-HATCHEDIT": {
+                "DefaultVersion": "3"
+            },
+            "HELIX": {
+                "DefaultVersion": "2"
+            },
+            "HIDE": {
+                "DefaultVersion": "2"
+            },
+            "IMAGE": {
+                "DefaultVersion": "2"
+            },
+            "IMAGEADJUST": {
+                "DefaultVersion": "2"
+            },
+            "INSERT": {
+                "DefaultVersion": "3"
+            },
+            "JOIN": {
+                "DefaultVersion": "2"
+            },
+            "LAYDEL": {
+                "DefaultVersion": "2"
+            },
+            "LAYER": {
+                "DefaultVersion": "2"
+            },
+            "LAYISO": {
+                "DefaultVersion": "2"
+            },
+            "LAYMCH": {
+                "DefaultVersion": "2"
+            },
+            "LAYMRG": {
+                "DefaultVersion": "2"
+            },
+            "LAYOUT": {
+                "DefaultVersion": "2"
+            },
+            "LINETYPE": {
+                "DefaultVersion": "2"
+            },
+            "LOFT": {
+                "DefaultVersion": "3"
+            },
+            "LWEIGHT": {
+                "DefaultVersion": "2"
+            },
+            "MASSPROP": {
+                "DefaultVersion": "2"
+            },
+            "MENULOAD": {
+                "DefaultVersion": "2"
+            },
+            "MENUUNLOAD": {
+                "DefaultVersion": "2"
+            },
+            "MESHSMOOTH": {
+                "DefaultVersion": "2"
+            },
+            "MLEADER": {
+                "DefaultVersion": "2"
+            },
+            "MLEDIT": {
+                "DefaultVersion": "2"
+            },
+            "MOVE": {
+                "DefaultVersion": "2"
+            },
+            "MTEXT": {
+                "DefaultVersion": "2"
+            },
+            "MVIEW": {
+                "DefaultVersion": "2"
+            },
+            "OPENDWFMARKUP": {
+                "DefaultVersion": "2"
+            },
+            "OSNAP": {
+                "DefaultVersion": "2"
+            },
+            "PAN": {
+                "DefaultVersion": "2"
+            },
+            "PLANESURF": {
+                "DefaultVersion": "2"
+            },
+            "PLOTSTAMP": {
+                "DefaultVersion": "2"
+            },
+            "PLOTSTYLE": {
+                "DefaultVersion": "2"
+            },
+            "PSETUPIN": {
+                "DefaultVersion": "2"
+            },
+            "PURGE": {
+                "DefaultVersion": "2"
+            },
+            "PYRAMID": {
+                "DefaultVersion": "2"
+            },
+            "QUICKCALC": {
+                "DefaultVersion": "2"
+            },
+            "RENAME": {
+                "DefaultVersion": "2"
+            },
+            "RENDER": {
+                "DefaultVersion": "2"
+            },
+            "REVCLOUD": {
+                "DefaultVersion": "3"
+            },
+            "REVOLVE": {
+                "DefaultVersion": "3"
+            },
+            "ROTATE": {
+                "DefaultVersion": "2"
+            },
+            "SCALE": {
+                "DefaultVersion": "4"
+            },
+            "SELECT": {
+                "DefaultVersion": "2"
+            },
+            "SHADE": {
+                "DefaultVersion": "2"
+            },
+            "SHADEMODE": {
+                "DefaultVersion": "2"
+            },
+            "SKETCH": {
+                "DefaultVersion": "2"
+            },
+            "SOLIDEDIT": {
+                "DefaultVersion": "2"
+            },
+            "SPLINE": {
+                "DefaultVersion": "2"
+            },
+            "SPLINEDIT": {
+                "DefaultVersion": "2"
+            },
+            "STRETCH": {
+                "DefaultVersion": "2"
+            },
+            "STYLE": {
+                "DefaultVersion": "2"
+            },
+            "SWEEP": {
+                "DefaultVersion": "3"
+            },
+            "TABLE": {
+                "DefaultVersion": "2"
+            },
+            "TABLEDIT": {
+                "DefaultVersion": "2"
+            },
+            "TABLESTYLE": {
+                "DefaultVersion": "2"
+            },
+            "TEXT": {
+                "DefaultVersion": "3"
+            },
+            "TOOLBAR": {
+                "DefaultVersion": "2"
+            },
+            "TRIM": {
+                "DefaultVersion": "2"
+            },
+            "UCS": {
+                "DefaultVersion": "2"
+            },
+            "UNITS": {
+                "DefaultVersion": "2"
+            },
+            "VBALOAD": {
+                "DefaultVersion": "2"
+            },
+            "VBARUN": {
+                "DefaultVersion": "2"
+            },
+            "VIEW": {
+                "DefaultVersion": "2"
+            },
+            "VIEWPORTS": {
+                "DefaultVersion": "2"
+            },
+            "VPLAYER": {
+                "DefaultVersion": "2"
+            },
+            "VPOINT": {
+                "DefaultVersion": "2"
+            },
+            "VPORTS": {
+                "DefaultVersion": "2"
+            },
+            "WBLOCK": {
+                "DefaultVersion": "2"
+            },
+            "WSSAVE": {
+                "DefaultVersion": "2"
+            },
+            "XBIND": {
+                "DefaultVersion": "2"
+            },
+            "XREF": {
+                "DefaultVersion": "2"
+            }
+        }
+    }
+}

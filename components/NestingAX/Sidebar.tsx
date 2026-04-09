@@ -1,340 +1,172 @@
 import React, { useState } from 'react';
-import { NestList, Part } from './services/db';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface SidebarProps {
-  nestLists: NestList[];
-  activeListId: string | null;
-  onSelectNestList: (id: string) => void;
-  parts: Part[];
-  onContextMenu: (e: React.MouseEvent, listId: string) => void;
-  onPartContextMenu: (e: React.MouseEvent, partId: string) => void;
-  onSelectPart: (partId: string | null) => void;
-  activePartId: string | null;
-  nestingMethod: string;
-  onUpdatePart?: (partId: string, updates: Partial<Part>) => void;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
-  collapsedNestLists?: Record<string, boolean>;
-  onToggleNestListCollapse?: (listId: string) => void;
+interface Layer {
+  id: string;
+  name: string;
+  color: string;
+  visible?: boolean;
+  locked?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  nestLists, 
-  activeListId, 
-  onSelectNestList, 
-  parts, 
-  onContextMenu,
-  onPartContextMenu,
-  onSelectPart,
-  activePartId,
-  nestingMethod,
-  onUpdatePart,
-  isCollapsed = false,
-  onToggleCollapse,
-  collapsedNestLists = {},
-  onToggleNestListCollapse
-}) => {
-  // Local state for editing values
-  const [editingPartId, setEditingPartId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [editField, setEditField] = useState<keyof Part | null>(null);
+interface SidebarProps {
+  layers?: Layer[];
+  activeLayerId?: string;
+  onLayerVisibility?: (id: string) => void;
+  onLayerActive?: (id: string) => void;
+}
 
-  const handleEditStart = (partId: string, field: keyof Part, value: any) => {
-    setEditingPartId(partId);
-    setEditField(field);
-    setEditValue(String(value));
-  };
+const PropRow: React.FC<{ label: string; value: string | React.ReactNode }> = ({ label, value }) => (
+  <div className="flex justify-between items-center h-[26px] px-3 border-b border-[#1a2330] hover:bg-[#303c48] group cursor-default">
+    <span className="text-[11px] text-[#8a9aaa] w-[120px] flex-none">{label}</span>
+    <div className="flex items-center text-[11.5px] text-[#dde4ec] flex-1 justify-end gap-1">
+      {value}
+      <svg viewBox="0 0 24 24" className="w-[12px] h-[12px] fill-current text-[#4a5a6a] opacity-0 group-hover:opacity-100"><path d="M7 10l5 5 5-5z" /></svg>
+    </div>
+  </div>
+);
 
-  const handleEditCommit = () => {
-    if (editingPartId && editField && onUpdatePart) {
-        let finalVal: any = editValue;
-        
-        // Parse numbers for numeric fields
-        if (['required', 'priority'].includes(editField)) {
-            const num = parseInt(editValue);
-            if (!isNaN(num) && num >= 0) finalVal = num;
-            else return; // Invalid number
-        } else if (editField === 'mirrored' || editField === 'smallPart' || editField === 'ignore3D') {
-            finalVal = editValue === 'true';
-        }
+const Sidebar: React.FC<SidebarProps> = ({ layers = [], activeLayerId, onLayerVisibility, onLayerActive }) => {
+  const [activePanel, setActivePanel] = useState<string | null>('properties');
 
-        onUpdatePart(editingPartId, { [editField]: finalVal });
+  const panels = [
+    {
+      id: 'properties', label: 'Prop.',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" /></svg>
+    },
+    {
+      id: 'layers', label: 'Layers',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+    },
+    {
+      id: 'blocks', label: 'Blocks',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" /></svg>
+    },
+    {
+      id: 'xrefs', label: 'Xrefs',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" /></svg>
+    },
+    {
+      id: 'traces', label: 'Traces',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" /></svg>
+    },
+    {
+      id: 'activity', label: 'Activity',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" /></svg>
+    },
+    {
+      id: 'issues', label: 'Issues',
+      icon: <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
+    },
+  ];
+
+  const renderPanel = () => {
+    if (activePanel === 'properties') {
+      return (
+        <div className="flex flex-col h-full bg-[#27313c] border-r border-[#111820]">
+          <div className="flex items-center justify-between h-[40px] px-3 bg-[#2c3845] border-b border-[#111820] flex-none">
+            <span className="text-[13px] font-semibold text-[#cdd9e4]">Object Properties</span>
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current text-[#6a7a8a] cursor-pointer hover:text-white"><path d="M10 14l2-2 2 2 1.41-1.41L14 11l1.41-1.41L14 8.17 12.41 9.59l-1.41-1.42L9.59 9.58 11 11l-1.41 1.41z" /></svg>
+          </div>
+          <div className="flex-1 overflow-y-auto pt-0.5">
+            <PropRow label="Layer" value="0" />
+            <PropRow label="Color" value={<><div className="w-3 h-3 bg-white border border-[#4a5a6a]"></div>ByLayer</>} />
+            <PropRow label="Linetype" value="ByLayer" />
+            <PropRow label="Linetype scale" value="1" />
+            <PropRow label="Lineweight" value="ByLayer" />
+            <PropRow label="Dimension style" value="Decimal-3" />
+            <PropRow label="Text style" value="Arial_3" />
+            <PropRow label="Multileader style" value="ML_3" />
+          </div>
+          {/* Resize handle */}
+          <div className="h-[8px] flex items-center justify-center border-t border-b border-[#111820] bg-[#232d38] cursor-ns-resize flex-none">
+            <div className="w-8 h-[2px] bg-[#3a4a5a] rounded-full"></div>
+          </div>
+          <div className="flex items-center justify-between h-[40px] px-3 bg-[#2c3845] border-b border-[#111820] flex-none">
+            <span className="text-[13px] font-semibold text-[#cdd9e4]">Model Properties</span>
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current text-[#6a7a8a]"><path d="M7 10l5 5 5-5z" /></svg>
+          </div>
+          <div className="overflow-y-auto">
+            <PropRow label="Plot style" value="None" />
+          </div>
+        </div>
+      );
     }
-    setEditingPartId(null);
-    setEditField(null);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleEditCommit();
-    if (e.key === 'Escape') {
-        setEditingPartId(null);
-        setEditField(null);
-    }
-  };
-
-  // Helper to render editable field
-  const renderEditable = (part: Part, field: keyof Part, label: string, widthClass: string = "w-8") => {
-    const isEditing = editingPartId === part.id && editField === field;
-    const value = part[field];
-
-    return (
-        <div 
-            className={`text-[9px] text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 flex items-center hover:border-cyan-500/50 cursor-text mr-1 mb-1`}
-            onClick={(e) => { e.stopPropagation(); handleEditStart(part.id, field, value); }}
-            title={`Click to edit ${label}`}
-        >
-            <span className="text-slate-500 font-bold mr-1">{label}:</span>
-            {isEditing ? (
-                <input 
-                    autoFocus
-                    className={`${widthClass} bg-transparent text-cyan-400 outline-none p-0`}
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={handleEditCommit}
-                    onKeyDown={handleKeyDown}
-                    onClick={(e) => e.stopPropagation()}
-                />
+    if (activePanel === 'layers') {
+      return (
+        <div className="flex flex-col h-full bg-[#27313c] border-r border-[#111820]">
+          <div className="flex items-center h-[40px] px-3 bg-[#2c3845] border-b border-[#111820] flex-none">
+            <span className="text-[13px] font-semibold text-[#cdd9e4]">Layers</span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {layers.length > 0 ? (
+              layers.map(layer => (
+                <div
+                  key={layer.id}
+                  className={`flex items-center h-[28px] px-3 gap-2 cursor-pointer border-b border-[#1a2330] ${activeLayerId === layer.id ? 'bg-[#1f4060]' : 'hover:bg-[#303c48]'}`}
+                  onClick={() => onLayerActive?.(layer.id)}
+                >
+                  <button className="text-[#8a9aaa] hover:text-white" onClick={(e) => { e.stopPropagation(); onLayerVisibility?.(layer.id); }}>
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>
+                  </button>
+                  <div className="w-3 h-3 rounded-sm border border-[#4a5a6a]" style={{ backgroundColor: layer.color }}></div>
+                  <span className="text-[12px] text-[#cdd9e4]">{layer.name}</span>
+                </div>
+              ))
             ) : (
-                <span className="truncate max-w-[60px]">{String(value ?? '')}</span>
+              <div className="px-3 py-3 text-[11px] text-[#6a7a8a]">No layers found</div>
             )}
+          </div>
         </div>
-    );
-  };
-
-  if (isCollapsed) {
+      );
+    }
     return (
-      <div className="w-14 bg-slate-800 border-r border-slate-700 flex flex-col h-full overflow-hidden select-none">
-        <div className="p-2 border-b border-slate-700 bg-slate-900/50 flex flex-col items-center gap-2">
-          <button
-            onClick={onToggleCollapse}
-            className="w-8 h-8 rounded border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
-            title="Expand sidebar"
-          >
-            <span className="material-symbols-outlined text-sm">keyboard_double_arrow_right</span>
-          </button>
-          <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
-            {nestLists.length}
-          </span>
+      <div className="flex flex-col h-full bg-[#27313c] border-r border-[#111820]">
+        <div className="flex items-center h-[40px] px-3 bg-[#2c3845] border-b border-[#111820] flex-none">
+          <span className="text-[13px] font-semibold text-[#cdd9e4] capitalize">{activePanel}</span>
         </div>
-
-        <div className="flex-1 overflow-y-auto p-1.5 space-y-2 custom-scrollbar">
-          {nestLists.map((list) => {
-            const isActive = list.id === activeListId;
-            return (
-              <button
-                key={list.id}
-                onClick={() => onSelectNestList(list.id)}
-                onContextMenu={(e) => onContextMenu(e, list.id)}
-                title={list.name}
-                className={`w-full h-10 rounded border flex items-center justify-center transition-all ${
-                  isActive
-                    ? 'bg-cyan-500/25 border-cyan-500 text-cyan-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:border-slate-600'
-                }`}
-              >
-                <span className="material-symbols-outlined text-lg">folder</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="p-2 border-t border-slate-700 bg-slate-900/30 flex flex-col items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-          <span className="text-[8px] text-cyan-400 font-mono [writing-mode:vertical-rl] rotate-180 tracking-wider">
-            {nestingMethod}
-          </span>
+        <div className="flex-1 flex items-center justify-center text-[11px] text-[#6a7a8a] p-4 text-center">
+          Select objects to view properties
         </div>
       </div>
     );
-  }
+  };
 
   return (
-    <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col h-full overflow-hidden select-none">
-      <div className="p-3 border-b border-slate-700 bg-slate-900/50 flex items-center justify-between">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
-          <span className="material-symbols-outlined text-sm mr-1.5 text-cyan-500">list_alt</span>
-          Nest Lists
-        </h2>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full font-mono">
-            {nestLists.length}
-          </span>
-          <button
-            onClick={onToggleCollapse}
-            className="w-6 h-6 rounded border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
-            title="Collapse sidebar"
+    <div className="flex h-full z-50 relative pointer-events-none">
+      {/* Icon Rail */}
+      <aside className="w-[56px] flex-none h-full bg-[#2c3845] border-r border-[#111820] flex flex-col items-center pt-1 pointer-events-auto z-10">
+        {panels.map((panel) => {
+          const isActive = activePanel === panel.id;
+          return (
+            <button
+              key={panel.id}
+              onClick={() => setActivePanel(isActive ? null : panel.id)}
+              className={`flex flex-col items-center justify-center w-full h-[56px] gap-0.5 border-none cursor-pointer transition-colors ${isActive ? 'bg-[#1a2330] text-[#4fc2f8]' : 'bg-transparent text-[#8a9aaa] hover:bg-[#354050] hover:text-[#cdd9e4]'}`}
+            >
+              {panel.icon}
+              <span className="text-[9px] font-semibold tracking-tight">{panel.label}</span>
+            </button>
+          );
+        })}
+      </aside>
+
+      {/* Flyout Panel */}
+      <AnimatePresence>
+        {activePanel && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 276, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
+            className="h-full pointer-events-auto overflow-hidden flex-none"
           >
-            <span className="material-symbols-outlined text-xs">keyboard_double_arrow_left</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-        {nestLists.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-slate-500 italic text-[11px] opacity-60">
-            <span className="material-symbols-outlined text-3xl mb-2">inventory_2</span>
-            No nest lists created
-          </div>
-        ) : (
-          nestLists.map((list) => {
-            const isActive = list.id === activeListId;
-            const isListCollapsed = collapsedNestLists[list.id] ?? false;
-            const listParts = isActive ? parts : [];
-            
-            return (
-              <div key={list.id} className="space-y-1">
-                <div
-                  onClick={() => onSelectNestList(list.id)}
-                  onContextMenu={(e) => onContextMenu(e, list.id)}
-                  className={`group flex items-center p-2 rounded cursor-pointer transition-all border ${
-                    isActive 
-                      ? 'bg-slate-700/80 border-cyan-500/50 shadow-md' 
-                      : 'bg-slate-800/40 border-transparent hover:bg-slate-700/40 hover:border-slate-600'
-                  }`}
-                >
-                  <div className={`mr-2.5 w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                    isActive ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400 group-hover:bg-slate-600'
-                  }`}>
-                    <span className="material-symbols-outlined text-lg">
-                      {isActive ? 'folder_open' : 'folder'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex-1 overflow-hidden">
-                    <div className={`text-[11px] font-bold truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>
-                      {list.name}
-                    </div>
-                    <div className="flex items-center text-[9px] text-slate-500 mt-0.5 space-x-2">
-                      <span className="flex items-center">
-                        <span className="material-symbols-outlined text-[10px] mr-0.5">extension</span>
-                        {listParts.length} parts
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleNestListCollapse?.(list.id);
-                    }}
-                    className="ml-2 w-6 h-6 rounded border border-slate-600 bg-slate-800/70 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
-                    title={isListCollapsed ? 'Expand Nest List' : 'Collapse Nest List'}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">
-                      {isListCollapsed ? 'chevron_right' : 'expand_more'}
-                    </span>
-                  </button>
-                </div>
-
-                {/* Display Parts under the active list */}
-                {isActive && !isListCollapsed && listParts.length > 0 && (
-                  <div className="ml-6 mt-2 space-y-1">
-                    {listParts.map(part => {
-                      const isPartActive = activePartId === part.id;
-                      
-                      let svgPathData = "";
-                      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                      let hasPoints = false;
-
-                      if (part.cadEntities && part.cadEntities.length > 0) {
-                        part.cadEntities.forEach(entity => {
-                          const points = entity.points || [];
-                          if (points.length < 2) return;
-                          hasPoints = true;
-                          points.forEach((pt: { x: number; y: number }, i: number) => {
-                            minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-                            minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
-                            if (i === 0) svgPathData += `M ${pt.x} ${pt.y} `;
-                            else svgPathData += `L ${pt.x} ${pt.y} `;
-                          });
-                          svgPathData += "Z ";
-                        });
-                      }
-
-                      const geomW = isFinite(maxX - minX) ? (maxX - minX) : 100;
-                      const geomH = isFinite(maxY - minY) ? (maxY - minY) : 100;
-                      const pad = Math.max(geomW, geomH) * 0.1;
-                      const vb = `${minX - pad} ${minY - pad} ${geomW + pad * 2} ${geomH + pad * 2}`;
-                      
-                      return (
-                        <div key={part.id} className="mb-2">
-                          <div 
-                            onClick={() => onSelectPart(isPartActive ? null : part.id)}
-                            onContextMenu={(e) => onPartContextMenu(e, part.id)}
-                            className={`flex flex-col p-2 rounded-md border transition-all group cursor-pointer ${
-                              isPartActive 
-                                ? 'bg-cyan-900/30 border-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.3)]' 
-                                : 'bg-slate-900/60 border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800'
-                            }`}
-                          >
-                            <div className="flex items-start mb-2">
-                                <div className="flex flex-col items-center mr-3 shrink-0">
-                                <div className={`text-[7px] font-black mb-1 tracking-tighter uppercase transition-colors ${isPartActive ? 'text-cyan-400' : 'text-slate-500'}`}>Preview</div>
-                                <div className={`w-16 h-16 bg-[#020408] border rounded flex items-center justify-center overflow-hidden relative shadow-inner transition-colors ${
-                                    isPartActive ? 'border-cyan-500' : 'border-slate-600 group-hover:border-cyan-400'
-                                }`}>
-                                    {hasPoints ? (
-                                    <svg viewBox={vb} className="w-full h-full p-1" preserveAspectRatio="xMidYMid meet">
-                                        <path 
-                                        d={svgPathData}
-                                        fill={isPartActive ? "rgba(34, 211, 238, 0.3)" : "rgba(34, 211, 238, 0.15)"}
-                                        stroke={isPartActive ? "#22d3ee" : "#22d3ee"}
-                                        strokeWidth={Math.max(geomW, geomH) / (isPartActive ? 30 : 40)}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className={isPartActive ? "drop-shadow-[0_0_3px_rgba(34,211,238,1)]" : ""}
-                                        />
-                                    </svg>
-                                    ) : (
-                                    <div className="text-[8px] text-red-500 font-bold text-center leading-none uppercase">No<br/>Preview</div>
-                                    )}
-                                </div>
-                                </div>
-
-                                <div className="flex-1 overflow-hidden">
-                                    <div className={`font-bold text-[11px] truncate leading-tight mb-1 ${isPartActive ? 'text-cyan-300' : 'text-blue-100'}`} title={part.name}>
-                                        {renderEditable(part, 'name', 'Name', 'w-full')}
-                                    </div>
-                                    <div className="text-[9px] text-slate-500 font-mono italic mb-1">
-                                        {renderEditable(part, 'dimensions', 'Dim', 'w-full')}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Editable Fields Grid */}
-                            <div className="flex flex-wrap items-center bg-slate-900/50 p-1.5 rounded border border-slate-700/50">
-                                {renderEditable(part, 'required', 'QTY')}
-                                {renderEditable(part, 'priority', 'PRI')}
-                                {renderEditable(part, 'mirrored', 'Mir', 'w-10')}
-                                {renderEditable(part, 'rotation', 'Rot', 'w-12')}
-                                {renderEditable(part, 'smallPart', 'Sml', 'w-10')}
-                                {renderEditable(part, 'kitNumber', 'Kit', 'w-12')}
-                                {renderEditable(part, 'isNested', 'Nst', 'w-10')}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })
+            <div className="w-[276px] h-full">
+              {renderPanel()}
+            </div>
+          </motion.div>
         )}
-      </div>
-
-      <div className="p-2 border-t border-slate-700 bg-slate-900/30">
-        <div className="flex items-center justify-between px-2 mb-1">
-          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Nesting Engine</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-        </div>
-        <div className="bg-slate-800/60 rounded p-2 border border-slate-700/50">
-          <div className="flex justify-between text-[9px]">
-            <span className="text-slate-500 italic">Algorithm:</span>
-            <span className="text-cyan-400 font-mono">{nestingMethod}</span>
-          </div>
-        </div>
-      </div>
+      </AnimatePresence>
     </div>
   );
 };

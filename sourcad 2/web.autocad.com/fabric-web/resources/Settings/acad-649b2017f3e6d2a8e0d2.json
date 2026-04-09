@@ -1,0 +1,1763 @@
+{
+    "Settings": {
+        "Package": {
+            "FontsDirectory": "Fonts",
+            "FontsAssetDirectory": "Fonts",
+            "DynamicBlocksEnabled": "0",
+            "RevcloudExperiment": "0",
+            "SMJournalPath": "asmlogs",
+            "DynamicInputPositionEnabled": "0"
+        }
+    },
+    "Variables": {
+        "CENTERMARKEXE": {
+            "@": "1",
+            "PrimaryType": "5003",
+            "StorageType": "3",
+            "SecondaryType": "1"
+        },
+        "*HQGEOM": {
+            "LowerBound": "0",
+            "UpperBound": "1",
+            "StorageType": "2",
+            "@": "1",
+            "PrimaryType": "5003"
+        },
+        "PICKFIRST": {
+            "PrimaryType": "5003",
+            "LegacyValueName": "PickFirst",
+            "LegacyType": "4",
+            "LowerBound": "0",
+            "UpperBound": "1",
+            "@": "1",
+            "StorageType": "1",
+            "LegacyKeyName": "Editor Configuration"
+        },
+        "*REVCLOUDAPPROXARCLEN": {
+            "@": "0.0",
+            "PrimaryType": "5001",
+            "StorageType": "3"
+        },
+        "*GAUSSSIGMA": {
+            "LowerBound": "0",
+            "UpperBound": "100",
+            "StorageType": "2",
+            "@": "52.5",
+            "PrimaryType": "5001"
+        },
+        "INPUTSEARCHDELAY": {
+            "PrimaryType": "5003",
+            "@": "300",
+            "StorageType": "2",
+            "LowerBound": "100",
+            "UpperBound": "10000"
+        },
+        "*INPUTSEARCHOPTIONFLAGS": {
+            "PrimaryType": "5003",
+            "@": "31",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "31"
+        },
+        "PRESELECTIONEFFECT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SELECTIONEFFECT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SELECTIONEFFECTCOLOR": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "255"
+        },
+        "DRAGCOLOR": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "255"
+        },
+        "*DELETIONEFFECT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "ONLINEUSERNAME": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "0",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "ONLINEUSERID": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "0",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*CACHEDONLINEFULLNAME": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "2",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*CACHEDPRODUCTNAME": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "2",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*LICENSEUSAGE": {
+            "PrimaryType": "5005",
+            "@": "UNKNOWN",
+            "StorageType": "1",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*LICENSEUSAGESUBMODEL": {
+            "PrimaryType": "5005",
+            "@": "UNKNOWN",
+            "StorageType": "1",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*LICENSETYPE": {
+            "PrimaryType": "5005",
+            "@": "UNKNOWN",
+            "StorageType": "1",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*LICENSEMODEL": {
+            "PrimaryType": "5005",
+            "@": "UNKNOWN",
+            "StorageType": "1",
+            "TypeFlags": "12",
+            "Owner": "exe"
+        },
+        "*TRACEMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "8",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*TRACEDISPLAYMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "8",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "TRACEPAPERCTL": {
+            "PrimaryType": "5003",
+            "@": "20",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "50"
+        },
+        "TRACEFADECTL": {
+            "PrimaryType": "5003",
+            "@": "40",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "90"
+        },
+        "CHECKOUTDISPLAYMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "3",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "CHECKOUTFADECTL": {
+            "PrimaryType": "5003",
+            "@": "40",
+            "StorageType": "2",
+            "LowerBound": "-90",
+            "UpperBound": "90"
+        },
+        "TRACEVPSUPPORT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*TRACECURRENT": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "0",
+            "TypeFlags": "9",
+            "Owner": "exe"
+        },
+        "TRACEOSNAP": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "MARKUPPAPERTRANSPARENCY": {
+            "PrimaryType": "5003",
+            "@": "90",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "90"
+        },
+        "MARKUPPAPERDISPLAY": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "TRACEMARKUPFADECTL": {
+            "PrimaryType": "5003",
+            "@": "85",
+            "StorageType": "2",
+            "LowerBound": "10",
+            "UpperBound": "90"
+        },
+        "COMMENTHIGHLIGHT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "ENABLESYNCPDF": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "MARKUPASSISTMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "3",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*MARKUPASSISTSERVICE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*MARKUPDISPLAY": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "0",
+            "SecondaryType": "1",
+            "TypeFlags": "4"
+        },
+        "*SUPPRESSMARKUPUPDATE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "SecondaryType": "1",
+            "TypeFlags": "4"
+        },
+        "ACTIVITYINSIGHTSSUPPORT": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "ACTIVITYINSIGHTSVIEWEDLOGGING": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "DRAFTASSISTSUPPORT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "MARKUPSELECTIONMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*TELEMETRYSERVICES": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "BLOCKTESTWINDOW": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "4",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SUBOBJSELECTIONMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "LowerBound": "0",
+            "UpperBound": "5"
+        },
+        "CONSTRAINTINFER": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "DYNMODE": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "1",
+            "LowerBound": "-3",
+            "UpperBound": "3",
+            "LegacyKeyName": "General Configuration",
+            "LegacyValueName": "DYNMODE",
+            "LegacyType": "4"
+        },
+        "GRIPSIZE": {
+            "PrimaryType": "5003",
+            "@": "5",
+            "StorageType": "1",
+            "LowerBound": "1",
+            "UpperBound": "255",
+            "LegacyKeyName": "General Configuration",
+            "LegacyValueName": "GRIPSIZE",
+            "LegacyType": "4"
+        },
+        "DIMCONSTRAINTICON": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "CVPORT": {
+            "PrimaryType": "5003",
+            "@": null,
+            "StorageType": "0",
+            "TypeFlags": "12"
+        },
+        "ASMOUTVER": {
+            "PrimaryType": "5003",
+            "@": "70",
+            "StorageType": "0"
+        },
+        "SOLIDCHECK": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "HPDLGMODE": {
+            "PrimaryType": "5003",
+            "@": "2",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "HATCHBOUNDSET": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "HATCHTYPE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "HPQUICKPREVIEW": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "HPRELATIVEPS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "SecondaryType": "1",
+            "Owner": "exe"
+        },
+        "HPLASTPATTERN": {
+            "PrimaryType": "5005",
+            "@": "ANSI31",
+            "StorageType": "0",
+            "TypeFlags": "2",
+            "Owner": "exe"
+        },
+        "STARTUP": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "3",
+            "LegacyKeyName": "General",
+            "LegacyValueName": "UseStartUpDialog",
+            "LegacyType": "4"
+        },
+        "SURFACEAUTOTRIM": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SELECTIONCYCLING": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "-2",
+            "UpperBound": "2"
+        },
+        "SURFACEASSOCIATIVITY": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SURFACEASSOCIATIVITYDRAG": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "SURFACEMODELINGMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "REBUILDU": {
+            "PrimaryType": "5003",
+            "@": "6",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "3",
+            "UpperBound": "32767"
+        },
+        "REBUILDV": {
+            "PrimaryType": "5003",
+            "@": "6",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "3",
+            "UpperBound": "32767"
+        },
+        "REBUILDDEGREEU": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "2",
+            "UpperBound": "11"
+        },
+        "REBUILDDEGREEV": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "2",
+            "UpperBound": "11"
+        },
+        "REBUILDOPTIONS": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "SURFTRIMAUTOEXTEND": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SURFTRIMPROJECTION": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "SURFOFFSETCONNECT": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*REVCLOUDMINARCLENGTH": {
+            "PrimaryType": "5001",
+            "@": "0.5",
+            "StorageType": "2"
+        },
+        "*REVCLOUDMAXARCLENGTH": {
+            "PrimaryType": "5001",
+            "@": "0.5",
+            "StorageType": "2"
+        },
+        "*REVCLOUDARCSTYLE": {
+            "PrimaryType": "5005",
+            "@": "Normal",
+            "StorageType": "2"
+        },
+        "SPLMETHOD": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SPLKNOTS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "SPLDEGREE": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "0",
+            "TypeFlags": "0",
+            "LowerBound": "1",
+            "UpperBound": "10"
+        },
+        "*MOCOOPTIMIZE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "0",
+            "SecondaryType": "1"
+        },
+        "GRIPMULTIFUNCTIONAL": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "TypeFlags": "0",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "CULLINGOBJ": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1",
+            "LegacyKeyName": "General",
+            "LegacyValueName": "CULLINGOBJ",
+            "LegacyType": "4"
+        },
+        "CULLINGOBJSELECTION": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1",
+            "LegacyKeyName": "General",
+            "LegacyValueName": "CULLINGOBJSELECTION",
+            "LegacyType": "4"
+        },
+        "CLEANSCREENSTATE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "NAVBARDISPLAY": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "LAYOUTCREATEVIEWPORT": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LegacyKeyName": "Drawing Window",
+            "LegacyValueName": "CreateViewports",
+            "LegacyType": "4"
+        },
+        "SHOWPAGESETUPFORNEWLAYOUTS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LegacyKeyName": "Drawing Window",
+            "LegacyValueName": "ShowPlotSetup",
+            "LegacyType": "4"
+        },
+        "UCS2DDISPLAYSETTING": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LegacyKeyName": "Editor Configuration",
+            "LegacyValueName": "UCS2DDISPLAYSETTING",
+            "LegacyType": "4"
+        },
+        "UCS3DPARADISPLAYSETTING": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LegacyKeyName": "Editor Configuration",
+            "LegacyValueName": "UCS3DPARADISPLAYSETTING",
+            "LegacyType": "4"
+        },
+        "UCS3DPERPDISPLAYSETTING": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LegacyKeyName": "Editor Configuration",
+            "LegacyValueName": "UCS3DPERPDISPLAYSETTING",
+            "LegacyType": "4"
+        },
+        "VIEWFWDSTATUS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "VIEWBACKSTATUS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "GROUPDISPLAYMODE": {
+            "PrimaryType": "5003",
+            "@": "2",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "SPLPERIODIC": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "ARRAYTYPE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "PROPOBJLIMIT": {
+            "PrimaryType": "5003",
+            "@": "25000",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "32767"
+        },
+        "PREVIEWDELAY": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "32767"
+        },
+        "ARRAYASSOCIATIVITY": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "CACHEMAXFILES": {
+            "PrimaryType": "5003",
+            "@": "256",
+            "StorageType": "1",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "65535"
+        },
+        "CACHEMAXTOTALSIZE": {
+            "PrimaryType": "5003",
+            "@": "1024",
+            "StorageType": "1",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "65535"
+        },
+        "SAFEMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "DIMCONTINUEMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "COLORTHEME": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "COMMANDPREVIEW": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*LINESMOOTHING": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "1",
+            "SecondaryType": "1"
+        },
+        "*SMJOURNAL": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "SecondaryType": "1"
+        },
+        "*RECOVER3DSOLIDS": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "*RECOVERSOLIDSWEEPS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "DISPSILHBLOCKS": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "*INTERRUPTPREVIEW": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "POLARANG": {
+            "PrimaryType": "5001",
+            "@": "1.5707963267948966",
+            "StorageType": "2",
+            "SecondaryType": "5",
+            "TypeFlags": "8",
+            "LegacyKeyName": "Editor Configuration",
+            "LegacyValueName": "AutoSnapPolarAng",
+            "LegacyType": "1"
+        },
+        "POLARMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "TypeFlags": "8",
+            "LowerBound": "0",
+            "UpperBound": "15",
+            "LegacyKeyName": "Editor Configuration",
+            "LegacyValueName": "AutoSnapPolarMode",
+            "LegacyType": "4"
+        },
+        "*2DRETAINMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*2DRETAINMODELEVEL": {
+            "PrimaryType": "5003",
+            "@": "5",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "5"
+        },
+        "*GPULINETYPE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*GPUHATCH": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*WHIPARC": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*CONFIGLEVEL": {
+            "PrimaryType": "5003",
+            "@": "6",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "-3",
+            "UpperBound": "6"
+        },
+        "*GFXDX12": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "LTGAPSELECTION": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "TEXTGAPSELECTION": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*GPUTEXT2D": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*BIDILAYOUT": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "REVCLOUDCREATEMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "DIMTXTRULER": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1"
+        },
+        "*XREFMATERIALMERGEBEHAVIOR": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*WHIPPREVIEWBGCOLOR": {
+            "PrimaryType": "5005",
+            "@": "RGB:33,40,48",
+            "StorageType": "2",
+            "TypeFlags": "4"
+        },
+        "LINEFADINGLEVEL": {
+            "PrimaryType": "5003",
+            "@": "2",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "3"
+        },
+        "*FADINGFUNCTIONTYPE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "2"
+        },
+        "*FADINGPOWER": {
+            "PrimaryType": "5001",
+            "@": "0.3",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "10"
+        },
+        "*GAUSSTHETA": {
+            "PrimaryType": "5001",
+            "@": "10",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "100"
+        },
+        "CURSORTYPE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*GSFENABLE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "FASTSHADEDMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "TypeFlags": "8",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*GSFQAFLAGS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0"
+        },
+        "*WHIPQAFLAGS": {
+            "PrimaryType": "5010",
+            "@": "0",
+            "StorageType": "0"
+        },
+        "*GSFDIAG": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0"
+        },
+        "*TEXTATLASTHRESHOLD": {
+            "PrimaryType": "5001",
+            "@": "0.2",
+            "StorageType": "3",
+            "LowerBound": "0",
+            "UpperBound": "5"
+        },
+        "TEXTEDITMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "FACETERDEVSURFACE": {
+            "PrimaryType": "5001",
+            "@": "0.001",
+            "StorageType": "2",
+            "LegacyKeyName": "General Configuration",
+            "LegacyValueName": "FACETERDEVSURFACE",
+            "LegacyType": "1"
+        },
+        "JIGZOOMMIN": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "90"
+        },
+        "JIGZOOMMAX": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "90"
+        },
+        "*GESTURAONEFINGERTAPTIME": {
+            "PrimaryType": "5001",
+            "@": "0.25",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "10000"
+        },
+        "*GESTURAONEFINGERHOLDTIME": {
+            "PrimaryType": "5001",
+            "@": "1.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "10000"
+        },
+        "*GESTURAONEFINGERHOLDDISTANCE": {
+            "PrimaryType": "5001",
+            "@": "55.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*GESTURATWOFINGEREVENTCOUNTER": {
+            "PrimaryType": "5001",
+            "@": "10.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*GESTURATWOFINGERSEGDISTANCE": {
+            "PrimaryType": "5001",
+            "@": "200.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "5000"
+        },
+        "*GESTURATWOFINGERHOLDDISTANCE": {
+            "PrimaryType": "5001",
+            "@": "6.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "10000"
+        },
+        "*GESTURATWOFINGERPINCHXMULT": {
+            "PrimaryType": "5001",
+            "@": "1.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*GESTURATWOFINGERTRVSEGRATIO": {
+            "PrimaryType": "5001",
+            "@": "5.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "10000"
+        },
+        "*GESTURATWOFINGERTRVCNTRATIO": {
+            "PrimaryType": "5001",
+            "@": "0.5",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*GESTURATWOFINGERPINCHEXPRATIO": {
+            "PrimaryType": "5001",
+            "@": "0.1",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*GESTURAGESTURETIMERMINTIME": {
+            "PrimaryType": "5001",
+            "@": "2.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "10"
+        },
+        "*GESTURAPROCESSEVENTTIMERTIME": {
+            "PrimaryType": "5001",
+            "@": "20.0",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "100000"
+        },
+        "*GESTURAPROCESSEVENTMAXTIMEMUL": {
+            "PrimaryType": "5001",
+            "@": "0.5",
+            "StorageType": "2",
+            "SecondaryType": "6",
+            "LowerBound": "0",
+            "UpperBound": "100"
+        },
+        "*SINGLEFINGERPAN": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SKETCHHLTRANSPARENCY": {
+            "PrimaryType": "5003",
+            "@": "5",
+            "StorageType": "3",
+            "LowerBound": "1",
+            "UpperBound": "9"
+        },
+        "SKETCHHLWIDTH": {
+            "PrimaryType": "5001",
+            "@": "0.0",
+            "StorageType": "3"
+        },
+        "*TOUCHPROTOTYPES": {
+            "PrimaryType": "5003",
+            "@": "4",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "127"
+        },
+        "*TOGGLEVULKAN": {
+            "PrimaryType": "5003",
+            "@": "2",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*QUICKMEASUREENABLED": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "0",
+            "Owner": "true",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*TOUCHCURSOROFFSET": {
+            "PrimaryType": "5003",
+            "@": "60",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "99"
+        },
+        "STYLUSFORCETHRESHOLD": {
+            "PrimaryType": "5003",
+            "@": "2",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "TRIMEDGES": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*TOUCHINPUTMODE": {
+            "PrimaryType": "5003",
+            "@": "2",
+            "StorageType": "1",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*IMAGEDRAGPREVIEW": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "COUNTCOLOR": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "255"
+        },
+        "COUNTERRORCOLOR": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "255"
+        },
+        "BLOCKTARGETCOLOR": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "255"
+        },
+        "BLOCKINCLUDECOLOR": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "255"
+        },
+        "BLOCKEXCLUDECOLOR": {
+            "PrimaryType": "5003",
+            "@": "7",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "255"
+        },
+        "*GRIPSTOUCHAREA": {
+            "PrimaryType": "5003",
+            "@": "25",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*SELECTIONTOUCHAREA": {
+            "PrimaryType": "5003",
+            "@": "15",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1000"
+        },
+        "*MIRRORSOURCE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*DRAGOPACITY": {
+            "PrimaryType": "5003",
+            "@": "25",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "100"
+        },
+        "*MATCHMODE": {
+            "PrimaryType": "5010",
+            "@": "262143",
+            "StorageType": "2"
+        },
+        "*AUTOSNAPINDICATORSIZE": {
+            "PrimaryType": "5003",
+            "@": "15",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "100"
+        },
+        "*FABRICEXPERIMENTS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "100"
+        },
+        "*MEASUREMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*CACHEMAXBLOCKSIDEDB": {
+            "PrimaryType": "5003",
+            "@": "10",
+            "StorageType": "2",
+            "LowerBound": "1",
+            "UpperBound": "50"
+        },
+        "BLOCKNAVIGATE": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "2",
+            "TypeFlags": "3"
+        },
+        "*BLOCKSTATE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "4",
+            "Owner": "AcWindows",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*COMPLETABLESTATE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "4",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "TRIMEXTENDMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*TRIMARCASCURVE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*UPDATEXREFPATHFORSAVE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "BLOCKCREATEMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2",
+            "LegacyKeyName": "Dialogs\\block_definition_dialog",
+            "LegacyValueName": "ObjectsPostprocessing",
+            "LegacyType": "4",
+            "LegacyMapping": "{\"type\":\"enum\", \"content\":[{\"new\":1, \"old\":3}, {\"new\":2, \"old\":1}]}"
+        },
+        "WBLOCKCREATEMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2",
+            "LegacyKeyName": "Dialogs\\write_block_dialog",
+            "LegacyValueName": "ObjectsPostprocessing",
+            "LegacyType": "4",
+            "LegacyMapping": "{\"type\":\"enum\", \"content\":[{\"new\":1, \"old\":3}, {\"new\":2, \"old\":1}]}"
+        },
+        "BLOCKSRECENTFOLDER": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "1",
+            "TypeFlags": "19"
+        },
+        "BLOCKSYNCFOLDER": {
+            "PrimaryType": "5005",
+            "@": null,
+            "StorageType": "1",
+            "TypeFlags": "3"
+        },
+        "PICKAUTO": {
+            "PrimaryType": "5003",
+            "@": "5",
+            "StorageType": "2",
+            "LowerBound": "-7",
+            "UpperBound": "7",
+            "LegacyKeyName": "Editor Configuration",
+            "LegacyValueName": "PICKAUTO",
+            "LegacyType": "4"
+        },
+        "REVCLOUDARCVARIANCE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*PDFRENDERASYNC": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*PDFRENDERCACHELIMIT": {
+            "PrimaryType": "5003",
+            "@": "128",
+            "StorageType": "2",
+            "LowerBound": "16",
+            "UpperBound": "1024"
+        },
+        "*PROMPTSTYPE": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "1",
+            "Owner": "exe",
+            "LowerBound": "1",
+            "UpperBound": "3"
+        },
+        "*BLOCKSTREAM_FAVORITES": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "SPLINE_FASTDRAW": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*CONSENTSTATUS": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "*ONBOARDINGSUPPRESSED": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*ONBOARDINGCOMPLETED": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*FINDINCLUDEOPTIONS": {
+            "PrimaryType": "5003",
+            "@": "447",
+            "StorageType": "1",
+            "LowerBound": "0",
+            "UpperBound": "511"
+        },
+        "*FINDMATCHOPTIONS": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "1",
+            "LowerBound": "0",
+            "UpperBound": "31"
+        },
+        "*CLOUDCONNECTDISABLE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "*GEOMETRYCLEANUPZOOMPAN": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "TypeFlags": "12",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*GEOMETRYCLEANUPREVIEW": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "12",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*XREFMANIFEST": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "1",
+            "SecondaryType": "1",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*MISSINGREFERENCEDISPLAY": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "1",
+            "SecondaryType": "1",
+            "TypeFlags": "4",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "ANCOENTCOLMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "255"
+        },
+        "GAPSIZE": {
+            "PrimaryType": "5001",
+            "@": "0",
+            "StorageType": "2"
+        },
+        "CDIMASMODEL": {
+            "PrimaryType": "5005",
+            "@": "gpt",
+            "StorageType": "2"
+        },
+        "CDIMASDELAY": {
+            "PrimaryType": "5001",
+            "@": "0.0",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "600"
+        },
+        "DIMASSIST": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "3",
+            "TypeFlags": "4",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "FRAME": {
+            "PrimaryType": "5003",
+            "@": "3",
+            "StorageType": "3",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "WIPEOUTFRAME": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "3",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "HPCOLOR": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "2"
+        },
+        "HPBACKGROUNDCOLOR": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "2"
+        },
+        "HPTRANSPARENCY": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "2"
+        },
+        "HPLAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "HATCHCREATION": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "TypeFlags": "4",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "ARRAYEDITSTATE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "3",
+            "SecondaryType": "1",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "ARRAYCREATION": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "3",
+            "TypeFlags": "4",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "3"
+        },
+        "TEXTJUSTIFY": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "Owner": "exe"
+        },
+        "DIMLAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "DIMDISTSNAP": {
+            "PrimaryType": "5001",
+            "@": "0.0",
+            "StorageType": "3",
+            "TypeFlags": "8"
+        },
+        "XREFOVERRIDE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "3",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "REFPATHTYPE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "VISRETAINMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "LowerBound": "-2047",
+            "UpperBound": "2047"
+        },
+        "BLOCKREDEFINEMODE": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "2",
+            "LowerBound": "0",
+            "UpperBound": "2"
+        },
+        "TEXTLAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "MLEADERLAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "TABLELAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "REVCLOUDLAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "VIEWPORTLAYER": {
+            "PrimaryType": "5005",
+            "@": ".",
+            "StorageType": "3",
+            "TypeFlags": "3"
+        },
+        "*AUDITXREFSYMB": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "REVCLOUDSCALEMODE": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*ACTIONPROPAGATION": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "2",
+            "SecondaryType": "1",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*FABRICENABLEASM": {
+            "PrimaryType": "5003",
+            "@": "1",
+            "StorageType": "0",
+            "SecondaryType": "1"
+        },
+        "*FABRICASMSUPPORT": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "Owner": "exe",
+            "LowerBound": "0",
+            "UpperBound": "1"
+        },
+        "*MODELERFULL": {
+            "PrimaryType": "5003",
+            "@": "0",
+            "StorageType": "0",
+            "SecondaryType": "1"
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "nesting-optimization": {
+      "source": "kishorkukreja/awesome-supply-chain",
+      "sourceType": "github",
+      "computedHash": "154cf290cd36274763eb5e5583f7172e798ad56f203240b53a18f1c910e38fe9"
+    },
+    "threejs-geometry": {
+      "source": "cloudai-x/threejs-skills",
+      "sourceType": "github",
+      "computedHash": "4e5757bf80a329810545c237e557e362fa14fd3a3e6a567ec1d75435be6b2dda"
+    }
+  }
+}

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoCADCer version="27.0.0" date="12/9/2025 8:23:17 AM">
+  <Lookup>
+    <PlatformLookup>
+      <Platform name="Windows" p_ID="1" />
+      <Platform name="Mac" p_ID="2" />
+      <Platform name="IOS" p_ID="3" />
+      <Platform name="Android" p_ID="4" />
+      <Platform name="Web" p_ID="6" />
+      <Platform name="Win32" p_ID="7" />
+    </PlatformLookup>
+    <ManufLookup>
+      <Manufacturer name="NVIDIA" m_ID="1" IDArray="10DE" />
+      <Manufacturer name="AMD" m_ID="2" IDArray="1002" />
+      <Manufacturer name="INTEL" m_ID="3" IDArray="8086" />
+      <Manufacturer name="VMware" m_ID="4" IDArray="15AD" />
+      <Manufacturer name="Parallels" m_ID="5" IDArray="1AB8" />
+      <Manufacturer name="Matrox" m_ID="6" IDArray="102B" />
+      <Manufacturer name="Microsoft" m_ID="7" IDArray="1414" />
+    </ManufLookup>
+    <CardClassLookup>
+      <CardClass cc_ID="1" displayName="Workstation" />
+      <CardClass cc_ID="3" displayName="Consumer" />
+      <CardClass cc_ID="4" displayName="Mobile" />
+    </CardClassLookup>
+    <CardLookup>
+      <Card name="Microsoft Basic Render Driver" c_ID="1" m_ID="7" cc_ID="3" IDArray="008C" />
+      <Card name="Microsoft Basic Display Adapter" c_ID="2" m_ID="7" cc_ID="3" IDArray="008C" />
+      <Card name="Intel(R) 82915G/GV/910GL Express Chipset Family" c_ID="93" m_ID="3" cc_ID="3" IDArray="2562,2572,2582,2592,3577,3582,358E,7800,1240,1132,7125,7123,7121" />
+      <Card name="Intel(R) Q965/Q963 Express Chipset Family" c_ID="94" m_ID="3" cc_ID="3" IDArray="2772,2776,27A2,2972,2973,2982,2992,2993,29A2,29A3,29B2,29B3,29C2,29C3,29D2,29D3,2A42,2A43,2E23,2E22,2E33,2E32,2E42,2E43,2E92,2E93,2E12,2E13,2E02,2A02,2A03,2A12,2A13,A012,A011,A001,A002" />
+      <Card name="Intel(R) HD Graphics Family" c_ID="134" m_ID="3" cc_ID="3" IDArray="0102,0106,0112,0116,0122,0126,0162,0166,016A,0152" />
+      <Card name="Intel GMA 950" c_ID="164" m_ID="3" cc_ID="3" IDArray="08C7,08C8,08C9,08CA,08CB,08CC,08CD,08CE,08CF,0BE0,0BE1,0BE2,0BE3,4102,2E5B,8108,8109,27A6,27AE,2792,2592,2782,2582" />
+      <Card name="Intel 915G/915GV/910GL Embedded Graphics" c_ID="165" m_ID="3" cc_ID="3" IDArray="2792" />
+      <Card name="AMD Radeon Graphics Processor Legacy" c_ID="999" m_ID="2" cc_ID="4" IDArray="990F,9851,9851,990D,990B,9907,130A,1318,130A,990F,990D,9832,9907,990B,9830,130D,9903,1318,1309,130D,9874,9850,9850,9999,130E,9995,9999,9852,9903,9995,130C,9997,9832,9836,130E,990B,9874,9834,990C,9836,1309,9808,9830,130F,130C,9900,9850,1313,9838,9808,9990,999A,9853,9908,130F,990D,9997,1313,999B,990B,9908,9851,9900" />
+    </CardLookup>
+    <ReleaseLookup>
+    </ReleaseLookup>
+    <OSLookup>
+      <OS name="Windows7" displayName="Windows 7 32-bit" os_ID="1000" />
+      <OS name="Windows7_64" displayName="Windows 7 64-bit" os_ID="2000" />
+      <OS name="Windows8" displayName="Windows 8 32-bit" os_ID="4000" />
+      <OS name="Windows8_64" displayName="Windows 8 64-bit" os_ID="8000" />
+      <OS name="WinVista" displayName="Windows Vista 32-bit" os_ID="100" />
+      <OS name="WinVista64" displayName="Windows Vista 64-bit" os_ID="800" />
+      <OS name="WinXP" displayName="Windows XP 32-bit" os_ID="1" />
+      <OS name="WinXP64" displayName="Windows XP 64-bit" os_ID="200" />
+      <OS name="MacOSX105" displayName="Mac OSX 10.5" os_ID="40000000" />
+      <OS name="MacOSX106" displayName="Mac OSX 10.6" os_ID="20000000" />
+      <OS name="MacOSX107" displayName="Mac OSX 10.7" os_ID="10000000" />
+      <OS name="MacOSX108" displayName="Mac OSX 10.8" os_ID="8000000" />
+      <OS name="FEDORA14" displayName="Fedora 14" os_ID="100000" />
+      <OS name="REDHAT55" displayName="RedHat 5.5" os_ID="400000" />
+      <OS name="REDHAT57" displayName="RedHat 5.7" os_ID="4000000" />
+      <OS name="REDHAT62" displayName="RedHat 6.2" os_ID="1000000" />
+      <OS name="CENTOS55" displayName="CentOS 5.5" os_ID="200000" />
+      <OS name="CENTOS57" displayName="CentOS 5.7" os_ID="800000" />
+      <OS name="CENTOS62" displayName="CentOS 6.2" os_ID="2000000" />
+      <OS name="MACOSX109" displayName="Mac OSX 10.9" os_ID="2" />
+      <OS name="CENTOS63" displayName="CentOS 6.3" os_ID="4" />
+      <OS name="MACOSX1010" displayName="Mac OSX 10.10" os_ID="10" />
+      <OS name="REDHAT53" displayName="RedHat 5.3" os_ID="8" />
+      <OS name="REDHAT63" displayName="RedHat 6.3" os_ID="20" />
+      <OS name="CENTOS52" displayName="CentOS 5.2" os_ID="40" />
+      <OS name="CENTOS53" displayName="CentOS 5.3" os_ID="80" />
+      <OS name="Windows81" displayName="Windows 8.1 32-bit" os_ID="10000" />
+      <OS name="Windows81_64" displayName="Windows 8.1 64-bit" os_ID="20000" />
+      <OS name="REDHAT65" displayName="RedHat 6.5" os_ID="40000" />
+      <OS name="Windows10_64" displayName="Windows 10 64-bit" os_ID="80000" />
+      <OS name="CENTOS65" displayName="CentOS 6.5" os_ID="400" />
+      <OS name="Windows10" displayName="Windows 10 32-bit" os_ID="80000000" />
+      <!-- Windows11 only 64 bit is supported -->
+      <OS name="Windows11" displayName="Windows 11 64-bit" os_ID="100000000" />
+    </OSLookup>
+    <DriverLookup>
+      <Driver d_ID="1" m_ID="2" os_ID="3F000" displayName="AMD Legacy Driver" version="*" version2="14.501.9999.9"/>
+      <Driver d_ID="2" m_ID="2" os_ID="180080000" displayName="AMD Win10 Legacy Driver" version="*" version2="15.201.1045.9"/>
+      <Driver d_ID="3" m_ID="2" os_ID="180080000" displayName="AMD integrated Win10 Legacy Driver" version="*" version2="15.299.9999.9"/>
+      <Driver d_ID="4" m_ID="2" os_ID="180080000" displayName="AMD 19-12 20-1 Drivers" version="26.20.15000.00" version2="26.20.15029.20014"/>
+      <Driver d_ID="5" m_ID="2" os_ID="180080000" displayName="AMD Pre20 Win10 Dx12 Drivers" version="*" version2="26.20.14000.00000"/>
+      <Driver d_ID="6" m_ID="1" os_ID="180080000" displayName="NVIDIA Win10 R440 Drivers" version="26.21.14.4000" version2="26.21.14.4999"/>
+      <Driver d_ID="7" m_ID="1" os_ID="180080000" displayName="NVIDIA Win10 Win11 R470 Drivers" version="30.0.14.7000" version2="30.0.14.7220"/>
+    </DriverLookup>
+  </Lookup>
+  <Certification>
+    <!-- Mac Platform -->
+    <cert id="1" p_ID="2">
+      <Mode avail="1" used="-3"/>
+    </cert>
+    <!-- iOS Platform -->
+    <cert id="2" p_ID="3">
+      <Mode avail="120" used="3"/>
+      <Feature>
+        <fe name="ACAD_2DRetainModeLevel" type="1" avail="5" recom="5"/>
+        <fe name="ACAD_2DRetainMode" type="0" avail="1" recom="1"/>
+        <fe name="ACAD_GPULineType" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUHatch" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUText2D" type="1" avail="2" recom="2"/>
+      </Feature>
+    </cert>
+    <!-- Android Platform -->
+    <cert id="3" p_ID="4">
+      <Mode avail="120" used="3"/>
+      <Feature>
+        <fe name="ACAD_2DRetainModeLevel" type="1" avail="5" recom="5"/>
+        <fe name="ACAD_2DRetainMode" type="0" avail="1" recom="1"/>
+        <fe name="ACAD_GPULineType" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUHatch" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_WhipArc" type="0" avail="1" recom="1"/>
+        <fe name="ACAD_GPUText2D" type="1" avail="1" recom="1"/>
+      </Feature>
+    </cert>
+    <!-- WinRT Platform -->
+    <cert id="4" p_ID="5">
+      <Mode avail="120" used="3"/>
+      <Feature>
+        <fe name="ACAD_2DRetainModeLevel" type="1" avail="5" recom="5"/>
+        <fe name="ACAD_WhipArc" type="0" avail="1" recom="1"/>
+        <fe name="ACAD_GPUText2D" type="1" avail="1" recom="1"/>
+      </Feature>
+    </cert>
+    <!-- Web Platform -->
+    <cert id="5" p_ID="6">
+      <Mode avail="120" used="3"/>
+      <Feature>
+        <fe name="ACAD_2DRetainModeLevel" type="1" avail="5" recom="5"/>
+        <fe name="ACAD_2DRetainMode" type="0" avail="1" recom="1"/>
+        <fe name="ACAD_GPULineType" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUHatch" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUText2D" type="1" avail="1" recom="1"/>
+      </Feature>
+    </cert>
+    <!-- Win32 Platform -->
+    <cert id="6" p_ID="7">
+      <Mode avail="120" used="3"/>
+      <Feature>
+        <fe name="ACAD_2DRetainModeLevel" type="1" avail="5" recom="5"/>
+        <fe name="ACAD_2DRetainMode" type="0" avail="1" recom="1"/>
+        <fe name="ACAD_WhipArc" type="0" avail="1" recom="1"/>
+      </Feature>
+    </cert>
+    <!-- Microsoft Basic Render -->
+    <cert id="7" m_ID="7" c_ID="1">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <cert id="8" m_ID="7" c_ID="2">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <!-- VMware -->
+    <cert id="9" m_ID="4">
+      <GraphicsLevel val="5_0"/>
+      <Feature>
+        <fe name="ACAD_GPULineType" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUHatch" type="0" avail="0" recom="0"/>
+      </Feature>
+    </cert>
+    <!-- Parallels Desktop -->
+    <cert id="10" m_ID="5">
+      <GraphicsLevel val="5_0"/>
+      <Feature>
+        <fe name="ACAD_GPULineType" type="0" avail="0" recom="0"/>
+        <fe name="ACAD_GPUHatch" type="0" avail="0" recom="0"/>
+      </Feature>
+    </cert>
+    <!--AMD legacy driver -->
+    <cert id="11" m_ID="2" os_ID="3F000" d_ID="1">
+      <GraphicsLevel val="3_0"/>
+    </cert>
+    <!--AMD legacy Win10 driver -->
+    <cert id="12" m_ID="2" os_ID="180080000" d_ID="2">
+      <GraphicsLevel val="3_0"/>
+    </cert>
+    <!--Intel legacy cards -->
+    <cert id="13" m_ID="3" c_ID="93">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <cert id="14" m_ID="3" c_ID="94">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <cert id="15" m_ID="3" c_ID="134">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <cert id="16" m_ID="3" c_ID="164">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <cert id="17" m_ID="3" c_ID="165">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <!--AMD integrated legacy Win10 driver -->
+    <cert id="18" m_ID="2" c_ID="999" os_ID="180080000" d_ID="3">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <!-- AMD 19-12 20-1 Drivers -->
+    <cert id="19" m_ID="2" os_ID="180080000" d_ID="4">
+      <GraphicsLevel val="0_0"/>
+    </cert>
+    <!--AMD Pre20 Dx12 Drivers -->
+    <cert id="20" m_ID="2" os_ID="180080000" d_ID="5">
+      <GraphicsLevel val="5_0"/>
+    </cert>
+    <!--NVIDIA R440 Dx12 Drivers (ACD-13529)-->
+    <cert id="21" m_ID="1" os_ID="180080000" d_ID="6">
+      <GraphicsLevel val="5_0"/>
+    </cert>
+    <!--NVIDIA R470 Drivers GSF (ACD-22794)-->
+    <cert id="22" m_ID="1" os_ID="180080000" d_ID="7">
+      <Feature>
+        <fe name="ACAD_FastShaded" type="0" avail="0" recom="0"/>
+      </Feature>
+    </cert>
+  </Certification>
+</AutoCADCer>

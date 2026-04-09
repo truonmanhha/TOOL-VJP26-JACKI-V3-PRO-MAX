@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 4">
+  <defs>
+    <style>
+      .greyFill {
+        fill: gray;
+      }
+    </style>
+  </defs>
+  <g id="Icons">
+    <rect class="greyFill" width="4" height="4"/>
+    <rect class="greyFill" x="8" width="4" height="4"/>
+    <rect class="greyFill" x="16" width="4" height="4"/>
+    <rect class="greyFill" x="24" width="4" height="4"/>
+    <rect class="greyFill" x="32" width="4" height="4"/>
+    <rect class="greyFill" x="40" width="4" height="4"/>
+    <rect class="greyFill" x="48" width="4" height="4"/>
+    <rect class="greyFill" x="56" width="4" height="4"/>
+  </g>
+</svg>

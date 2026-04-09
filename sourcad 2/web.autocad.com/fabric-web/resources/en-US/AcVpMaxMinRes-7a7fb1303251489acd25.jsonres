@@ -1,0 +1,13 @@
+{
+  "strings": {
+    "100": "VPMAX",
+    "101": "A viewport is currently maximized.\n",
+    "102": "No viewports available to maximize.\n",
+    "103": "Select a viewport to maximize: ",
+    "104": "Invalid selection, please select a single viewport.\n",
+    "110": "VPMIN",
+    "111": "No viewport is currently maximized.\n",
+    "112": "UPDATETHUMBSNOW"
+  },
+  "datares": {}
+}

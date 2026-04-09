@@ -1,0 +1,1 @@
+<svg width='99%' height='99%' xmlns='http://www.w3.org/2000/svg'><circle fill='none' cx='50%' cy='50%' r ='50%' stroke='#bcd3eeBF' stroke-width='4' stroke-dasharray='4 8' stroke-dashoffset='86' stroke-linecap='square'/></svg>

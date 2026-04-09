@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "1": "\nSelect reference objects: ",
+    "2": "Cannot use same object.",
+    "3": "\nDatabase read/write error",
+    "4": "Above Under Front Back",
+    "5": "\nEnter object ordering option [Above objects/Under objects/Front/Back] <Back>: ",
+    "6": "DRAWORDER",
+    "7": "Refresh _Refresh",
+    "8": "\n%d objects are not in the current space and have been removed from the selection set.",
+    "9": "Partial nested selection for REFEDIT has disabled the DRAWORDER command.",
+    "10": "TEXTTOFRONT",
+    "11": "Text Dimensions Leaders All _ Text Dimensions Leaders All",
+    "12": "\nBring to front [Text/Dimensions/Leaders/All] <All>: ",
+    "13": "\n%d object(s) brought to front.\n",
+    "14": "\nNo objects found.\n",
+    "15": "HATCHTOBACK",
+    "16": "\n%d hatch object(s) sent to back.\n",
+    "17": "\nNo hatch objects found.\n"
+  },
+  "datares": {}
+}

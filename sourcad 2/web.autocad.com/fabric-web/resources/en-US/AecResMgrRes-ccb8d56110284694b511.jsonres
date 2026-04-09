@@ -1,0 +1,11 @@
+{
+  "strings": {
+    "25152": "Cannot find the resource string number %1!d! in resource %2!s!.",
+    "25153": "Cannot find the resource string number %1!d! in resource %2!d!.",
+    "25155": "Internal Error: Resource-Manager not found!!!",
+    "25150": "Application name must be set to register \nwith the Resource-Manager.",
+    "25154": "Resource DLL name must be set to register \nwith the Resource-Manager.",
+    "25151": "Application path must be set to register \nwith the Resource-Manager."
+  },
+  "datares": {}
+}

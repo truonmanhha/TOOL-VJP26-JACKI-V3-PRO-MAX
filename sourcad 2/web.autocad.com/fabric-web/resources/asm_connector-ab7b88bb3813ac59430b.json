@@ -1,0 +1,9 @@
+{
+    "Applications": {
+        "AcDbAsmEnabler": {
+            "DESCRIPTION": "Fabric Asm Module",
+            "LOADCTRLS": "8",
+            "LOADER": "fabricasmconnector"
+        }
+    }
+}

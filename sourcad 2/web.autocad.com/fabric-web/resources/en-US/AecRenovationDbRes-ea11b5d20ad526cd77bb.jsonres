@@ -1,0 +1,32 @@
+{
+  "strings": {
+    "991": "Prefix for normal prompt messages",
+    "995": "Prefix for dialog messages and text",
+    "1000": "These strings manage the prompts and the initget strings",
+    "5000": "Strings which appear on dialogs from Renovation",
+    "5035": "AEC Renovation",
+    "5036": "AecRenovation (Imperial).dwg",
+    "5037": "AecRenovation (Metric).dwg",
+    "5068": "Existing_",
+    "5069": "Demolished_",
+    "5070": "New_",
+    "5071": "_(Existing)",
+    "5072": "_(Demolished)",
+    "5073": "_(New)",
+    "5074": "Renovation_",
+    "5080": "Breakthrough_New",
+    "5081": "Breakthrough_Closed",
+    "5084": "General",
+    "5085": "Starting Renovation Mode",
+    "5086": "Solidhatch; grey/yellow/red Display for Existing/Demolished/New",
+    "5087": "Wall",
+    "5088": "Roof",
+    "5089": "Standard setting with suffix for Existing and Demolished",
+    "5090": "Fillings have been moved as result of wall style changes. Verify if fillings positions from walls of style %s are correct",
+    "5091": "Warning !",
+    "5092": "RoofSlab",
+    "5093": "Slab",
+    "5094": "You cannot edit the xref in the drawing because the xref is in Renovation mode.\n"
+  },
+  "datares": {}
+}

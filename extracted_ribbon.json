@@ -1,0 +1,165 @@
+[
+  {
+    "title": "Draw",
+    "commands": [
+      {
+        "name": "RECTANGLE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"blueDefault\" y=\"3\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" x=\"21\" y=\"18\" width=\"3\" height=\"3\"></rect>\n    <polygon class=\"greyDefault\" points=\"22 17 23 17 23 4 4 4 4 5 22 5 22 17\"></polygon>\n    <polygon class=\"greyDefault\" points=\"20 19 2 19 2 7 1 7 1 20 20 20 20 19\"></polygon>\n  </g>\n</svg>"
+      },
+      {
+        "name": "CIRCLE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"blueDefault\" x=\"10\" y=\"11\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" x=\"18\" y=\"4\" width=\"3\" height=\"3\"></rect>\n    <path class=\"greyDefault\" d=\"M11.5,24A11.5,11.5,0,1,1,17.31934,2.57959l-.50586.8623a10.48964,10.48964,0,1,0,4.30566,4.84278l.916-.40235A11.5056,11.5056,0,0,1,11.5,24Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "ARC",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M11.294,6.40479l-.5879-.80958a23.91828,23.91828,0,0,1,9.10059-4.08886l.209.97851A22.90678,22.90678,0,0,0,11.294,6.40479Z\"></path>\n    <path class=\"greyDefault\" d=\"M2.30859,20.10547,1.332,19.89453a23.4164,23.4164,0,0,1,4.26856-9.1958l.79882.60254A22.44313,22.44313,0,0,0,2.30859,20.10547Z\"></path>\n    <rect class=\"blueDefault\" x=\"21\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" y=\"21\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" x=\"7\" y=\"7\" width=\"3\" height=\"3\"></rect>\n  </g>\n</svg>"
+      },
+      {
+        "name": "SPLINE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"blueDefault\" d=\"M3,24H0V21H3ZM7,0H4V3H7ZM20,21H17v3h3ZM24,0H21V3h3Z\"></path>\n    <path class=\"greyDefault\" d=\"M21.99786,4c-.37475,5.08276-1.91729,11-5.03985,11-1.74024,0-2.81348-1.41357-4.05664-3.05029C11.49512,10.09814,9.90137,8,7,8,2.42676,8,1.20117,17.95508,1.00293,19.9502c-.00183.01818-.00079.03192-.00238.0498H2.00269C2.41986,15.89,3.93384,9,7,9c2.4043,0,3.71582,1.72656,5.10449,3.55469C13.3916,14.24854,14.72168,16,16.958,16c4.79785,0,5.83691-9.15723,6.041-11.96387.001-.01324.00025-.02307.0011-.03613Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "XLINE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"blueDefault\" x=\"10\" y=\"10\" width=\"3\" height=\"3\"></rect>\n    <g>\n      <polygon class=\"greyDefault\" points=\"22.986 0 16.235 1.843 18.358 3.965 13.653 8.67 14.36 9.377 19.065 4.672 21.187 6.795 22.986 0\"></polygon>\n      <polygon class=\"greyDefault\" points=\"9.347 14.39 8.64 13.683 3.935 18.388 1.813 16.265 0 23.03 6.765 21.217 4.642 19.095 9.347 14.39\"></polygon>\n    </g>\n  </g>\n</svg>"
+      },
+      {
+        "name": "LINE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"blueDefault\" y=\"21\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" x=\"21\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"greyDefault\" x=\"0.66616\" y=\"11.50475\" width=\"22.65817\" height=\"1\" transform=\"translate(-4.97531 11.99803) rotate(-44.99999)\"></rect>\n  </g>\n</svg>"
+      },
+      {
+        "name": "PLINE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"blueDefault\" x=\"13\" y=\"17\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" y=\"17\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"greyDefault\" x=\"4\" y=\"18\" width=\"8\" height=\"1\"></rect>\n    <rect class=\"blueDefault\" x=\"13\" y=\"4\" width=\"3\" height=\"3\"></rect>\n    <path class=\"greyDefault\" d=\"M17.02789,5,17,5.00153V6.00159L17.02789,6a6.00006,6.00006,0,0,1,.00081,12L17,17.99847v.99994L17.02789,19a7.00006,7.00006,0,0,0,0-14Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "HATCH",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M24,4V3H21V0H20V3H4V0H3V3H0V4H3V20H0v1H3v3H4V21H20v3h1V21h3V20H21V4ZM20,20H4V4H20Z\"></path>\n    <polygon class=\"blueDefault\" points=\"19 5 18.308 5 5 18.308 5 19 5.722 19 19 5.722 19 5\"></polygon>\n    <polygon class=\"blueDefault\" points=\"13.308 5 5 13.308 5 14.722 14.722 5 13.308 5\"></polygon>\n    <polygon class=\"blueDefault\" points=\"8.308 5 5 8.308 5 9.722 9.722 5 8.308 5\"></polygon>\n    <polygon class=\"blueDefault\" points=\"19 9.308 9.308 19 10.722 19 19 10.722 19 9.308\"></polygon>\n    <polygon class=\"blueDefault\" points=\"15.722 19 19 15.722 19 14.308 14.308 19 15.722 19\"></polygon>\n  </g>\n</svg>"
+      },
+      {
+        "name": "ARRAY",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M0,0V10H10V0ZM9,9H1V1H9Z\"></path>\n    <g>\n      <path class=\"blueDefault\" d=\"M13,0V10H23V0Zm9,9H14V1h8Z\"></path>\n      <path class=\"blueDefault\" d=\"M13,23H23V13H13Zm1-9h8v8H14Z\"></path>\n      <path class=\"blueDefault\" d=\"M0,23H10V13H0Zm1-9H9v8H1Z\"></path>\n    </g>\n  </g>\n</svg>"
+      },
+      {
+        "name": "DIVIDE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <g>\n    <rect class=\"blueDefault\" x=\"5\" y=\"13\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"blueDefault\" x=\"14\" y=\"4\" width=\"3\" height=\"3\"></rect>\n    <rect class=\"greyDefault\" x=\"17.44049\" y=\"1.17141\" width=\"3.72747\" height=\"1\" transform=\"translate(4.47221 14.13969) rotate(-45)\"></rect>\n    <rect class=\"greyDefault\" x=\"0.80768\" y=\"17.80423\" width=\"3.72747\" height=\"1\" transform=\"translate(-12.1606 7.25016) rotate(-45)\"></rect>\n    <rect class=\"greyDefault\" x=\"8.17153\" y=\"9.48652\" width=\"5.63518\" height=\"1\" transform=\"translate(-3.84289 10.69546) rotate(-45)\"></rect>\n    <rect class=\"greyDefault\" x=\"19.9692\" y=\"6.95098\" width=\"1\" height=\"7.06066\" transform=\"translate(-1.41611 17.54382) rotate(-45)\"></rect>\n    <rect class=\"greyDefault\" x=\"10.9692\" y=\"15.95098\" width=\"1\" height=\"7.06066\" transform=\"translate(-10.41611 13.8159) rotate(-45)\"></rect>\n    <path class=\"greyDefault\" d=\"M18,13a2.97764,2.97764,0,0,0-2,.77856V13H15v7h1V16a2,2,0,0,1,4,0v4h1V16A3,3,0,0,0,18,13Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "ELLIPSE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <g>\n    <g>\n      <path class=\"greyDefault\" d=\"M21.38745,10h1.10516C21.28809,7.10315,18.04364,4.87158,14,4.208V5.21582C17.44031,5.81989,20.21466,7.64111,21.38745,10Z\"></path>\n      <path class=\"greyDefault\" d=\"M11.5,20C5.71,20,1,16.63574,1,12.5,1,8.98059,4.41534,6.028,9,5.22375V4.20734C3.85229,5.05182,0,8.441,0,12.5,0,17.1944,5.14874,21,11.5,21c5.17389,0,9.548-2.52594,10.99261-6H21.38745C19.94153,17.90826,16.06146,20,11.5,20Z\"></path>\n    </g>\n    <g>\n      <rect class=\"blueDefault\" x=\"10\" y=\"3\" width=\"3\" height=\"3\"></rect>\n      <rect class=\"blueDefault\" x=\"10\" y=\"11\" width=\"3\" height=\"3\"></rect>\n      <rect class=\"blueDefault\" x=\"21\" y=\"11\" width=\"3\" height=\"3\"></rect>\n    </g>\n  </g>\n</svg>"
+      },
+      {
+        "name": "POLYGON",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <polygon class=\"greyDefault\" points=\"16 22 5.12 22 1.174 9.789 11.499 2.254 21.826 9.806 18.527 20 19.578 20 23 9.426 11.5 1 0 9.408 4.393 23 16 23 16 22\"></polygon>\n    <path class=\"blueDefault\" d=\"M13,14H10V11h3Zm7,7H17v3h3Z\"></path>\n  </g>\n</svg>"
+      }
+    ]
+  },
+  {
+    "title": "Annotate",
+    "commands": [
+      {
+        "name": "MEASURE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Icons\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <rect class=\"cls-1\" y=\"10\" width=\"23\" height=\"6\"></rect>\n  <rect class=\"cls-2\" x=\"2\" y=\"10\" width=\"1\" height=\"2\"></rect>\n  <rect class=\"cls-2\" x=\"5\" y=\"10\" width=\"1\" height=\"3\"></rect>\n  <rect class=\"cls-2\" x=\"8\" y=\"10\" width=\"1\" height=\"2\"></rect>\n  <rect class=\"cls-2\" x=\"11\" y=\"10\" width=\"1\" height=\"3\"></rect>\n  <rect class=\"cls-2\" x=\"14\" y=\"10\" width=\"1\" height=\"2\"></rect>\n  <rect class=\"cls-2\" x=\"17\" y=\"10\" width=\"1\" height=\"3\"></rect>\n  <rect class=\"cls-2\" x=\"20\" y=\"10\" width=\"1\" height=\"2\"></rect>\n</svg>"
+      },
+      {
+        "name": "REVCLOUD",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M12.87646,21.31836A3.71267,3.71267,0,0,1,9.521,19.24316a3.82928,3.82928,0,0,1-1.4917.32178,3.95583,3.95583,0,0,1-3.90381-3.90332c0-.1084,0-.22119.00439-.33789a2.17775,2.17775,0,0,1-.22607.0127A3.95593,3.95593,0,0,1,0,11.43262a3.76852,3.76852,0,0,1,1.38477-2.958,3.57979,3.57979,0,0,1,2.82812-5.793A3.57983,3.57983,0,0,1,6.98877,3.98047,4.23839,4.23839,0,0,1,13.4375,5.57129a4.403,4.403,0,0,1,2.32715-.72363,4.18364,4.18364,0,0,1,4.127,3.33789,2.64747,2.64747,0,0,1,.41113-.0376A3.70159,3.70159,0,0,1,24,11.84521,3.80666,3.80666,0,0,1,21.03516,15.561a3.63811,3.63811,0,0,1,.07666.71923,3.95573,3.95573,0,0,1-3.90332,3.90332,3.7462,3.7462,0,0,1-1.47705-.26464A3.5744,3.5744,0,0,1,12.87646,21.31836ZM10.07324,17.792l.1875.61035a2.71427,2.71427,0,0,0,2.61572,1.916,2.5886,2.5886,0,0,0,2.24463-1.28955l.251-.45166.44287.26562a2.54168,2.54168,0,0,0,1.39356.34082,2.94225,2.94225,0,0,0,2.90332-2.90332,4.6564,4.6564,0,0,0-.38623-1.5957l.65087-.03809A2.79993,2.79993,0,0,0,23,11.84521,2.70028,2.70028,0,0,0,20.30273,9.148a6.60512,6.60512,0,0,0-1.27539.103l-.04687-.44776a3.21863,3.21863,0,0,0-3.21582-2.95556,3.57284,3.57284,0,0,0-2.25342.91113l-.61426.52588L12.70117,6.5a3.16069,3.16069,0,0,0-3.125-2.40576A3.24253,3.24253,0,0,0,7.24805,5.082l-.46875.46875-.32178-.57959A2.58862,2.58862,0,0,0,4.21289,3.68164,2.53727,2.53727,0,0,0,1.61865,6.27588a2.46537,2.46537,0,0,0,.85156,1.88476l.54151.45069-.604.3623A2.78026,2.78026,0,0,0,1,11.43262a2.94245,2.94245,0,0,0,2.90381,2.90381,6.32987,6.32987,0,0,0,1.42952-.27393,10.81828,10.81828,0,0,0-.20784,1.59912A2.94235,2.94235,0,0,0,8.0293,18.56494a2.974,2.974,0,0,0,1.49609-.44433Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "DIMENSION",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"greyDefault\" width=\"1\" height=\"24\"></rect>\n    <rect class=\"greyDefault\" x=\"23\" width=\"1\" height=\"24\"></rect>\n    <polygon class=\"greyDefault\" points=\"23 4.5 19 2 19 4 5 4 5 2 1 4.5 5 7 5 5 19 5 19 7 23 4.5\"></polygon>\n  </g>\n</svg>"
+      },
+      {
+        "name": "MTEXT",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M18,23h3L13.5,2h-3L3,23H6l2.13217-6h7.73566ZM9.19821,14,12,6.11548,14.80179,14Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "MLEADER",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M18.5,3a5.49868,5.49868,0,0,0-5.47479,5H7.67548l-4.95,8.57355L0,15v7l6.06219-3.5L3.59155,17.07355,8.25281,9h4.7724A5.49884,5.49884,0,1,0,18.5,3Zm0,10A4.5,4.5,0,1,1,23,8.5,4.50508,4.50508,0,0,1,18.5,13Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "-VPORTS",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M2,17H1v6H7V22H2Zm20,5H17v1h6V17H22ZM17,1V2h5V7h1V1ZM2,2H7V1H1V7H2ZM3,21H21V3H3ZM4,4H20V20H4Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "FIND",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\">\n<g clip-path=\"url(#clip0_2321_4581)\">\n<path d=\"M13.7998 14.5H15.2998L10.7998 4H9.2998L4.7998 14.5H6.2998L7.6298 11.5H12.4598L13.7898 14.5H13.7998ZM8.2998 10L10.0498 6.06L11.7998 10H8.2998Z\" fill=\"#D9D9D9\"></path>\n<path d=\"M9.97998 1.5C14.67 1.5 18.48 5.31 18.48 10C18.48 14.69 14.67 18.5 9.97998 18.5C5.28998 18.5 1.47998 14.69 1.47998 10C1.47998 5.31 5.28998 1.5 9.97998 1.5ZM9.97998 0C4.45998 0 -0.0200195 4.48 -0.0200195 10C-0.0200195 15.52 4.45998 20 9.97998 20C15.5 20 19.98 15.52 19.98 10C19.98 4.48 15.5 0 9.97998 0Z\" fill=\"#F3F3F3\"></path>\n<path d=\"M23.7102 22.29L18.3802 16.96C17.9502 17.47 17.4802 17.95 16.9702 18.37L22.3002 23.7C22.6902 24.09 23.3202 24.09 23.7102 23.7C24.1002 23.31 24.1002 22.68 23.7102 22.29Z\" fill=\"#D9AE77\"></path>\n</g>\n<defs>\n<clipPath id=\"clip0_2321_4581\">\n<rect width=\"24\" height=\"24\" fill=\"white\"></rect>\n</clipPath>\n</defs>\n</svg>"
+      }
+    ]
+  },
+  {
+    "title": "Modify",
+    "commands": [
+      {
+        "name": "MOVE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Icons\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <polygon class=\"greyAccent\" points=\"24 12 18 8 18 11 13 11 13 6 16 6 12 0 8 6 11 6 11 11 6 11 6 8 0 12 6 16 6 13 11 13 11 18 8 18 12 24 16 18 13 18 13 13 18 13 18 16 24 12\"></polygon>\n</svg>"
+      },
+      {
+        "name": "STRETCH",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Layer_1\" data-name=\"Layer 1\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <polygon class=\"blueDefault\" points=\"17 0 12 0 12 1 16.292 1 22.708 23 12 23 12 24 24 24 17 0\"></polygon>\n  <polygon class=\"greyAccent\" points=\"16.286 18.521 12 16.021 12 18 6 18 6 19 12 19 12 21.021 16.286 18.521\"></polygon>\n  <polygon class=\"greyDefault\" points=\"0 0 0 24 11 24 11 20 10 20 10 23 1 23 1 1 10 1 10 17 11 17 11 0 0 0\"></polygon></svg>"
+      },
+      {
+        "name": "MIRROR",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M11,24H0L11,0ZM1.55957,23H10V4.59033Z\"></path>\n    <path class=\"blueDefault\" d=\"M13,0,24,24H13Zm1,4.59033V23h8.44043Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "FILLET",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"greyDefault\" y=\"15\" width=\"1\" height=\"9\"></rect>\n    <rect class=\"greyDefault\" x=\"15\" width=\"9\" height=\"1\"></rect>\n    <path class=\"blueDefault\" d=\"M14,0A14,14,0,0,0,0,14H1A13.01472,13.01472,0,0,1,14,1Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "CHAMFER",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <g>\n      <polygon class=\"greyDefault\" points=\"1 13.733 1 24 0 24 0 14.732 0 13.35 1 13.733\"></polygon>\n      <polygon class=\"blueDefault\" points=\"12.55 0.767 12.982 1.749 1.773 12.958 0.751 12.567 12.55 0.767\"></polygon>\n      <polygon class=\"greyDefault\" points=\"13.309 0.008 13.318 0 14.732 0 24 0 24 1 13.745 1 13.309 0.008\"></polygon>\n  </g>\n</svg>"
+      },
+      {
+        "name": "COPY",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M5.5,0A5.5,5.5,0,1,0,11,5.5,5.5,5.5,0,0,0,5.5,0Zm0,10A4.5,4.5,0,1,1,10,5.5,4.5,4.5,0,0,1,5.5,10Z\"></path>\n    <polygon class=\"greyAccent\" points=\"19 6 19 2 12 2 12 3 18 3 18 6 15.5 6 18.5 11.143 21.5 6 19 6\"></polygon>\n    <path class=\"blueDefault\" d=\"M10.5,13A5.5,5.5,0,1,0,16,18.5,5.5,5.5,0,0,0,10.5,13Zm0,10A4.5,4.5,0,1,1,15,18.5,4.5,4.5,0,0,1,10.5,23Z\"></path>\n    <path class=\"blueDefault\" d=\"M18.5,13a5.46794,5.46794,0,0,0-3.254,1.07312,6.53612,6.53612,0,0,1,.63269.78229,4.5,4.5,0,1,1,0,7.28918,6.53612,6.53612,0,0,1-.63269.78229A5.49756,5.49756,0,1,0,18.5,13Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "TRIM",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Icons\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <rect class=\"blueDefault\" y=\"2\" width=\"3\" height=\"1\"></rect>\n  <rect class=\"blueDefault\" x=\"4\" y=\"2\" width=\"3\" height=\"1\"></rect>\n  <rect class=\"blueDefault\" x=\"8\" y=\"2\" width=\"3\" height=\"1\"></rect>\n  <rect class=\"greyDefault\" x=\"16\" y=\"2\" width=\"8\" height=\"1\"></rect>\n  <path class=\"greyAccent\" d=\"M19.58563,15.34296c-.18866-.18866-.38763-.3559-.5921-.50739-.05634-.04181-.11536-.07343-.17261-.11237-.14679-.09973-.29388-.19647-.44531-.27722-.08978-.04816-.18048-.08441-.27136-.12585-.11914-.05402-.23737-.10834-.35742-.15063-.11377-.04053-.22632-.06958-.34009-.09955-.09412-.02441-.18732-.04913-.28088-.06616-.13293-.0249-.26294-.03912-.39362-.04907-.06885-.00494-.13678-.00903-.20471-.00977-.14685-.00238-.28931,.00531-.43042,.02271-.04517,.00574-.08905,.01355-.13342,.02136-.15393,.02637-.30237,.06256-.4458,.11365-.02533,.00909-.04895,.02081-.07391,.0307-.15375,.06036-.30075,.13141-.43808,.22162l-.00589,.00299V3L12,0V12.02081L4,4.02081v4.24268l7.76773,7.7677-.00023,.00006c-.57941,.0603-1.11022,.33124-1.55047,.76813l-.02008,.02216c-.13611,.13757-.26446,.28564-.38104,.45154-.02344,.03302-.04242,.07098-.065,.1051-.09644,.14697-.1897,.29657-.26941,.4613-.03589,.07349-.06201,.15485-.09424,.23151-.05725,.13751-.11737,.27203-.16235,.41888-.04028,.13049-.065,.27032-.09485,.40741-.02301,.10632-.0542,.20758-.07062,.31732-.03821,.25391-.05939,.51605-.05939,.7854,0,2.20911,1.34314,4,3,4s3-1.79089,3-4c0-.31488-.03394-.61761-.08551-.9115,.13281,.17053,.26971,.33978,.42847,.49854,1.56207,1.56207,3.77814,1.87872,4.94971,.70715,.43964-.43964,.66956-1.02625,.70294-1.67023,.05609-1.07263-.43365-2.30463-1.41003-3.28101Zm-7.58557,7.15704c-.70801,0-1.5-1.06934-1.5-2.5s.79199-2.5,1.5-2.5,1.5,1.06934,1.5,2.5-.79199,2.5-1.5,2.5Zm2-7.5h-2v-2h2v2Zm5.23206,4.23352c-.50067,.50061-1.81683,.3045-2.82843-.70715-1.01166-1.0116-1.20776-2.32776-.70715-2.82837,.50067-.50067,1.81683-.30457,2.82843,.70709,1.01166,1.0116,1.20776,2.32776,.70715,2.82843Z\"></path>\n</svg>"
+      },
+      {
+        "name": "ERASE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Icons\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <polygon class=\"cls-2\" points=\"24 0 23.79901 0 10.09265 13.7063 14.33527 17.94897 24 8.28418 24 0\"></polygon>\n  <rect class=\"cls-4\" y=\"23\" width=\"5\" height=\"1\"></rect>\n  <rect class=\"cls-5\" x=\"12\" y=\"23\" width=\"12\" height=\"1\"></rect>\n  <path class=\"cls-3\" d=\"M6.29026,17.51786c-1.10169,1.15076-1.07224,2.99363,.08383,4.1497s2.99894,1.18553,4.1497,.08383l.00453,.00453,1.06065-1.06065-4.2426-4.2426-1.06065,1.06065,.00453,.00453Z\"></path>\n  <rect class=\"cls-1\" x=\"8.89889\" y=\"14.2008\" width=\"3.88387\" height=\"6.00001\" transform=\"translate(-8.98765 12.70384) rotate(-45.00064)\"></rect>\n</svg>"
+      },
+      {
+        "name": "ROTATE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M2.11926,12h1.011A9.49509,9.49509,0,1,0,13,4.02533V7L6.93781,3.5,13,0V3.02527A10.56908,10.56908,0,1,1,2.11926,12Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "SCALE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <polygon class=\"blueDefault\" points=\"0 0 0 10 1 10 1 1 23 1 23 23 14 23 14 24 24 24 24 0 0 0\"></polygon>\n    <path class=\"greyDefault\" d=\"M0,11V24H13V11ZM12,23H1V12H12Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "OFFSET",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <path class=\"greyDefault\" d=\"M9,9H24V8H9a4,4,0,0,0,0,8H24V15H9A3,3,0,0,1,9,9Z\"></path>\n    <path class=\"blueDefault\" d=\"M8,5H24V4H8A8,8,0,0,0,8,20H24V19H8A7,7,0,0,1,8,5Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "JOIN",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Layer_1\" data-name=\"Layer 1\" viewBox=\"0 0 24 24\">\n    <defs>\n        \n    </defs>\n    \n    <rect class=\"greyDefault\" x=\"17\" y=\"11\" width=\"7\" height=\"1\"></rect>\n    <rect class=\"greyDefault\" y=\"11\" width=\"7\" height=\"1\"></rect>\n    <polygon class=\"blueDefault\" points=\"6 8 12 11.5 6 15 6 8\"></polygon>\n    <polygon class=\"blueDefault\" points=\"18 15 12 11.5 18 8 18 15\"></polygon>\n</svg>"
+      },
+      {
+        "name": "MATCHPROP",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Icons\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <path class=\"cls-5\" d=\"M11,18v-1l.84509-.06744c.47052-.15857,.84589-.36908,1.08618-.60938l2.21906-2.21552-.00946-.00946,.7135-.70709,1.00922-1.00018c.03973-.03973,.09277-.05743,.13641-.09143V0H2V21H13.87006l-2.87006-3ZM4,2H14v7H4V2Z\"></path>\n  <rect class=\"cls-3\" x=\"5.00001\" y=\"3.00002\" width=\"7.99999\" height=\"4.99998\"></rect>\n  <polygon class=\"cls-4\" points=\"13 13 7 13 7 12 6 12 6 13 5 13 5 14 6 14 6 15 7 15 7 14 13 14 13 13\"></polygon>\n  <rect class=\"cls-4\" x=\"5\" y=\"17\" width=\"6\" height=\"1\"></rect>\n  <g>\n    <path class=\"cls-2\" d=\"M20.08879,23.24614c-.58868,.53418-1.36676,.70149-1.80449,.75386l-6.11985-6.1198c.52874-.17819,1.07037-.44626,1.47335-.84929l2.27021-2.26657,6.33864,6.33864c-.70362,.71427-1.78089,1.80107-2.15785,2.14316Z\"></path>\n    <path class=\"cls-1\" d=\"M23.90423,19.4288l-1.0138,1.00471-6.33213-6.33213,1.0124-1.00331c.08528-.08534,.18492-.09807,.23667-.09807s.15139,.01273,.23661,.09795l1.60393,1.60393,.64957,.64962,.64962-.64962,1.5136-1.51372c.07351-.07345,.15924-.08439,.20376-.08439,.05439,0,.13384,.01463,.20353,.08433l.94377,.94365c.0739,.0739,.08495,.16019,.08495,.20505,0,.04491-.01105,.13126-.085,.20522l-1.5122,1.5122-.64957,.64951,.64951,.64962,1.60186,1.60203c.0859,.08584,.09868,.18604,.09868,.23813s-.01278,.15229-.09577,.23527Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "EXTEND",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"greyDefault\" x=\"23\" y=\"1\" width=\"1\" height=\"22\"></rect>\n    <rect class=\"greyDefault\" y=\"15\" width=\"7\" height=\"1\"></rect>\n    <rect class=\"blueDefault\" x=\"9\" y=\"15\" width=\"3\" height=\"1\"></rect>\n    <rect class=\"blueDefault\" x=\"14\" y=\"15\" width=\"3\" height=\"1\"></rect>\n    <rect class=\"blueDefault\" x=\"19\" y=\"15\" width=\"3\" height=\"1\"></rect>\n    <polygon class=\"greyAccent\" points=\"21 8.5 16 5.5 16 8 7 8 7 9 16 9 16 11.5 21 8.5\"></polygon>\n  </g>\n</svg>"
+      },
+      {
+        "name": "EXPLODE",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <g>\n      <rect class=\"blueDefault\" y=\"9\" width=\"1\" height=\"14\"></rect>\n      <path class=\"greyDefault\" d=\"M2,9V23H16V9ZM15,22H3V10H15Z\"></path>\n      <path class=\"blueDefault\" d=\"M8,2,2,8H16l6-6Zm7.58594,5H4.41406l4-4H19.58594Z\"></path>\n      <path class=\"blueDefault\" d=\"M17,9V23l6-6V3Zm5,7.58594-4,4V9.41406l4-4Z\"></path>\n    </g>\n  </g>\n</svg>"
+      },
+      {
+        "name": "BREAKATPOINT",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  \n  <g>\n    <rect class=\"blueDefault\" x=\"10.98271\" y=\"5.99789\" width=\"1.00323\" height=\"11.03557\" transform=\"translate(-4.77913 11.49351) rotate(-45)\"></rect>\n    <path class=\"greyDefault\" d=\"M10.77,12.93.71,23,0,22.29,10.07,12.23ZM22.29,0,12.19,10.1l.71.71L23,.71Z\"></path>\n  </g>\n</svg>"
+      },
+      {
+        "name": "UNDO",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" id=\"Icons\" viewBox=\"0 0 24 24\">\n  <defs>\n    \n  </defs>\n  <path class=\"cls-3\" d=\"M3,0V24H21V0H3Zm2,2h14V12H5V2Z\"></path>\n  <rect class=\"cls-1\" x=\"6.00001\" y=\"3.00002\" width=\"12\" height=\"8\"></rect>\n  <polygon class=\"cls-2\" points=\"19 15 10 15 10 14 9 14 9 15 5 15 5 16 9 16 9 17 10 17 10 16 19 16 19 15\"></polygon>\n  <polygon class=\"cls-2\" points=\"19 20 16 20 16 19 15 19 15 20 5 20 5 21 15 21 15 22 16 22 16 21 19 21 19 20\"></polygon>\n</svg>"
+      },
+      {
+        "name": "REDO",
+        "svg": "<svg class=\"MuiSvgIcon-root MuiSvgIcon-colorPrimary MuiSvgIcon-fontSizeMedium command-REDO css-1ltn0am\" focusable=\"false\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" data-testid=\"RedoMIcon\" width=\"1em\" height=\"1em\"><path d=\"M22 11.5L12 4V8H10.43C5.27 8 2 12.36 2 17.17C2 17.52 2 18.44 2 18.78C4 16 5.66 15 9.5 15H12V19L22 11.5ZM9.5 14C6.44 14 4.62 14.7 3.09 16.07C3.53 12.48 6.09 9.07 10.43 9.07H13V6L20.33 11.5L13 17V14H9.5Z\"></path></svg>"
+      }
+    ]
+  }
+]

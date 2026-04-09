@@ -1,0 +1,7 @@
+{
+  "strings": {
+    "13": "Number of boundary points: %d\n",
+    "14": "       at point, X=%9.16q0,  Y=%9.16q0,  Z=%9.16q0\n"
+  },
+  "datares": {}
+}

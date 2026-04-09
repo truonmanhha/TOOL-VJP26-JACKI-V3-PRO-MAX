@@ -1,0 +1,32 @@
+{
+  "strings": {
+    "42924": "\nBase point: ",
+    "27339": "*Cancel*",
+    "30576": "\nClose error %s",
+    "17800": "MOCORO",
+    "54328": "\nDraw error %s",
+    "54027": "\nErase Open error %s",
+    "45167": "\nErase error %s",
+    "54216": "eXit Undo _eXit Undo",
+    "25834": "\nFlush Open error %s",
+    "26553": "\nError in acdbGetAdsName %s",
+    "35976": "\nIgnoring selected viewport",
+    "34412": "Move Copy Rotate Scale Base Undo eXit _Move Copy Rotate Scale Base Undo eXit",
+    "10906": "\n[Move/Copy/Rotate/Scale/Base/Undo]<eXit>: ",
+    "2840": "\nNo eligible entities selected.",
+    "54541": "\nSecond Point or Rotation angle: ",
+    "50663": "\nSecond point of displacement/Undo/<eXit>: ",
+    "10889": "\nSecond point of displacement: ",
+    "47575": "\nSecond Point or Scale factor: ",
+    "50851": "\nTransform error (usually caused by proxies): %s",
+    "52328": "\nXform Open error %s",
+    "31686": "Second Point or Scale factor or [Reference]: ",
+    "21419": "Reference _Reference",
+    "6604": "Specify new length or [Points] <%f>: ",
+    "45320": "Points _Points",
+    "36839": "Specify reference length <%f:> ",
+    "58406": "Value must be positive and nonzero.\n",
+    "3064": "Specify first point: "
+  },
+  "datares": {}
+}

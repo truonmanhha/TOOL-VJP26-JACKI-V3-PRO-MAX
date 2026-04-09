@@ -22,3 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Agent and Playwright Temporary data
+playwright_user_data/
+.agents/
+.claude/
+.factory/
+.playwright-mcp/
+
+# Debug and Dumps
+autocad_*.json
+autocad_*.png
+autocad_*.html
+autodesk_*.json
+*.patch
+editor_real.png
+recents_real.png

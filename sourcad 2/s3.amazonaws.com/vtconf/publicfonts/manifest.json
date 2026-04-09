@@ -1,0 +1,122 @@
+[
+  {
+    "names": ["arial unicode ms", "@arial unicode ms", "arial", "simsun", "isocpeur", "aharoni", "miriam", "narkisim"],
+    "files": ["Fonts/Arial Unicode/OpenType TTF Unicode/ARIALUNI.ttf"]
+  },
+
+  {
+    "names": ["arial narrow"],
+    "files": ["Fonts/Arial Narrow FM/Windows-TrueType/fi_9001f.ttf"]
+  },
+
+  {
+    "names": ["arial mt pro", "arial mt pro black", "arial black"],
+    "files": ["Fonts/Arial/OpenType CFF Pro/ArialMTPro-Black.otf"]
+  },
+
+  {
+    "names": ["arial tur"],
+    "files": ["Fonts/Arial/Windows-TrueType/a_____tu.ttf"]
+  },
+
+  {
+    "names": ["bankgothic lt bt"],
+    "files": ["Fonts/Bank Gothic/OpenType TTF Std/tt0589m_.ttf"]
+  },
+
+  {
+    "names": ["calibri"],
+    "files": ["Fonts/Calibri/Windows-TrueType W1G/Calibri.ttf"]
+  },
+
+  {
+    "names": ["century gothic"],
+    "files": ["Fonts/Century Gothic FM/Windows-TrueType/fi_9002b.ttf"]
+  },
+
+  {
+    "names": ["comic sans ms"],
+    "files": ["Fonts/Comic Sans/OpenType TTF Pro/comic.ttf"]
+  },
+
+  {
+    "names": ["gulim"],
+    "files": ["Fonts/Gulim/OpenType TTF Korean/Gulim_M.ttf"]
+  },
+
+  {
+    "names": ["MS PGothic"],
+    "files": ["Fonts/MS Gothic/OpenType TTF Japanese/MSGothic-P_M.ttf"]
+  },
+
+  {
+    "names": ["PMingLiU"],
+    "files": ["Fonts/MingLiU/OpenType TTF Chinese (Traditional)/MingLiU_P_M.ttf"]
+  },
+
+  {
+    "names": ["tahoma"],
+    "files": ["Fonts/Tahoma/OpenType TTF WGL/tahoma.ttf"]
+  },
+
+  {
+    "names": ["times nr mt pro", "times new roman"],
+    "files": ["Fonts/Times New Roman/OpenType TTF Pro/TimesNRMTPro.ttf"]
+  },
+
+  {
+    "names": ["swis721 lt bt"],
+    "files": ["Fonts/Swiss 721/OpenType TTF Std/tt0001m_.ttf"]
+  },
+  { 
+    "names": ["@extfont2.shx"], 
+    "files": ["Fonts/shx/@extfont2.shx"] 
+  },
+  { "names": ["bigfont.shx"], 
+    "files": ["Fonts/shx/bigfont.shx"] 
+  },
+  { 
+    "names": ["chineset.shx"], 
+    "files": ["Fonts/shx/chineset.shx"] 
+  },
+  {
+    "names": ["extfont.shx"], 
+    "files": ["Fonts/shx/extfont.shx"] 
+  },
+  { 
+     "names": ["extfont2.shx"], 
+     "files": ["Fonts/shx/extfont2.shx"] 
+  },
+  {  
+     "names": ["gbcbig.shx"], 
+     "files": ["Fonts/shx/gbcbig.shx"] 
+  },
+  { 
+     "names": ["spec_bar.shx"], 
+     "files": ["Fonts/shx/spec_bar.shx"] 
+  },
+  { 
+     "names": ["spec_sl.shx"],
+     "files": ["Fonts/shx/spec_sl.shx"] 
+  },
+  { 
+  	 "names": ["special.shx"],
+     "files": ["Fonts/shx/special.shx"] 
+  },
+  { 
+  	"names": ["whgdtxt.shx"],
+    "files": ["Fonts/shx/whgdtxt.shx"] 
+  },
+  { 
+  	"names": ["whgtxt.shx"], 
+    "files": ["Fonts/shx/whgtxt.shx"] 
+  },
+  { 
+  	 "names": ["whtgtxt.shx"], 
+  	 "files": ["Fonts/shx/whtgtxt.shx"] 
+  },
+  { 
+     "names": ["whtmtxt.shx"], 
+     "files": ["Fonts/shx/whtmtxt.shx"] 
+  }
+]

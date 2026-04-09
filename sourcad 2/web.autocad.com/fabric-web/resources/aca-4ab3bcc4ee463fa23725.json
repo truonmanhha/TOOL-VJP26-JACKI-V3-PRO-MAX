@@ -1,0 +1,179 @@
+{
+    "Applications": {
+        "AecArchBase": {
+            "DESCRIPTION": "AecArchBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecArchBase40": {
+            "DESCRIPTION": "AecArchBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecArchBase50": {
+            "DESCRIPTION": "AecArchBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecArchBase60": {
+            "DESCRIPTION": "AecArchBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecArchBase70": {
+            "DESCRIPTION": "AecArchBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecArchBase80": {
+            "DESCRIPTION": "AecArchBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecAreaCalculationBase": {
+            "DESCRIPTION": "AecAreaCalculationBase80",
+            "LOADCTRLS": "13",
+            "LOADER": "aca_fabric"
+        },
+        "AecAreaCalculationBase40": {
+            "DESCRIPTION": "AecAreaCalculationBase80",
+            "LOADCTRLS": "13",
+            "LOADER": "aca_fabric"
+        },
+        "AecAreaCalculationBase50": {
+            "DESCRIPTION": "AecAreaCalculationBase80",
+            "LOADCTRLS": "13",
+            "LOADER": "aca_fabric"
+        },
+        "AecAreaCalculationBase60": {
+            "DESCRIPTION": "AecAreaCalculationBase80",
+            "LOADCTRLS": "13",
+            "LOADER": "aca_fabric"
+        },
+        "AecAreaCalculationBase70": {
+            "DESCRIPTION": "AecAreaCalculationBase80",
+            "LOADCTRLS": "13",
+            "LOADER": "aca_fabric"
+        },
+        "AecAreaCalculationBase80": {
+            "DESCRIPTION": "AecAreaCalculationBase80",
+            "LOADCTRLS": "13",
+            "LOADER": "aca_fabric"
+        },
+        "AecBase": {
+            "DESCRIPTION": "AecBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBase40": {
+            "DESCRIPTION": "AecBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBase50": {
+            "DESCRIPTION": "AecBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBase60": {
+            "DESCRIPTION": "AecBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBase70": {
+            "DESCRIPTION": "AecBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBase80": {
+            "DESCRIPTION": "AecBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBaseEx50": {
+            "DESCRIPTION": "AecBaseEx80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBaseEx60": {
+            "DESCRIPTION": "AecBaseEx80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBaseEx70": {
+            "DESCRIPTION": "AecBaseEx80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecBaseEx80": {
+            "DESCRIPTION": "AecBaseEx80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecDACHMigratorDb": {
+            "DESCRIPTION": "AecDACHMigratorDb80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecDACHMigratorDb80": {
+            "DESCRIPTION": "AecDACHMigratorDb80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecModeler80": {
+            "DESCRIPTION": "AecModeler80",
+            "LOADCTRLS": "8",
+            "LOADER": "aca_fabric"
+        },
+        "AecProjectBase80": {
+            "DESCRIPTION": "AecProjectBase80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecRenovationDb": {
+            "DESCRIPTION": "AecRenovationDb80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecRenovationDb80": {
+            "DESCRIPTION": "AecRenovationDb80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSchedule": {
+            "DESCRIPTION": "AecSchedule80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSchedule40": {
+            "DESCRIPTION": "AecSchedule80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSchedule50": {
+            "DESCRIPTION": "AecSchedule80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSchedule60": {
+            "DESCRIPTION": "AecSchedule80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSchedule70": {
+            "DESCRIPTION": "AecSchedule80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSchedule80": {
+            "DESCRIPTION": "AecSchedule80",
+            "LOADCTRLS": "9",
+            "LOADER": "aca_fabric"
+        },
+        "AecSolidModeler80": {
+            "DESCRIPTION": "AecSolidModeler80",
+            "LOADCTRLS": "8",
+            "LOADER": "aca_fabric"
+        }
+    }
+}

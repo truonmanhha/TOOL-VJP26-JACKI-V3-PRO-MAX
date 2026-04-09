@@ -1,0 +1,7 @@
+{
+  "strings": {
+    "104": "Debug Assertion Failed!\n\nProgram: %s\nFile: %s\nLine: %d\n\nExpression: %s\n\n(Press Retry to debug the application, or Shift+Ignore to ignore all future\ninstances of this assertion failure).",
+    "105": "Debug Assertion Failed!"
+  },
+  "datares": {}
+}

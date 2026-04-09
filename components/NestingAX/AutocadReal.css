@@ -1,0 +1,782 @@
+@import './ArtifaktElement.css';
+@import './ArtifaktLegend.css';
+
+:root {
+  --acad-canvas: #212830;
+  --acad-header: #292929;
+  --acad-sidebar: #222222;
+  --acad-footer: #1e1e1e;
+  --acad-border: #444444;
+  --acad-cyan: #0696D7;
+  --acad-hover: #333333;
+  --acad-text-primary: #e0e0e0;
+  --acad-text-secondary: #aaaaaa;
+  --acad-text-muted: #888888;
+  --acad-flyout-bg: rgba(34, 34, 34, 0.95);
+  --acad-flyout-blur: blur(20px);
+  --acad-button-blue: #0696d7;
+  --acad-transition: cubic-bezier(0.2, 0, 0, 1);
+  --acad-transition-fast: 150ms;
+  --acad-transition-normal: 250ms;
+  --acad-panel: #3b4454;
+  --acad-surface-dark: #1a1f25;
+  --acad-accent-red: #e51050;
+  --acad-file-blue: #2F649E;
+  --acad-file-gold: #F4B623;
+
+  --shadow-elevation: 16px;
+  --shadow-offset: 0px;
+  --opacity-effect-disabled: 0.4;
+  --width-effect-hover: 2px;
+  --color-effect-hover: #80808026;
+  --color-button: transparent;
+  --color-button-text: var(--color-text-button-text);
+  --color-text-button-text: #0696d7;
+  --weight-button: var(--font-weight-regular);
+  --spacing-xs: 4px;
+  --spacing-s: 8px;
+  --spacing-m: 12px;
+  --spacing-l: 16px;
+  --opacity-disabled: 0.4;
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+  --font-weight-bold: 700;
+  --radius-s: 2px;
+  --radius-m: 4px;
+  --touch-size: 24px;
+  --font-size-body: 12px;
+  --line-height-body: 16px;
+  --font-size-title: 16px;
+  --line-height-title: 22px;
+  --font-size-subtitle: 20px;
+  --line-height-subtitle: 26px;
+  --color-surface-1: #535353;
+  --color-divider-regular: rgba(255, 255, 255, 0.25);
+  --color-text-link: #6dd2ff;
+  --color-text-regular: #f5f5f5;
+  --color-text-soft: rgba(245, 245, 245, 0.7);
+  --color-shadow-backdrop: rgba(0, 0, 0, 0.5);
+  --color-shadow-elevation: rgba(0, 0, 0, 0.3);
+}
+
+.acad-app {
+  font-family: "Artifakt Element", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--acad-text-primary);
+  background-color: var(--acad-canvas);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.acad-header {
+  height: 40px;
+  background-color: var(--acad-header);
+  border-bottom: 1px solid var(--acad-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 60;
+  box-sizing: border-box;
+}
+
+.acad-header-top {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.acad-header-ribbon {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 0;
+  background-color: #292929;
+  border-bottom: 1px solid var(--acad-border);
+}
+
+.acad-ribbon-tab {
+  padding: 4px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--acad-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--acad-transition-fast) var(--acad-transition);
+  background: transparent;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.acad-ribbon-tab:hover {
+  color: var(--acad-text-primary);
+  background-color: var(--acad-hover);
+}
+
+.acad-ribbon-tab.active {
+  color: #0696D7;
+  border-bottom-color: #0696D7;
+}
+
+.acad-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-s);
+  color: var(--acad-text-secondary);
+  transition: all var(--acad-transition-fast) var(--acad-transition);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.acad-header-btn:hover {
+  background-color: var(--acad-hover);
+  color: #fff;
+}
+
+.acad-header-btn:active {
+  background-color: #555;
+}
+
+.acad-sidebar {
+  width: 44px;
+  background-color: var(--acad-sidebar);
+  border-right: 1px solid var(--acad-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  z-index: 50;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.acad-sidebar-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--acad-transition-fast) var(--acad-transition);
+  position: relative;
+  color: var(--acad-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.acad-sidebar-btn:hover {
+  background-color: var(--acad-hover);
+  color: #fff;
+}
+
+.acad-sidebar-btn.active {
+  background-color: #333333;
+  color: #0696D7;
+}
+
+.acad-sidebar-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #0696D7;
+}
+
+.acad-sidebar-btn svg {
+  stroke-width: 1.5;
+  stroke: currentColor;
+  fill: none;
+  width: 20px;
+  height: 20px;
+}
+
+.acad-sidebar-btn span {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 4px;
+  letter-spacing: -0.2px;
+}
+
+.acad-flyout {
+  background-color: var(--acad-flyout-bg);
+  backdrop-filter: var(--acad-flyout-blur);
+  border-right: 1px solid var(--acad-border);
+  box-shadow: 15px 0 30px rgba(0,0,0,0.5);
+  position: absolute;
+  left: 44px;
+  top: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--acad-transition-normal) var(--acad-transition),
+              opacity var(--acad-transition-normal) var(--acad-transition);
+}
+
+.acad-flyout-tool {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--acad-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--acad-transition-fast) var(--acad-transition);
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+}
+
+.acad-flyout-tool:hover {
+  background-color: var(--acad-hover);
+  color: var(--acad-text-primary);
+}
+
+.acad-flyout-tool svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+
+.acad-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--acad-text-muted);
+  cursor: pointer;
+  transition: background-color var(--acad-transition-fast) var(--acad-transition);
+  border: none;
+  background: transparent;
+  width: 100%;
+}
+
+.acad-accordion-header:hover {
+  background-color: var(--acad-hover);
+}
+
+.acad-accordion-header svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  transition: transform var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-accordion-header.open svg {
+  transform: rotate(180deg);
+}
+
+.acad-prop-group {
+  border-bottom: 1px solid var(--acad-border);
+}
+
+.acad-prop-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  font-size: 11px;
+  transition: background-color var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-prop-row:hover {
+  background-color: var(--acad-hover);
+}
+
+.acad-prop-label {
+  color: var(--acad-text-muted);
+}
+
+.acad-prop-value {
+  color: var(--acad-text-primary);
+  font-weight: 500;
+  text-align: right;
+}
+
+.acad-prop-input {
+  width: 100%;
+  background-color: var(--acad-surface-dark);
+  border: 1px solid var(--acad-border);
+  border-radius: var(--radius-s);
+  color: var(--acad-text-primary);
+  font-size: 11px;
+  padding: 2px 6px;
+  outline: none;
+  text-align: right;
+  transition: border-color var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-prop-input:focus {
+  border-color: #0696D7;
+}
+
+.acad-flyout-header {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background-color: rgba(40, 40, 40, 0.9);
+  border-bottom: 1px solid var(--acad-border);
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.acad-flyout-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--acad-text-secondary);
+  transition: all var(--acad-transition-fast) var(--acad-transition);
+  cursor: pointer;
+}
+
+.acad-flyout-btn:hover {
+  background-color: var(--acad-hover);
+  border-color: rgba(6, 150, 215, 0.3);
+  color: var(--acad-cyan);
+}
+
+.acad-flyout-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5;
+  stroke: currentColor;
+  fill: none;
+  margin-bottom: 6px;
+}
+
+.acad-footer {
+  height: 32px;
+  background-color: var(--acad-footer);
+  border-top: 1px solid var(--acad-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 70;
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+  font-size: 11px;
+}
+
+.acad-statusbar-btn {
+  height: 22px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--acad-text-muted);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-statusbar-btn:hover {
+  background-color: var(--acad-hover);
+  color: var(--acad-text-secondary);
+}
+
+.acad-statusbar-btn.active {
+  background-color: var(--acad-hover);
+  border-color: #555;
+  color: #0696D7;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.acad-statusbar-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.acad-cmd-wrap {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 40px;
+  width: 500px;
+  z-index: 50;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+}
+
+.acad-cmd-history {
+  padding: 4px 12px;
+  margin-bottom: 4px;
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--acad-text-muted);
+  background-color: rgba(40, 40, 40, 0.4);
+  backdrop-filter: blur(4px);
+  border-radius: 2px;
+  pointer-events: auto;
+}
+
+.acad-cmd-input-box {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  background-color: var(--acad-header);
+  border: 1px solid var(--acad-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  padding: 0 12px;
+  border-radius: 2px;
+  pointer-events: auto;
+  transition: border-color var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-cmd-input-box:focus-within {
+  border-color: #0696D7;
+}
+
+.acad-cmd-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+.acad-cmd-input::placeholder {
+  color: #777;
+}
+
+.acad-canvas-area {
+  flex: 1;
+  position: relative;
+  background-color: var(--acad-canvas);
+  overflow: hidden;
+}
+
+.acad-ucs {
+  position: absolute;
+  bottom: 48px;
+  left: 24px;
+  z-index: 30;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 0.85;
+}
+
+.acad-model-tabs {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  pointer-events: auto;
+}
+
+.acad-model-tab {
+  padding: 4px 20px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  border-top: 2px solid transparent;
+  background-color: var(--acad-sidebar);
+  color: var(--acad-text-secondary);
+  cursor: pointer;
+}
+
+.acad-model-tab:hover {
+  background-color: var(--acad-hover);
+}
+
+.acad-model-tab.active {
+  background-color: var(--acad-canvas);
+  color: #0696D7;
+  border-top-color: #0696D7;
+}
+
+.acad-grip {
+  width: 6px;
+  height: 6px;
+  background-color: #0696D7;
+  border: 1px solid #222933;
+  position: absolute;
+  cursor: pointer;
+  z-index: 20;
+  transition: background-color var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-grip:hover {
+  background-color: #ff3333;
+  border-color: #cc0000;
+  transform: scale(1.3);
+}
+
+.acad-grip.hot {
+  background-color: #ff0000;
+  border-color: #cc0000;
+}
+
+.acad-autocomplete {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 4px;
+  background-color: var(--acad-header);
+  border: 1px solid var(--acad-border);
+  border-radius: 2px;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
+  max-height: 200px;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.acad-autocomplete-item {
+  padding: 6px 12px;
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+  font-size: 12px;
+  color: var(--acad-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-autocomplete-item:hover,
+.acad-autocomplete-item.selected {
+  background-color: var(--acad-hover);
+  color: var(--acad-text-primary);
+}
+
+.acad-autocomplete-item .match {
+  color: #0696D7;
+  font-weight: 600;
+}
+
+.acad-cmd-prompt {
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+  font-size: 11px;
+  color: var(--acad-text-muted);
+  padding: 2px 12px;
+  opacity: 0.7;
+}
+
+.acad-mtext-toolbar {
+  position: absolute;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background-color: var(--acad-header);
+  border: 1px solid var(--acad-border);
+  border-radius: 2px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  pointer-events: auto;
+}
+
+.acad-mtext-toolbar-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--acad-text-secondary);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all var(--acad-transition-fast) var(--acad-transition);
+}
+
+.acad-mtext-toolbar-btn:hover {
+  background-color: var(--acad-hover);
+  color: var(--acad-text-primary);
+}
+
+.acad-mtext-toolbar-btn.active {
+  background-color: #0696D7;
+  color: #fff;
+}
+
+.acad-opening-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(26, 31, 37, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+.acad-progress-bar {
+  height: 3px;
+  background-color: var(--acad-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* Dynamic Input Styles */
+.acad-dynamic-input {
+  position: absolute;
+  z-index: 1000;
+  background-color: rgba(40, 40, 40, 0.9);
+  border: 1px solid var(--acad-border);
+  border-radius: 2px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  font-family: "Artifakt Element", -apple-system, sans-serif;
+  color: #fff;
+  font-size: 12px;
+}
+
+.acad-dynamic-input-field {
+  background: #1e1e1e;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 2px 6px;
+  width: 60px;
+  font-family: monospace;
+  font-size: 12px;
+  outline: none;
+  border-radius: 2px;
+}
+
+.acad-dynamic-input-field:focus {
+  border-color: var(--acad-cyan);
+}
+
+.acad-dynamic-input-label {
+  color: var(--acad-text-secondary);
+  font-weight: 500;
+}
+
+
+
+/* ========================================= */
+/* BẢN SAO CSS 100% AUTOCAD WEB (TỪ HTML GỐC) */
+/* ========================================= */
+
+.commands-ribbon {
+  font-size: 16px;
+  font-weight: unset;
+  line-height: unset;
+  pointer-events: all;
+  font-family: ArtifaktElement, Arial, sans-serif;
+  box-sizing: border-box;
+  background-color: rgb(59, 68, 83);
+  border-bottom: 2px solid rgb(26, 31, 37);
+  max-height: 124px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  width: 100%;
+}
+.commands-ribbon::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.command-ribbon-sections {
+  display: flex;
+  gap: 1px;
+  flex: 1 1 0%;
+}
+
+.commands-ribbon-section {
+  display: flex;
+  flex-direction: column;
+  padding: 0px 12px;
+  border-right: 1px solid rgba(26, 31, 37, 0.5);
+}
+
+.commands-ribbon-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgb(162, 181, 223);
+  text-align: center;
+  padding: 4px 0px;
+  text-transform: none;
+  font-family: ArtifaktElement, Arial, sans-serif;
+}
+
+.command-button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-bottom: 8px;
+}
+
+.command-button-normal {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 2px;
+  transition: background-color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.command-button-normal:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+.command-button-normal.active {
+  background-color: rgba(23, 126, 251, 0.2);
+  outline: 1px solid rgb(23, 126, 251);
+}
+
+.command-button-normal.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.command-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

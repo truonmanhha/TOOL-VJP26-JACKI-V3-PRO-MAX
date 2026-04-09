@@ -1,0 +1,19 @@
+{
+  "strings": {
+    "37101": "ATTACH",
+    "38790": "EXTERNALREFERENCES",
+    "8871": "OPTIONS",
+    "20986": "SETTINGS",
+    "13125": "PROPERTIES",
+    "56524": "REFERENCE",
+    "37950": "VIEW",
+    "44527": "UNITS",
+    "20729": "APPLOAD",
+    "60161": "IMAGEATTACH",
+    "51992": "FIND",
+    "63076": "COMPARE",
+    "8365": "VERSIONCOMPARE",
+    "40801": "XCOMPARE"
+  },
+  "datares": {}
+}

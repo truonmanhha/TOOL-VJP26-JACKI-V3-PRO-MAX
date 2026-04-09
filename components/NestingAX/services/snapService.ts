@@ -278,6 +278,30 @@ export function findBestSnap(
     }
   }
 
+  // Intersections (between all visible entities)
+  if (activeSnaps.has('intersection')) {
+    const allSegments: { seg: LineSegment; id: string }[] = [];
+    entities.forEach(ent => {
+      getLineSegments(ent).forEach(seg => allSegments.push({ seg, id: ent.id }));
+    });
+
+    for (let i = 0; i < allSegments.length; i++) {
+      for (let j = i + 1; j < allSegments.length; j++) {
+        const s1 = allSegments[i];
+        const s2 = allSegments[j];
+        if (s1.id === s2.id) continue; // Skip same entity segments unless they share endpoints
+
+        const pt = getSegmentIntersection(s1.seg.a, s1.seg.b, s2.seg.a, s2.seg.b);
+        if (pt) {
+          const d = dist(worldPos, pt);
+          if (d <= aperture) {
+            candidates.push({ ...pt, type: 'intersection', entityId: s1.id, priority: SNAP_PRIORITY.intersection, distance: d });
+          }
+        }
+      }
+    }
+  }
+
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => a.priority !== b.priority ? a.priority - b.priority : a.distance - b.distance);
   return candidates[0];

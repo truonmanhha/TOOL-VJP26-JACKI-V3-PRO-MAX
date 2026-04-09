@@ -1,0 +1,10 @@
+{
+  "strings": {
+    "33853": "SHARE",
+    "40939": "You must save as a DWG file before continuing with share.",
+    "35689": "Share - Save Changes",
+    "42173": "Share",
+    "41781": "Your shared files are still being uploaded. \nYou can continue to work, but the upload \nmust complete before %ls is closed."
+  },
+  "datares": {}
+}
