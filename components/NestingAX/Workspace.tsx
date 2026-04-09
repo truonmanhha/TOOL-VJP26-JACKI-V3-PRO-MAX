@@ -36,7 +36,7 @@ interface WorkspaceProps {
   onStoreDWGHandler?: (handler: () => void) => void;
   onStoreDXFAsPartHandler?: (handler: () => void) => void;
   onStoreExportHandler?: (handler: (format: 'dxf' | 'svg' | 'pdf') => void) => void;
-  
+
   // Nesting Trigger
   onStartNesting?: () => void;
   onMouseWorldPos?: (pos: { x: number; y: number }) => void;
@@ -46,6 +46,7 @@ interface WorkspaceProps {
   onCrosshairChange?: (show: boolean) => void;
   onCrosshairSizeChange?: (size: number) => void;
   onDynInputChange?: (show: boolean) => void;
+  onToggleDynInput?: () => void;
   // FOOTER 1 — Store setter for crosshair size (write-back from slider)
   onSetCrosshairSize?: (fn: (size: number) => void) => void;
 
@@ -94,7 +95,7 @@ interface WorkspaceProps {
   activeLayerId?: string;
   onLayerChange?: () => void;
   showLayerPanel?: boolean; // Task 18
-  
+
   // Real-Time Selection Preview (for Preview 2)
   onSelectionChange?: (selectedIds: Set<string>, allEntities: CadEntity[]) => void;
   onOptimizeEntities?: (entityIds: Set<string>) => void;
@@ -104,6 +105,19 @@ interface WorkspaceProps {
   onAxDocumentImported?: (document: AXDrawingDocument) => void;
   axMigrationController?: AXMigrationController;
   axPerformanceRuntime?: AXPerformanceRuntime;
+
+  // Command Line Integration
+  commandInput?: string;
+  onCommandInputChange?: (val: string) => void;
+  onCommandInputKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  selectedEntityIds?: Set<string>;
+  allCadEntities?: CadEntity[];
+
+  // Command Prompt (AutoCAD Style)
+  onCommandPromptChange?: (prompt: string | undefined) => void;
+  onCommandOptionsChange?: (opts: string[] | undefined) => void;
+  lastCommandOptionClicked?: string | null;
+  onCommandOptionHandled?: () => void;
 }
 
 // REMOVE duplicate CadEntity if exists and use import
@@ -114,10 +128,10 @@ interface WorkspaceProps {
 //   properties?: any;
 // }
 
-const Workspace: React.FC<WorkspaceProps> = ({ 
-  onMouseMove, 
-  showModal, 
-  onCloseModal, 
+const Workspace: React.FC<WorkspaceProps> = ({
+  onMouseMove,
+  showModal,
+  onCloseModal,
   activeNestList,
   showSettingsModal,
   onOpenSettings,
@@ -134,8 +148,9 @@ const Workspace: React.FC<WorkspaceProps> = ({
   onCrosshairChange,
   onCrosshairSizeChange,
   onDynInputChange,
+  onToggleDynInput,
   onSetCrosshairSize,
-  
+
   isSelecting,
   onAddPartFromDrawing,
   onOpenPartParamsDirect,
@@ -178,21 +193,30 @@ const Workspace: React.FC<WorkspaceProps> = ({
   axMigrationController,
   axPerformanceRuntime,
 
-  // Layer System
   layers = [],
   activeLayerId = 'default',
   onLayerChange,
   showLayerPanel = false, // Task 18
+  commandInput,
+  onCommandInputChange: setCommandInputProp,
+  onCommandInputKeyDown,
+  selectedEntityIds,
+  allCadEntities,
+
+  onCommandPromptChange,
+  onCommandOptionsChange,
+  lastCommandOptionClicked,
+  onCommandOptionHandled
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dxfImportRef = useRef<HTMLInputElement>(null);
   const dwgImportRef = useRef<HTMLInputElement>(null);
   const dxfAsPartImportRef = useRef<HTMLInputElement>(null);
-  
+
   // Snap State (current active snap point for rendering)
   const [currentSnap, setCurrentSnap] = useState<SnapResult | null>(null);
-  
+
   // Settings Logic
   const [settingsTab, setSettingsTab] = useState<'general' | 'engine' | 'rectengine' | 'extensions'>('general');
   const [activeEnginePreview, setActiveEnginePreview] = useState<'packTo' | 'guillotine' | 'gaps'>('packTo');
@@ -219,7 +243,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   const [measureRadiusPoints, setMeasureRadiusPoints] = useState<{ x: number; y: number }[]>([]);
   const [measureAnglePoints, setMeasureAnglePoints] = useState<{ x: number; y: number }[]>([]);
   const [measureAreaPoints, setMeasureAreaPoints] = useState<{ x: number; y: number }[]>([]);
-  
+
   // === FIREWORKS STATE ===
   const [showFireworksOverlay, setShowFireworksOverlay] = useState(false);
 
@@ -227,7 +251,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   const [joinFirstEntityId, setJoinFirstEntityId] = useState<string | null>(null);
 
   // === EDIT TOOL STATE (Offset, Trim, Extend, Fillet, Chamfer) ===
-  const EDIT_TOOLS = ['offset', 'trim', 'extend', 'fillet', 'chamfer'];
+  const EDIT_TOOLS = ['offset', 'trim', 'extend', 'fillet', 'chamfer', 'blend', 'lengthen', 'break', 'join', 'reverse'];
   const [editToolState, setEditToolState] = useState<{
     step: number;
     distance: number;       // offset distance, fillet radius, chamfer distance
@@ -237,7 +261,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
   }>({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: null, clickPos: null });
 
   // === TRANSFORM EDIT TOOLS (Move, Copy, Mirror, Rotate, Scale) ===
-  const TRANSFORM_EDIT_TOOLS = ['move', 'copy', 'mirror', 'rotate', 'scale'];
+  const TRANSFORM_EDIT_TOOLS = ['move', 'copy', 'mirror', 'rotate', 'scale', 'stretch'];
   const [transformEditState, setTransformEditState] = useState<{
     step: number;
     points: { x: number; y: number }[];
@@ -489,10 +513,20 @@ const Workspace: React.FC<WorkspaceProps> = ({
   useEffect(() => {
     onSetCrosshairSize?.(setCrosshairSize);
   }, [onSetCrosshairSize]);
-  
-  // Command Input State (AutoCAD Dynamic Input)
-  const [commandInput, setCommandInput] = useState('');
+
+  // Command Input State (AutoCAD Dynamic Input) - Sync with props
+  const setCommandInput = setCommandInputProp || ((_v: string) => { });
   const [showCommandInput, setShowCommandInput] = useState(true);
+  useEffect(() => {
+    // If onToggleDynInput is not provided, do not invoke it
+  }, [onToggleDynInput]);
+  const toggleDynInput = useCallback(() => {
+    setShowCommandInput(prev => !prev);
+    if (onToggleDynInput) {
+      onToggleDynInput();
+    }
+  }, [onToggleDynInput]);
+  const lastToolRef = useRef<string | null>(null);
 
   // === FOOTER 1: Broadcast dynamic input mode ===
   useEffect(() => {
@@ -517,7 +551,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
             idsToSelect.add(ent.properties.originalId);
           }
         });
-        
+
         if (idsToSelect.size > 0) {
           console.log('🔗 Syncing Sidebar selection to Canvas:', idsToSelect.size, 'entities');
           setSelectedEntities(idsToSelect);
@@ -541,7 +575,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle if we're focused on the workspace area
       if (!isMouseInWorkspace) return;
-      
+
       // F6: Toggle Crosshair
       if (e.key === 'F6') {
         e.preventDefault();
@@ -559,7 +593,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
         e.preventDefault();
         onToggleOrtho?.();
       }
-      
+
       // F12: Toggle Dynamic Input
       if (e.key === 'F12') {
         e.preventDefault();
@@ -601,13 +635,13 @@ const Workspace: React.FC<WorkspaceProps> = ({
       // Escape: Clear selection or cancel transform edit
       if (e.key === 'Escape') {
         if (showSettingsModal && onCloseSettings) {
-            onCloseSettings();
-            return;
+          onCloseSettings();
+          return;
         }
 
         if (showModal && onCloseModal) {
-            onCloseModal();
-            return;
+          onCloseModal();
+          return;
         }
 
         // Cancel transform edit tool first
@@ -648,8 +682,8 @@ const Workspace: React.FC<WorkspaceProps> = ({
   // Reset drawing state when tool changes
   useEffect(() => {
     // console.log('🔧 Active draw tool changed:', activeDrawTool);
-setDrawState({ step: 0, points: [], currentPos: null });
-setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: null, clickPos: null });
+    setDrawState({ step: 0, points: [], currentPos: null });
+    setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: null, clickPos: null });
     setTransformEditState({ step: 0, points: [], currentPos: null });
     setMeasurePoints([]);
     setMeasureResult(null);
@@ -658,14 +692,67 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     setMeasureAnglePoints([]);
     setMeasureAreaPoints([]);
     setJoinFirstEntityId(null);
-    
+
     // Validate transform edit tools require selection
     if (activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool) && selectedEntities.size === 0) {
       console.warn('⚠️ Transform edit tool requires selection! No entities selected.');
       showToast('Select entities first! Use window selection or Ctrl+A before using ' + activeDrawTool.toUpperCase() + ' tool.');
       if (onCancelDraw) onCancelDraw();
     }
-  }, [activeDrawTool]);
+
+    // Set Command Prompt based on Active Tool (AutoCAD Style)
+    if (activeDrawTool === 'circle') {
+      onCommandPromptChange?.('Specify center point for circle or');
+      onCommandOptionsChange?.(['3P', '2P', 'Ttr']);
+    } else if (activeDrawTool === 'line' || activeDrawTool === 'polyline') {
+      onCommandPromptChange?.('Specify first point:');
+      onCommandOptionsChange?.([]);
+    } else if (activeDrawTool === 'rect') {
+      onCommandPromptChange?.('Specify first corner point or');
+      onCommandOptionsChange?.(['Chamfer', 'Elevation', 'Fillet', 'Thickness', 'Width']);
+    } else if (activeDrawTool === 'arc') {
+      onCommandPromptChange?.('Specify start point of arc or');
+      onCommandOptionsChange?.(['Center']);
+    } else if (activeDrawTool === 'move') {
+      onCommandPromptChange?.('Specify base point or');
+      onCommandOptionsChange?.(['Displacement']);
+    } else if (activeDrawTool === 'copy') {
+      onCommandPromptChange?.('Specify base point or');
+      onCommandOptionsChange?.(['Displacement', 'mOde']);
+    } else if (!activeDrawTool) {
+      onCommandPromptChange?.(undefined);
+      onCommandOptionsChange?.(undefined);
+    } else {
+      // Generic fallback
+      onCommandPromptChange?.(`Specify point for ${activeDrawTool.toUpperCase()}:`);
+      onCommandOptionsChange?.([]);
+    }
+
+  }, [activeDrawTool, selectedEntities.size, onCommandPromptChange, onCommandOptionsChange]);
+
+  // Handle Command Option clicks (AutoCAD interaction)
+  useEffect(() => {
+    if (lastCommandOptionClicked) {
+      console.log(`Command Option Clicked: [${lastCommandOptionClicked}]`);
+
+      // Simulate action based on option (e.g. 3P circle)
+      if (lastCommandOptionClicked === '3P') {
+        onCommandPromptChange?.('Specify first point on circle:');
+        onCommandOptionsChange?.([]);
+        showToast('3P circle mode selected');
+      } else if (lastCommandOptionClicked === '2P') {
+        onCommandPromptChange?.('Specify first end point of circle\'s diameter:');
+        onCommandOptionsChange?.([]);
+        showToast('2P circle mode selected');
+      } else if (lastCommandOptionClicked === 'Ttr') {
+        onCommandPromptChange?.('Specify point on object for first tangent of circle:');
+        onCommandOptionsChange?.([]);
+        showToast('Tangent, Tangent, Radius selected');
+      }
+
+      onCommandOptionHandled?.();
+    }
+  }, [lastCommandOptionClicked, onCommandPromptChange, onCommandOptionsChange, onCommandOptionHandled]);
 
   // === ZOOM FIT: When activeDrawTool === 'zoom_fit', fit all content in view ===
   useEffect(() => {
@@ -721,7 +808,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   // === DELETE TOOL: When activeDrawTool === 'delete', delete selected entities or switch to select mode ===
   useEffect(() => {
     if (activeDrawTool !== 'delete') return;
-    
+
     if (selectedEntities.size > 0) {
       // State A: Entities already selected → delete them immediately
       console.log('🗑️ Delete tool activated', { selectedCount: selectedEntities.size, mode: 'immediate' });
@@ -837,7 +924,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         return;
       }
 
-       const preprocessed = preprocessImportedEntities(result.entities, result.fileName);
+      const preprocessed = preprocessImportedEntities(result.entities, result.fileName);
 
       onAxDocumentImported?.(result.document);
 
@@ -847,7 +934,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         'draw',
         preprocessed.legacyEntities.map(e => e.id)
       );
-      
+
       showToast(`✅ Imported ${result.entities.length} entities from ${result.fileName}${formatAXImportDiagnostics(result.document)}`, 6500);
     } catch (err) {
       showToast(`❌ Import error: ${err instanceof Error ? err.message : 'Unknown'}`, 5000);
@@ -856,7 +943,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       setImportProgress(0);
       setImportStatusText('');
     }
-    
+
     if (dxfImportRef.current) dxfImportRef.current.value = '';
   };
 
@@ -991,10 +1078,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   };
 
   const handleGapChange = (field: keyof AppSettings['gaps'], value: number) => {
-     setAppSettings(prev => ({
-       ...prev,
-       gaps: { ...prev.gaps, [field]: value }
-     }));
+    setAppSettings(prev => ({
+      ...prev,
+      gaps: { ...prev.gaps, [field]: value }
+    }));
   };
 
   const handleRectEngineChange = (field: keyof AppSettings['rectEngine'], value: any) => {
@@ -1019,35 +1106,35 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   const handleOpenStockModal = () => {
     setStockSheets(db.getStockSheets());
     setShowStockModal(true);
-    if (onCloseModal) onCloseModal(); 
+    if (onCloseModal) onCloseModal();
   };
 
   const handleAddFromStock = () => {
     if (!selectedStockId || !onAddSheet) return;
     const stock = stockSheets.find(s => s.id === selectedStockId);
     if (stock) {
-        onAddSheet({
-            material: stock.material,
-            dimensions: `${stock.width}x${stock.height}`,
-            thickness: stock.thickness,
-            quantity: 1,
-            cost: stock.cost || 0,
-            category: stock.category || 'General',
-            supplier: stock.supplier || 'Unknown',
-            grainDirection: stock.grainDirection || 'None'
-        });
-        setSelectedStockId('');
+      onAddSheet({
+        material: stock.material,
+        dimensions: `${stock.width}x${stock.height}`,
+        thickness: stock.thickness,
+        quantity: 1,
+        cost: stock.cost || 0,
+        category: stock.category || 'General',
+        supplier: stock.supplier || 'Unknown',
+        grainDirection: stock.grainDirection || 'None'
+      });
+      setSelectedStockId('');
     }
   };
 
   // Viewport State
-  const [zoom, setZoom] = useState(0.8); 
+  const [zoom, setZoom] = useState(0.8);
 
   // === FOOTER 1: Broadcast zoom changes ===
   useEffect(() => {
     onZoomChange?.(zoom);
   }, [zoom, onZoomChange]);
-  const [viewOffset, setViewOffset] = useState({ x: -200, y: 3500 }); 
+  const [viewOffset, setViewOffset] = useState({ x: -200, y: 3500 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragStartView, setDragStartView] = useState({ x: 0, y: 0 });
@@ -1072,32 +1159,32 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   const [formSheetHeight, setFormSheetHeight] = useState(1500);
   const [formSheetQty, setFormSheetQty] = useState(5);
   const [selectedSheetGeometry, setSelectedSheetGeometry] = useState<CadEntity[] | null>(null); // NEW: Store geometry for sheet preview
-  
+
   const [isDxfPreFilled, setIsDxfPreFilled] = useState(false); // Flag for DXF-imported parts
   const [dxfImportedGeometry, setDxfImportedGeometry] = useState<CadEntity[] | null>(null); // Geometry from DXF import (bypasses canvas)
-  
+
   // ============ LIVE PART GEOMETRY (Real-time computed) ============
   // Priority 1: DXF-imported geometry (when bypassing canvas)
   // Priority 2: Live selection from canvas (updates in real-time)
   // Priority 2: Live selection from canvas (updates in real-time)
   const selectedPartGeometry = React.useMemo(() => {
     if (!showPartParamsModal) return null;
-    
+
     // Priority 1: Use DXF-imported geometry if available
     if (isDxfPreFilled && dxfImportedGeometry && dxfImportedGeometry.length > 0) {
       return dxfImportedGeometry;
     }
-    
+
     // Priority 2: Compute from current canvas selection (live updates)
     const selected = cadEntities.filter(e => selectedEntities.has(e.id));
     if (selected.length === 0) {
       console.log('⚠️ selectedPartGeometry: No entities selected');
       return null;
     }
-    
+
     console.log('📦 selectedPartGeometry: Returning', selected.length, 'entities (NO normalization)');
     console.log('  Entity types:', selected.map(e => e.type).join(', '));
-    
+
     // IMPORTANT: Return entities AS-IS without normalization
     // VectorPreview will handle bounding box calculation and scaling internally
     return selected;
@@ -1109,7 +1196,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       setDxfImportedGeometry(null);
     }
   }, [showPartParamsModal]);
-  
+
 
   // Reset Part form (dimensions now auto-calculated from live selectedPartGeometry)
   useEffect(() => {
@@ -1123,7 +1210,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       }
       console.log('  📦 cadEntities:', cadEntities.length);
       console.log('  ✅ selectedEntities:', Array.from(selectedEntities));
-      
+
       // Reset form fields
       setFormPartName(`Part_${parts.length + 1}`);
       setFormReqType('fixed');
@@ -1135,15 +1222,15 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       setFormKitNum("");
     }
   }, [showPartParamsModal, parts.length]);
-  
+
   // Calculate part dimensions from live geometry (updates in real-time)
   useEffect(() => {
     if (!showPartParamsModal || !selectedPartGeometry || selectedPartGeometry.length === 0) {
       return;
     }
-    
+
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
+
     try {
       const geometry = cadEntitiesToGeometry(selectedPartGeometry);
       geometry.paths.forEach(path => {
@@ -1162,9 +1249,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
     const width = isFinite(minX) ? maxX - minX : 0;
     const height = isFinite(minY) ? maxY - minY : 0;
-    
+
     console.log('📐 Live dimensions:', { width, height });
-    
+
     setFormPartWidth(Math.round(width));
     setFormPartHeight(Math.round(height));
   }, [showPartParamsModal, selectedPartGeometry]);
@@ -1175,11 +1262,11 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       // Store selected entities geometry for sheet preview
       const selected = cadEntities.filter(e => selectedEntities.has(e.id));
       console.log('🔍 Selected SHEET entities for preview:', selected);
-      
+
       // Calculate sheet dimensions from selection
       if (selected.length > 0) {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        
+
         try {
           const geometry = cadEntitiesToGeometry(selected);
           geometry.paths.forEach(path => {
@@ -1198,13 +1285,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
         const width = isFinite(minX) ? maxX - minX : 0;
         const height = isFinite(minY) ? maxY - minY : 0;
-        
+
         console.log('📐 Calculated sheet dimensions:', { width, height });
-        
+
         setFormSheetWidth(Math.round(width));
         setFormSheetHeight(Math.round(height));
       }
-      
+
       setSelectedSheetGeometry(selected);
       setFormSheetMaterial("Mild Steel");
       setFormSheetThickness(5.0);
@@ -1219,7 +1306,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
     const calculateAndSetZoom = () => {
       if (!containerRef.current) return;
-      
+
       const containerWidth = containerRef.current.clientWidth;
       if (containerWidth <= 0) return;
 
@@ -1236,10 +1323,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
       // Tính zoom để fit sheet width vào container width (với buffer 50px)
       const targetZoom = (containerWidth - 50) / maxSheetWidth;
-      
+
       // Giới hạn zoom: min 0.1, max 5
       const finalZoom = Math.max(0.1, Math.min(targetZoom, 5));
-      
+
       setZoom(finalZoom);
     };
 
@@ -1271,7 +1358,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         properties: { ...(drawState.properties || {}), sides: 6 }, // Preserve polygon sides
         layerId: activeLayerId
       };
-      
+
       setCadEntities(prev => [...prev, newEntity]);
       setSelectedEntities(new Set([newEntity.id])); // Auto-select it!
       setDrawState({ step: 0, points: [], currentPos: null });
@@ -1282,15 +1369,15 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   const handleParamsOK = () => {
     if (onAddPart) {
       console.log('🎯 Alphacam Core: Finalizing Selection Capture...');
-      
+
       // STEP 1: Identify what to save
       let entsToProcess: CadEntity[] = [];
-      
+
       // Priority 1: Use explicit selection
       const selection = cadEntities.filter(e => selectedEntities.has(e.id));
       if (selection.length > 0) {
         entsToProcess = selection;
-      } 
+      }
       // Priority 2: If nothing selected, but we have entities on canvas, use the last one!
       else if (cadEntities.length > 0) {
         console.log('💡 Auto-selecting the most recent entity on canvas.');
@@ -1313,7 +1400,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         // IMPORTANT: Map original IDs to the exploded paths so we can highlight them later
         const geometry = cadEntitiesToGeometry(entsToProcess);
         let minX = Infinity, minY = Infinity;
-        
+
         geometry.paths.forEach(p => p.points.forEach(pt => {
           minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
         }));
@@ -1322,7 +1409,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           // Find which original entity this path came from (best effort)
           // For simple selection, it's usually 1-to-1
           const sourceEntity = entsToProcess[Math.min(idx, entsToProcess.length - 1)];
-          
+
           return {
             id: `fixed_${idx}_${Date.now()}`,
             type: 'polyline',
@@ -1376,7 +1463,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
 
   // Constants
-  const BASE_PIXELS_PER_UNIT = 0.1; 
+  const BASE_PIXELS_PER_UNIT = 0.1;
   const pixelsPerUnit = BASE_PIXELS_PER_UNIT * zoom;
 
   const screenToWorld = React.useCallback((screenX: number, screenY: number) => {
@@ -1406,12 +1493,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       const B = point.y - p1.y;
       const C = p2.x - p1.x;
       const D = p2.y - p1.y;
-      
+
       const dot = A * C + B * D;
       const lenSq = C * C + D * D;
       let param = -1;
       if (lenSq !== 0) param = dot / lenSq;
-      
+
       let xx, yy;
       if (param < 0) {
         xx = p1.x;
@@ -1423,7 +1510,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         xx = p1.x + param * C;
         yy = p1.y + param * D;
       }
-      
+
       const dx = point.x - xx;
       const dy = point.y - yy;
       return Math.sqrt(dx * dx + dy * dy) <= threshold;
@@ -1434,16 +1521,16 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       const maxX = Math.max(p1.x, p2.x);
       const minY = Math.min(p1.y, p2.y);
       const maxY = Math.max(p1.y, p2.y);
-      
+
       // Check distance to edges
       const distToLeft = Math.abs(point.x - minX);
       const distToRight = Math.abs(point.x - maxX);
       const distToBottom = Math.abs(point.y - minY);
       const distToTop = Math.abs(point.y - maxY);
-      
+
       const isNearVertical = (distToLeft <= threshold || distToRight <= threshold) && point.y >= minY - threshold && point.y <= maxY + threshold;
       const isNearHorizontal = (distToBottom <= threshold || distToTop <= threshold) && point.x >= minX - threshold && point.x <= maxX + threshold;
-      
+
       return isNearVertical || isNearHorizontal;
     } else if (entity.type === 'circle') {
       const center = entity.points[0];
@@ -1601,7 +1688,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       const halfW = (approxWidth / 2) * (threshold / 5); // Scale by threshold for consistent feel
       const halfH = (approxHeight / 2) * (threshold / 5);
       return Math.abs(point.x - pos.x) <= Math.max(halfW, threshold * 3) &&
-             Math.abs(point.y - pos.y) <= Math.max(halfH, threshold * 2);
+        Math.abs(point.y - pos.y) <= Math.max(halfH, threshold * 2);
     } else if (entity.type === 'leader') {
       // Leader: distance to polyline segments
       for (let i = 0; i < entity.points.length - 1; i++) {
@@ -1633,7 +1720,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     if (entity.type === 'line' || entity.type === 'rect' || entity.type === 'polyline' || entity.type === 'spline') {
       // Check if all points are in window (window mode) or any point is in window (crossing mode)
       const pointsInWindow = entity.points.filter(p => p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY);
-      
+
       if (crossing) {
         return pointsInWindow.length > 0; // At least one point inside
       } else {
@@ -1642,7 +1729,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     } else if (entity.type === 'circle') {
       const center = entity.points[0];
       const radius = entity.properties?.radius || 0;
-      
+
       if (crossing) {
         // Circle intersects or is inside window
         const nearestX = Math.max(minX, Math.min(center.x, maxX));
@@ -1652,7 +1739,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       } else {
         // Entire circle must be inside window
         return center.x - radius >= minX && center.x + radius <= maxX &&
-               center.y - radius >= minY && center.y + radius <= maxY;
+          center.y - radius >= minY && center.y + radius <= maxY;
       }
     } else if (entity.type === 'arc') {
       // Use bounding points (start, through, end) for selection
@@ -1673,7 +1760,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       const center = entity.points[0];
       const rx = entity.properties?.rx || 0;
       const ry = entity.properties?.ry || 0;
-      
+
       if (crossing) {
         // Ellipse intersects or is inside window (approximate with AABB)
         const nearestX = Math.max(minX, Math.min(center.x, maxX));
@@ -1681,11 +1768,11 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         // Approximate: check if nearest point on window bbox is within ellipse
         const nx = (nearestX - center.x) / (rx || 1);
         const ny = (nearestY - center.y) / (ry || 1);
-        return (nx * nx + ny * ny) <= 1 || 
+        return (nx * nx + ny * ny) <= 1 ||
           (center.x + rx >= minX && center.x - rx <= maxX && center.y + ry >= minY && center.y - ry <= maxY);
       } else {
         return center.x - rx >= minX && center.x + rx <= maxX &&
-               center.y - ry >= minY && center.y + ry <= maxY;
+          center.y - ry >= minY && center.y + ry <= maxY;
       }
     } else if (entity.type === 'polygon') {
       const center = entity.points[0];
@@ -1755,7 +1842,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   }, []);
 
   // ============ ENTITY TRANSFORMATION FUNCTIONS (Move, Copy, Mirror, Rotate, Scale) ============
-  
+
   /** Translate an entity by (dx, dy) — modifies all points and center-based properties */
   const translateEntity = (entity: CadEntity, dx: number, dy: number): CadEntity => {
     const newPoints = entity.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
@@ -1865,7 +1952,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
   // ============ EDIT TOOL GEOMETRY HELPERS ============
 
-  const lineLineIntersection = (p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}, p4: {x:number,y:number}) => {
+  const lineLineIntersection = (p1: { x: number, y: number }, p2: { x: number, y: number }, p3: { x: number, y: number }, p4: { x: number, y: number }) => {
     const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
     const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
     const denom = d1x * d2y - d1y * d2x;
@@ -1875,9 +1962,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     return { x: p1.x + t * d1x, y: p1.y + t * d1y, t, u };
   };
 
-  const offsetLine = (p1: {x:number,y:number}, p2: {x:number,y:number}, dist: number, sidePoint: {x:number,y:number}): [{x:number,y:number},{x:number,y:number}] => {
+  const offsetLine = (p1: { x: number, y: number }, p2: { x: number, y: number }, dist: number, sidePoint: { x: number, y: number }): [{ x: number, y: number }, { x: number, y: number }] => {
     const dx = p2.x - p1.x, dy = p2.y - p1.y;
-    const len = Math.sqrt(dx*dx + dy*dy);
+    const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 1e-10) return [p1, p2];
     let nx = -dy / len, ny = dx / len;
     const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
@@ -1890,13 +1977,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     ];
   };
 
-  const offsetCircle = (center: {x:number,y:number}, radius: number, dist: number, sidePoint: {x:number,y:number}): number => {
+  const offsetCircle = (center: { x: number, y: number }, radius: number, dist: number, sidePoint: { x: number, y: number }): number => {
     const dx = sidePoint.x - center.x, dy = sidePoint.y - center.y;
-    const d = Math.sqrt(dx*dx + dy*dy);
+    const d = Math.sqrt(dx * dx + dy * dy);
     return d > radius ? radius + dist : Math.max(0.1, radius - dist);
   };
 
-  const offsetRect = (p1: {x:number,y:number}, p2: {x:number,y:number}, dist: number, sidePoint: {x:number,y:number}): [{x:number,y:number},{x:number,y:number}] => {
+  const offsetRect = (p1: { x: number, y: number }, p2: { x: number, y: number }, dist: number, sidePoint: { x: number, y: number }): [{ x: number, y: number }, { x: number, y: number }] => {
     const cx = (p1.x + p2.x) / 2, cy = (p1.y + p2.y) / 2;
     const dx = sidePoint.x - cx, dy = sidePoint.y - cy;
     const hw = Math.abs(p2.x - p1.x) / 2, hh = Math.abs(p2.y - p1.y) / 2;
@@ -1911,7 +1998,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   };
 
   // ============ EDIT TOOL CLICK HANDLER ============
-  const handleEditToolClick = React.useCallback((worldPos: {x: number, y: number}) => {
+  const handleEditToolClick = React.useCallback((worldPos: { x: number, y: number }) => {
     if (!activeDrawTool || !EDIT_TOOLS.includes(activeDrawTool)) return;
     console.log(`✏️ Edit tool [${activeDrawTool}] click at`, worldPos, 'state:', editToolState);
 
@@ -1949,15 +2036,15 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         const dist = editToolState.distance;
         if (entity.type === 'line' && entity.points.length >= 2) {
           const [np1, np2] = offsetLine(entity.points[0], entity.points[1], dist, worldPos);
-           setCadEntitiesWithUndo(prev => [...prev, { id: crypto.randomUUID(), type: 'line', points: [np1, np2], properties: { ...entity.properties }, layerId: activeLayerId }], 'Offset Line', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, { id: crypto.randomUUID(), type: 'line', points: [np1, np2], properties: { ...entity.properties }, layerId: activeLayerId }], 'Offset Line', 'draw');
         } else if (entity.type === 'circle' && entity.points.length >= 1) {
           const center = entity.points[0];
           const r = entity.properties?.radius || 50;
           const newR = offsetCircle(center, r, dist, worldPos);
-           setCadEntitiesWithUndo(prev => [...prev, { id: crypto.randomUUID(), type: 'circle', points: [center], properties: { ...entity.properties, radius: newR }, layerId: activeLayerId }], 'Offset Circle', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, { id: crypto.randomUUID(), type: 'circle', points: [center], properties: { ...entity.properties, radius: newR }, layerId: activeLayerId }], 'Offset Circle', 'draw');
         } else if (entity.type === 'rect' && entity.points.length >= 2) {
           const [np1, np2] = offsetRect(entity.points[0], entity.points[1], dist, worldPos);
-           setCadEntitiesWithUndo(prev => [...prev, { id: crypto.randomUUID(), type: 'rect', points: [np1, np2], properties: { ...entity.properties }, layerId: activeLayerId }], 'Offset Rect', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, { id: crypto.randomUUID(), type: 'rect', points: [np1, np2], properties: { ...entity.properties }, layerId: activeLayerId }], 'Offset Rect', 'draw');
         } else { console.log('⚠️ Offset: Unsupported type:', entity.type); }
         setEditToolState(prev => ({ ...prev, step: 1, sourceEntityId: null, clickPos: null }));
         return;
@@ -2027,17 +2114,17 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         const ix = lineLineIntersection(e1.points[0], e1.points[1], e2.points[0], e2.points[1]);
         if (!ix) { console.log('⚠️ Fillet: Parallel'); return; }
         const ixPt = { x: ix.x, y: ix.y };
-        const getUnitDir = (pa: {x:number,y:number}, pb: {x:number,y:number}) => {
+        const getUnitDir = (pa: { x: number, y: number }, pb: { x: number, y: number }) => {
           const ddx = pb.x - pa.x, ddy = pb.y - pa.y;
-          const l = Math.sqrt(ddx*ddx + ddy*ddy);
-          return l > 0 ? { x: ddx/l, y: ddy/l } : { x: 1, y: 0 };
+          const l = Math.sqrt(ddx * ddx + ddy * ddy);
+          return l > 0 ? { x: ddx / l, y: ddy / l } : { x: 1, y: 0 };
         };
         const dir1 = getUnitDir(ixPt, ix.t > 0.5 ? e1.points[0] : e1.points[1]);
         const dir2 = getUnitDir(ixPt, ix.u > 0.5 ? e2.points[0] : e2.points[1]);
         const t1 = { x: ixPt.x + dir1.x * radius, y: ixPt.y + dir1.y * radius };
         const t2 = { x: ixPt.x + dir2.x * radius, y: ixPt.y + dir2.y * radius };
         const bisX = dir1.x + dir2.x, bisY = dir1.y + dir2.y;
-        const bisLen = Math.sqrt(bisX*bisX + bisY*bisY);
+        const bisLen = Math.sqrt(bisX * bisX + bisY * bisY);
         if (bisLen < 1e-10) { console.log('⚠️ Fillet: Collinear'); return; }
         const ang = Math.acos(Math.max(-1, Math.min(1, dir1.x * dir2.x + dir1.y * dir2.y)));
         const centerDist = radius / Math.sin(ang / 2);
@@ -2075,10 +2162,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         const ix = lineLineIntersection(e1.points[0], e1.points[1], e2.points[0], e2.points[1]);
         if (!ix) { console.log('⚠️ Chamfer: Parallel'); return; }
         const ixPt = { x: ix.x, y: ix.y };
-        const getUnitDir = (pa: {x:number,y:number}, pb: {x:number,y:number}) => {
+        const getUnitDir = (pa: { x: number, y: number }, pb: { x: number, y: number }) => {
           const ddx = pb.x - pa.x, ddy = pb.y - pa.y;
-          const l = Math.sqrt(ddx*ddx + ddy*ddy);
-          return l > 0 ? { x: ddx/l, y: ddy/l } : { x: 1, y: 0 };
+          const l = Math.sqrt(ddx * ddx + ddy * ddy);
+          return l > 0 ? { x: ddx / l, y: ddy / l } : { x: 1, y: 0 };
         };
         const dir1 = getUnitDir(ixPt, ix.t > 0.5 ? e1.points[0] : e1.points[1]);
         const dir2 = getUnitDir(ixPt, ix.u > 0.5 ? e2.points[0] : e2.points[1]);
@@ -2107,9 +2194,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   }, [activeDrawTool, editToolState, cadEntities, pixelsPerUnit, isPointNearEntity]);
 
   // --- Drawing Handlers ---
-  const handleDrawingClick = React.useCallback((worldPos: {x: number, y: number}) => {
+  const handleDrawingClick = React.useCallback((worldPos: { x: number, y: number }) => {
     // console.log('🎨 handleDrawingClick called with:', { activeDrawTool, worldPos });
-    
+
     if (!activeDrawTool) {
       console.log('⚠️ No active draw tool');
       return;
@@ -2117,7 +2204,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
     setDrawState(prevDrawState => {
       console.log('📊 prevDrawState:', prevDrawState);
-      
+
       if (activeDrawTool === 'line' || activeDrawTool === 'rect') {
         if (prevDrawState.step === 0) {
           console.log('📍 Step 0: Saving first point', worldPos);
@@ -2126,22 +2213,22 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           // Finish Drawing
           const p1 = prevDrawState.points[0];
           const p2 = worldPos;
-          
+
           console.log('✅ Step 1→0: Saving entity', { type: activeDrawTool, points: [p1, p2] });
-          
-           // Save to CAD Entities
-           setCadEntitiesWithUndo(prev => {
-             const newEntity = {
-               id: crypto.randomUUID(),
-               type: activeDrawTool,
-               points: [p1, p2],
-               layerId: activeLayerId
-             };
-             const newEntities = [...prev, newEntity];
-             console.log('📊 cadEntities updated:', newEntities);
-             return newEntities;
-           }, `Draw ${activeDrawTool.charAt(0).toUpperCase() + activeDrawTool.slice(1)}`, 'draw');
-          
+
+          // Save to CAD Entities
+          setCadEntitiesWithUndo(prev => {
+            const newEntity = {
+              id: crypto.randomUUID(),
+              type: activeDrawTool,
+              points: [p1, p2],
+              layerId: activeLayerId
+            };
+            const newEntities = [...prev, newEntity];
+            console.log('📊 cadEntities updated:', newEntities);
+            return newEntities;
+          }, `Draw ${activeDrawTool.charAt(0).toUpperCase() + activeDrawTool.slice(1)}`, 'draw');
+
           // Reset state but keep tool active
           return { step: 0, points: [], currentPos: null };
         }
@@ -2152,30 +2239,30 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         } else if (prevDrawState.step === 1) {
           const center = prevDrawState.points[0];
           const radius = Math.sqrt(Math.pow(worldPos.x - center.x, 2) + Math.pow(worldPos.y - center.y, 2));
-          
+
           console.log('✅ Circle Step 1→0: Saving entity', { center, radius });
-          
-           setCadEntitiesWithUndo(prev => {
-             const newEntity = {
-               id: crypto.randomUUID(),
-               type: 'circle',
-               points: [center, worldPos],
-               properties: { radius },
-               layerId: activeLayerId
-             };
-             return [...prev, newEntity];
-           }, 'Draw Circle', 'draw');
+
+          setCadEntitiesWithUndo(prev => {
+            const newEntity = {
+              id: crypto.randomUUID(),
+              type: 'circle',
+              points: [center, worldPos],
+              properties: { radius },
+              layerId: activeLayerId
+            };
+            return [...prev, newEntity];
+          }, 'Draw Circle', 'draw');
 
           return { step: 0, points: [], currentPos: null };
         }
       } else if (activeDrawTool === 'polyline' || activeDrawTool === 'spline') {
-          console.log(`📍 ${activeDrawTool} point added:`, worldPos);
-          // Add point
-          return { 
-              step: prevDrawState.step + 1, 
-              points: [...prevDrawState.points, worldPos],
-              currentPos: null 
-          };
+        console.log(`📍 ${activeDrawTool} point added:`, worldPos);
+        // Add point
+        return {
+          step: prevDrawState.step + 1,
+          points: [...prevDrawState.points, worldPos],
+          currentPos: null
+        };
       } else if (activeDrawTool === 'arc') {
         // 3-point arc: start, through, end
         if (prevDrawState.step === 0) {
@@ -2197,24 +2284,24 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
           if (Math.abs(D) < 1e-10) {
             // Degenerate (collinear) — save as a line instead
-             setCadEntitiesWithUndo(prev => [...prev, {
-               id: crypto.randomUUID(),
-               type: 'line',
-               points: [start, end],
-               layerId: activeLayerId
-             }], 'Draw Arc (line)', 'draw');
+            setCadEntitiesWithUndo(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'line',
+              points: [start, end],
+              layerId: activeLayerId
+            }], 'Draw Arc (line)', 'draw');
           } else {
             const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / D;
             const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / D;
             const radius = Math.sqrt((ax - ux) * (ax - ux) + (ay - uy) * (ay - uy));
 
-             setCadEntitiesWithUndo(prev => [...prev, {
-               id: crypto.randomUUID(),
-               type: 'arc',
-               points: [start, through, end],
-               properties: { centerX: ux, centerY: uy, radius },
-               layerId: activeLayerId
-             }], 'Draw Arc', 'draw');
+            setCadEntitiesWithUndo(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'arc',
+              points: [start, through, end],
+              properties: { centerX: ux, centerY: uy, radius },
+              layerId: activeLayerId
+            }], 'Draw Arc', 'draw');
           }
           return { step: 0, points: [], currentPos: null };
         }
@@ -2229,13 +2316,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           const ry = Math.abs(worldPos.y - center.y);
           console.log('✅ Ellipse Step 1→0: Saving ellipse', { center, rx, ry });
 
-           setCadEntitiesWithUndo(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'ellipse',
-             points: [center, worldPos],
-             properties: { rx, ry },
-             layerId: activeLayerId
-           }], 'Draw ellipse', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ellipse',
+            points: [center, worldPos],
+            properties: { rx, ry },
+            layerId: activeLayerId
+          }], 'Draw ellipse', 'draw');
           return { step: 0, points: [], currentPos: null };
         }
       } else if (activeDrawTool === 'polygon') {
@@ -2249,13 +2336,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           const sides = 6; // default hexagon
           console.log('✅ Polygon Step 1→0: Saving polygon', { center, radius, sides });
 
-           setCadEntitiesWithUndo(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'polygon',
-             points: [center, worldPos],
-             properties: { sides, radius },
-             layerId: activeLayerId
-           }], 'Draw polygon', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'polygon',
+            points: [center, worldPos],
+            properties: { sides, radius },
+            layerId: activeLayerId
+          }], 'Draw polygon', 'draw');
           return { step: 0, points: [], currentPos: null };
         }
       } else if (activeDrawTool === 'slot') {
@@ -2270,13 +2357,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           const width = dist * 0.3; // default width = 30% of length
           console.log('✅ Slot Step 1→0: Saving slot', { center1, center2, width });
 
-           setCadEntitiesWithUndo(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'slot',
-             points: [center1, center2],
-             properties: { width },
-             layerId: activeLayerId
-           }], 'Draw slot', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'slot',
+            points: [center1, center2],
+            properties: { width },
+            layerId: activeLayerId
+          }], 'Draw slot', 'draw');
           return { step: 0, points: [], currentPos: null };
         }
       } else if (activeDrawTool === 'obround') {
@@ -2292,13 +2379,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           const cornerRadius = Math.min(w, h) / 2;
           console.log('✅ Obround Step 1→0: Saving obround', { corner1, corner2, cornerRadius });
 
-           setCadEntitiesWithUndo(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'obround',
-             points: [corner1, corner2],
-             properties: { cornerRadius },
-             layerId: activeLayerId
-           }], 'Draw obround', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'obround',
+            points: [corner1, corner2],
+            properties: { cornerRadius },
+            layerId: activeLayerId
+          }], 'Draw obround', 'draw');
           return { step: 0, points: [], currentPos: null };
         }
       } else if (activeDrawTool === 'dimension') {
@@ -2315,13 +2402,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           const distance = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
           console.log('✅ Dimension Step 2→0: Saving dimension', { start, end, textPos, distance });
 
-           setCadEntitiesWithUndo(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'dimension',
-             points: [start, end, textPos],
-             properties: { value: Math.round(distance * 100) / 100, unit: 'mm' },
-             layerId: activeLayerId
-           }], 'Draw dimension', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'dimension',
+            points: [start, end, textPos],
+            properties: { value: Math.round(distance * 100) / 100, unit: 'mm' },
+            layerId: activeLayerId
+          }], 'Draw dimension', 'draw');
           return { step: 0, points: [], currentPos: null };
         }
       } else if (activeDrawTool === 'text') {
@@ -2343,16 +2430,16 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       } else if (activeDrawTool === 'hatch') {
         // 1-click hatch: click inside a closed entity to fill it
         console.log('📍 Hatch: Finding closest entity at', worldPos);
-        
+
         // Find the closest entity to fill with hatch
         let closestEntityId: string | null = null;
         let closestDist = Infinity;
-        
+
         // Search through entities for closest closed shape
         const closedTypes = ['rect', 'circle', 'ellipse', 'polygon', 'obround'];
         for (const ent of cadEntities) {
           if (!closedTypes.includes(ent.type)) continue;
-          
+
           // Check distance to entity center
           let cx = 0, cy = 0;
           if (ent.type === 'circle' || ent.type === 'ellipse' || ent.type === 'polygon') {
@@ -2368,16 +2455,16 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
             closestEntityId = ent.id;
           }
         }
-        
+
         if (closestEntityId) {
           console.log('✅ Hatch: Applying to entity', closestEntityId);
-           setCadEntitiesWithUndo(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'hatch',
-             points: [worldPos],
-             properties: { pattern: 'lines', angle: 45, spacing: 5, targetEntityId: closestEntityId },
-             layerId: activeLayerId
-           }], 'Draw hatch', 'draw');
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'hatch',
+            points: [worldPos],
+            properties: { pattern: 'lines', angle: 45, spacing: 5, targetEntityId: closestEntityId },
+            layerId: activeLayerId
+          }], 'Draw hatch', 'draw');
         } else {
           console.log('⚠️ Hatch: No closed entity found nearby');
         }
@@ -2612,7 +2699,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         }
         return prevDrawState;
       }
-      
+
       return prevDrawState;
     });
   }, [activeDrawTool, setCadEntities, setCadEntitiesWithUndo, setDrawState, cadEntities, measurePoints, measureRadiusPoints, measureAnglePoints, measureAreaPoints, joinFirstEntityId, isPointNearEntity, pixelsPerUnit, activeLayerId, showToast]);
@@ -2724,7 +2811,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   const handleWheel = React.useCallback((e: React.WheelEvent) => {
     if (wheelTimeout.current) return; // simple throttle
     wheelTimeout.current = window.setTimeout(() => {
-        wheelTimeout.current = null;
+      wheelTimeout.current = null;
     }, 16); // 60fps cap
 
     e.preventDefault(); // Prevent page scrolling
@@ -2750,7 +2837,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
   const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
     // console.log('🖱️ Mouse down:', { button: e.button, activeDrawTool });
-    
+
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
@@ -2771,117 +2858,117 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         }
       }
     }
-    
+
     // Left mouse button
     if (e.button === 0) {
-        if (activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
-            // Transform Edit mode (move, copy, mirror, rotate, scale)
-            console.log('✅ Transform edit mode active, processing click');
-            handleTransformEditClick(snappedPos);
-            return;
-        } else if (activeDrawTool && EDIT_TOOLS.includes(activeDrawTool)) {
-            // Edit tools mode (offset, trim, extend, fillet, chamfer)
-            console.log('✅ Edit tool mode active, processing click');
-            handleEditToolClick(snappedPos);
-            return;
-        } else if (activeDrawTool && activeDrawTool !== 'lag_reduce') {
-            // Drawing mode
-            console.log('✅ Drawing mode active, processing click');
-            handleDrawingClick(snappedPos);
-            return;
-        } else {
-            // Selection mode - Start window selection
-            // console.log('📦 Starting window selection');
-            setIsWindowSelecting(true);
-            setSelectionStart(worldPos);
-            setSelectionEnd(worldPos);
-            
-            // Check if clicking on an entity (for single selection)
-            let clickedEntity: string | null = null;
-            for (const entity of cadEntities) {
-                if (isPointNearEntity(worldPos, entity, 10 / pixelsPerUnit)) {
-                    clickedEntity = entity.id;
-                    break;
-                }
-            }
-            
-            if (clickedEntity) {
-                if (e.shiftKey) {
-                    // Shift+Click: DESELECT the clicked entity
-                    setSelectedEntities(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(clickedEntity!);
-                        return newSet;
-                    });
-                } else if (e.ctrlKey || e.metaKey) {
-                    // Ctrl/Cmd+Click: TOGGLE (add or remove)
-                    setSelectedEntities(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has(clickedEntity!)) {
-                            newSet.delete(clickedEntity!);
-                        } else {
-                            newSet.add(clickedEntity!);
-                        }
-                        return newSet;
-                    });
-                } else {
-                    // Normal Click: Select ONLY this entity (clear others)
-                    setSelectedEntities(new Set([clickedEntity]));
-                }
-            } else if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                // Click on empty space: Clear all selections
-                setSelectedEntities(new Set());
-                setSelectedSheets(new Set());
-            }
-            
-            return;
+      if (activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
+        // Transform Edit mode (move, copy, mirror, rotate, scale)
+        console.log('✅ Transform edit mode active, processing click');
+        handleTransformEditClick(snappedPos);
+        return;
+      } else if (activeDrawTool && EDIT_TOOLS.includes(activeDrawTool)) {
+        // Edit tools mode (offset, trim, extend, fillet, chamfer)
+        console.log('✅ Edit tool mode active, processing click');
+        handleEditToolClick(snappedPos);
+        return;
+      } else if (activeDrawTool && activeDrawTool !== 'lag_reduce') {
+        // Drawing mode
+        console.log('✅ Drawing mode active, processing click');
+        handleDrawingClick(snappedPos);
+        return;
+      } else {
+        // Selection mode - Start window selection
+        // console.log('📦 Starting window selection');
+        setIsWindowSelecting(true);
+        setSelectionStart(worldPos);
+        setSelectionEnd(worldPos);
+
+        // Check if clicking on an entity (for single selection)
+        let clickedEntity: string | null = null;
+        for (const entity of cadEntities) {
+          if (isPointNearEntity(worldPos, entity, 10 / pixelsPerUnit)) {
+            clickedEntity = entity.id;
+            break;
+          }
         }
+
+        if (clickedEntity) {
+          if (e.shiftKey) {
+            // Shift+Click: DESELECT the clicked entity
+            setSelectedEntities(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(clickedEntity!);
+              return newSet;
+            });
+          } else if (e.ctrlKey || e.metaKey) {
+            // Ctrl/Cmd+Click: TOGGLE (add or remove)
+            setSelectedEntities(prev => {
+              const newSet = new Set(prev);
+              if (newSet.has(clickedEntity!)) {
+                newSet.delete(clickedEntity!);
+              } else {
+                newSet.add(clickedEntity!);
+              }
+              return newSet;
+            });
+          } else {
+            // Normal Click: Select ONLY this entity (clear others)
+            setSelectedEntities(new Set([clickedEntity]));
+          }
+        } else if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+          // Click on empty space: Clear all selections
+          setSelectedEntities(new Set());
+          setSelectedSheets(new Set());
+        }
+
+        return;
+      }
     }
     // Middle mouse button: Pan (single-click) or Zoom Fit (double-click)
     else if (e.button === 1) {
-        e.preventDefault();
-        
-        // Double-click: Zoom Fit
-        if (e.detail === 2) {
-            console.log('🔍 Double-click middle mouse: Zoom Fit');
-            const bounds = getContentBounds();
-            if (!bounds) {
-                console.log('⚠️ Zoom Fit: No content to fit');
-                return;
-            }
-            
-            if (!containerRef.current) return;
-            const containerW = containerRef.current.clientWidth;
-            const containerH = containerRef.current.clientHeight;
-            if (containerW <= 0 || containerH <= 0) return;
-            
-            const contentW = bounds.maxX - bounds.minX;
-            const contentH = bounds.maxY - bounds.minY;
-            if (contentW <= 0 && contentH <= 0) return;
-            
-            // 10% padding on each side → content occupies 80% of viewport
-            const paddingFactor = 0.8;
-            const zoomX = contentW > 0 ? (containerW * paddingFactor) / (contentW * BASE_PIXELS_PER_UNIT) : Infinity;
-            const zoomY = contentH > 0 ? (containerH * paddingFactor) / (contentH * BASE_PIXELS_PER_UNIT) : Infinity;
-            const newZoom = Math.max(0.01, Math.min(Math.min(zoomX, zoomY), 50));
-            
-            const newPixelsPerUnit = BASE_PIXELS_PER_UNIT * newZoom;
-            const contentCenterX = (bounds.minX + bounds.maxX) / 2;
-            const contentCenterY = (bounds.minY + bounds.maxY) / 2;
-            
-            const newViewOffsetX = contentCenterX - (containerW / (2 * newPixelsPerUnit));
-            const newViewOffsetY = contentCenterY + (containerH / (2 * newPixelsPerUnit));
-            
-            setZoom(newZoom);
-            setViewOffset({ x: newViewOffsetX, y: newViewOffsetY });
-            console.log('✅ Zoom Fit applied (middle double-click):', { newZoom: newZoom.toFixed(3), offsetX: newViewOffsetX.toFixed(0), offsetY: newViewOffsetY.toFixed(0) });
-            return;
+      e.preventDefault();
+
+      // Double-click: Zoom Fit
+      if (e.detail === 2) {
+        console.log('🔍 Double-click middle mouse: Zoom Fit');
+        const bounds = getContentBounds();
+        if (!bounds) {
+          console.log('⚠️ Zoom Fit: No content to fit');
+          return;
         }
-        
-        // Single-click: Start pan
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-        setDragStartView({ ...viewOffset });
+
+        if (!containerRef.current) return;
+        const containerW = containerRef.current.clientWidth;
+        const containerH = containerRef.current.clientHeight;
+        if (containerW <= 0 || containerH <= 0) return;
+
+        const contentW = bounds.maxX - bounds.minX;
+        const contentH = bounds.maxY - bounds.minY;
+        if (contentW <= 0 && contentH <= 0) return;
+
+        // 10% padding on each side → content occupies 80% of viewport
+        const paddingFactor = 0.8;
+        const zoomX = contentW > 0 ? (containerW * paddingFactor) / (contentW * BASE_PIXELS_PER_UNIT) : Infinity;
+        const zoomY = contentH > 0 ? (containerH * paddingFactor) / (contentH * BASE_PIXELS_PER_UNIT) : Infinity;
+        const newZoom = Math.max(0.01, Math.min(Math.min(zoomX, zoomY), 50));
+
+        const newPixelsPerUnit = BASE_PIXELS_PER_UNIT * newZoom;
+        const contentCenterX = (bounds.minX + bounds.maxX) / 2;
+        const contentCenterY = (bounds.minY + bounds.maxY) / 2;
+
+        const newViewOffsetX = contentCenterX - (containerW / (2 * newPixelsPerUnit));
+        const newViewOffsetY = contentCenterY + (containerH / (2 * newPixelsPerUnit));
+
+        setZoom(newZoom);
+        setViewOffset({ x: newViewOffsetX, y: newViewOffsetY });
+        console.log('✅ Zoom Fit applied (middle double-click):', { newZoom: newZoom.toFixed(3), offsetX: newViewOffsetX.toFixed(0), offsetY: newViewOffsetY.toFixed(0) });
+        return;
+      }
+
+      // Single-click: Start pan
+      setIsDragging(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+      setDragStartView({ ...viewOffset });
     }
   }, [activeDrawTool, screenToWorld, handleDrawingClick, handleTransformEditClick, handleEditToolClick, viewOffset, cadEntities, pixelsPerUnit, snapEnabled, activeSnaps, orthoEnabled, drawState.points]);
 
@@ -2889,7 +2976,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     // Finish window selection
     if (isWindowSelecting && selectionStart && selectionEnd) {
       console.log('📦 Finishing window selection');
-      
+
       // Calculate selection box
       const selectionBox = getSelectionBox(
         selectionStart.x,
@@ -2897,26 +2984,26 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         selectionEnd.x,
         selectionEnd.y
       );
-      
+
       console.log('📦 Selection box:', selectionBox);
-      
+
       // Find entities in selection window
       const entitiesInWindow = getEntitiesInSelection(cadEntities, selectionBox);
-      
+
       console.log('✅ Selected entities:', entitiesInWindow.length);
-      
+
       // ============================================================
       // PART SELECTION MODE: Just select entities, don't auto-create
       // Dialog will open via handleFinishSelectPart() from parent
       // ============================================================
       if (isSelecting && entitiesInWindow.length > 0) {
         console.log('🎯 PART SELECTION MODE: Selected', entitiesInWindow.length, 'entities');
-        
+
         // Mark entities as selected
         const newSelected = new Set(selectedEntities);
         entitiesInWindow.forEach(e => newSelected.add(e.id));
         setSelectedEntities(newSelected);
-        
+
         console.log('✅ Entities marked as selected, waiting for dialog to open...');
       } else {
         // Normal selection mode (not ADD_PART)
@@ -2937,17 +3024,17 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           showToast(`🗑️ Đã chọn ${entitiesInWindow.length} đối tượng — nhấn CHUỘT PHẢI để xóa`);
         }
       }
-      
+
       setIsWindowSelecting(false);
       setSelectionStart(null);
       setSelectionEnd(null);
     }
-    
+
     // End sheet dragging
     if (draggingSheet) {
       setDraggingSheet(null);
     }
-    
+
     // End part dragging + overflow warning
     if (draggingPart) {
       // Check if part overflows its sheet
@@ -2967,7 +3054,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       }
       setDraggingPart(null);
     }
-    
+
     setIsDragging(false);
   }, [isWindowSelecting, selectionStart, selectionEnd, cadEntities, isSelecting, parts, onAddPart, draggingSheet, pendingDeleteMode, draggingPart, sheets]);
 
@@ -3004,43 +3091,43 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
     }
 
     if (activeDrawTool) {
-        let finalPos = worldPos;
+      let finalPos = worldPos;
 
-        // 1) ORTHO constraint: lock to H/V axis from last point
-        if (orthoEnabled && drawState.points.length > 0) {
-          finalPos = applyOrthoConstraint(finalPos, drawState.points[drawState.points.length - 1]);
+      // 1) ORTHO constraint: lock to H/V axis from last point
+      if (orthoEnabled && drawState.points.length > 0) {
+        finalPos = applyOrthoConstraint(finalPos, drawState.points[drawState.points.length - 1]);
+      }
+
+      // 2) SNAP: find nearest snap point within 20px screen-space threshold
+      if (snapEnabled && activeSnaps.size > 0) {
+        // Throttle snap calculation using RAF to prevent lag with many entities
+        if (!rafMouseMoveRef.current) {
+          rafMouseMoveRef.current = requestAnimationFrame(() => {
+            rafMouseMoveRef.current = null;
+            const threshold = 20 / pixelsPerUnit;
+            const snap = findBestSnap(finalPos, cadEntitiesRef.current, activeSnaps, threshold);
+            setCurrentSnap(snap);
+          });
         }
-
-        // 2) SNAP: find nearest snap point within 20px screen-space threshold
-        if (snapEnabled && activeSnaps.size > 0) {
-          // Throttle snap calculation using RAF to prevent lag with many entities
-          if (!rafMouseMoveRef.current) {
-            rafMouseMoveRef.current = requestAnimationFrame(() => {
-              rafMouseMoveRef.current = null;
-              const threshold = 20 / pixelsPerUnit;
-              const snap = findBestSnap(finalPos, cadEntitiesRef.current, activeSnaps, threshold);
-              setCurrentSnap(snap);
-            });
-          }
-          // Use previous snap result for immediate position
-          if (currentSnap) {
-            finalPos = { x: currentSnap.x, y: currentSnap.y };
-          }
-        } else {
-          setCurrentSnap(null);
+        // Use previous snap result for immediate position
+        if (currentSnap) {
+          finalPos = { x: currentSnap.x, y: currentSnap.y };
         }
-
-        setDrawState(prev => ({ ...prev, currentPos: finalPos }));
-
-        // Also track currentPos for transform edit tools (for ghost preview)
-        if (TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
-          setTransformEditState(prev => ({ ...prev, currentPos: finalPos }));
-        }
-
-        onMouseMove(finalPos.x, finalPos.y);
-    } else {
+      } else {
         setCurrentSnap(null);
-        onMouseMove(worldPos.x, worldPos.y);
+      }
+
+      setDrawState(prev => ({ ...prev, currentPos: finalPos }));
+
+      // Also track currentPos for transform edit tools (for ghost preview)
+      if (TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
+        setTransformEditState(prev => ({ ...prev, currentPos: finalPos }));
+      }
+
+      onMouseMove(finalPos.x, finalPos.y);
+    } else {
+      setCurrentSnap(null);
+      onMouseMove(worldPos.x, worldPos.y);
     }
 
     if (isDragging) {
@@ -3073,7 +3160,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         // Don't handle if focus is in a modal input or settings
         const target = e.target as HTMLElement;
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
-        
+
         setDrawState({ step: 0, points: [], currentPos: null });
         setTransformEditState({ step: 0, points: [], currentPos: null });
         setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: null, clickPos: null });
@@ -3188,26 +3275,95 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
   // === COMMAND INPUT HANDLER (AutoCAD Style) ===
   const handleCommandInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const input = commandInput.trim();
-      if (!input) return;
+    // Treat Space as Enter for command input if not in text mode
+    const isEnter = e.key === 'Enter' || (e.key === ' ' && activeDrawTool !== 'text');
+
+    if (isEnter) {
+      const input = commandInput.trim().toUpperCase();
+
+      // If empty input, repeat last command (AutoCAD behavior)
+      if (!input && !activeDrawTool && lastToolRef.current && onSelectTool) {
+        console.log('🔄 Repeating last command:', lastToolRef.current);
+        onSelectTool(lastToolRef.current);
+        setCommandInput('');
+        e.preventDefault();
+        return;
+      }
+
+      if (!input) {
+        // If drawing polyline/leader, empty enter finishes the command
+        if ((activeDrawTool === 'polyline' || activeDrawTool === 'spline' || activeDrawTool === 'leader') && drawState.points.length > 1) {
+          setCadEntitiesWithUndo(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: activeDrawTool as any,
+            points: drawState.points,
+            layerId: activeLayerId
+          }], `Draw ${activeDrawTool}`, 'draw');
+          setDrawState({ step: 0, points: [], currentPos: null });
+          if (onCancelDraw) onCancelDraw();
+        }
+        setCommandInput('');
+        return;
+      }
 
       console.log('📝 Command input:', input, 'DrawState:', drawState, 'Tool:', activeDrawTool);
 
       // Add to history
       setCommandHistory(prev => [...prev.slice(-19), input]);
 
+      // === COMMAND SHORTCUTS (AutoCAD 1:1) ===
+      const COMMAND_SHORTCUTS_1: Record<string, string> = {
+        'L': 'line',
+        'C': 'circle',
+        'PL': 'polyline',
+        'REC': 'rect', 'R': 'rect',
+        'M': 'move',
+        'TR': 'trim',
+        'CP': 'copy', 'CO': 'copy',
+        'MI': 'mirror',
+        'RO': 'rotate',
+        'SC': 'scale',
+        'O': 'offset', 'OF': 'offset',
+        'EX': 'extend',
+        'F': 'fillet',
+        'CHA': 'chamfer', 'CH': 'chamfer',
+        'A': 'arc',
+        'EL': 'ellipse', 'E': 'ellipse',
+        'POL': 'polygon', 'PG': 'polygon',
+        'DI': 'measure', 'DIST': 'measure',
+        'T': 'text', 'MT': 'text',
+        'H': 'hatch', 'HA': 'hatch',
+        'LE': 'leader',
+        'U': 'undo',
+        'RE': 'redo',
+        'Z': 'zoom_fit',
+      };
+
+      const shortcutTool1 = COMMAND_SHORTCUTS_1[input];
+      if (shortcutTool1) {
+        if (shortcutTool1 === 'undo') { handleUndo(); setCommandInput(''); return; }
+        if (shortcutTool1 === 'redo') { handleRedo(); setCommandInput(''); return; }
+
+        if (onSelectTool) {
+          console.log('⌨️ Command shortcut:', input, '→', shortcutTool1);
+          lastToolRef.current = shortcutTool1;
+          onSelectTool(shortcutTool1);
+          setCommandInput('');
+          return;
+        }
+      }
+
       // === TEXT TOOL: Accept text content from command input ===
       if (activeDrawTool === 'text' && drawState.step === 1 && drawState.points.length === 1) {
         const textPos = drawState.points[0];
         console.log('✅ Text tool: Creating text entity', { text: input, position: textPos });
-         setCadEntitiesWithUndo(prev => [...prev, {
-           id: crypto.randomUUID(),
-           type: 'text',
-           points: [textPos],
-           properties: { text: input, fontSize: 14, rotation: 0 },
-           layerId: activeLayerId
-         }], 'Draw text', 'draw');
+        setCadEntitiesWithUndo(prev => [...prev, {
+          id: crypto.randomUUID(),
+          type: 'text',
+          points: [textPos],
+          properties: { text: input, fontSize: 14, rotation: 0 },
+          layerId: activeLayerId
+        }], 'Draw text', 'draw');
         setDrawState({ step: 0, points: [], currentPos: null });
         setCommandInput('');
         return;
@@ -3217,13 +3373,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       if (activeDrawTool === 'leader' && drawState.step >= 2 && drawState.points.length >= 2) {
         const points = drawState.points;
         console.log('✅ Leader tool: Finishing leader with text', { text: input, points });
-         setCadEntitiesWithUndo(prev => [...prev, {
-           id: crypto.randomUUID(),
-           type: 'leader',
-           points: points,
-           properties: { text: input },
-           layerId: activeLayerId
-         }], 'Draw leader', 'draw');
+        setCadEntitiesWithUndo(prev => [...prev, {
+          id: crypto.randomUUID(),
+          type: 'leader',
+          points: points,
+          properties: { text: input },
+          layerId: activeLayerId
+        }], 'Draw leader', 'draw');
         setDrawState({ step: 0, points: [], currentPos: null });
         setCommandInput('');
         if (onCancelDraw) onCancelDraw();
@@ -3298,22 +3454,22 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           if (activeDrawTool === 'rect') {
             const firstPoint = drawState.points[0];
             console.log('📏 Rectangle: First point:', firstPoint, 'Width:', x, 'Height:', y);
-            
+
             // Calculate second point based on width and height
             const targetPos = {
               x: firstPoint.x + x,
               y: firstPoint.y + y
             };
-            
+
             console.log('✅ Rectangle target:', targetPos);
             handleDrawingClick(targetPos);
           } else {
             // For other tools: Relative to last point
             const lastPoint = drawState.points[drawState.points.length - 1];
-            const targetPos = isRelative 
+            const targetPos = isRelative
               ? { x: lastPoint.x + x, y: lastPoint.y + y }
               : { x, y };
-            
+
             console.log('✅ Drawing target:', targetPos);
             handleDrawingClick(targetPos);
           }
@@ -3331,19 +3487,19 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         const angleDeg = parseFloat(polarMatch[2]);
         const angleRad = angleDeg * Math.PI / 180;
         const lastPoint = drawState.points[drawState.points.length - 1];
-        
+
         const targetPos = {
           x: lastPoint.x + distance * Math.cos(angleRad),
           y: lastPoint.y + distance * Math.sin(angleRad)
         };
         handleDrawingClick(targetPos);
       }
-      
+
       // === TRANSFORM EDIT: Single number input for rotate angle / scale factor ===
       const distMatch = input.match(/^(-?\d+\.?\d*)$/);
       if (distMatch && activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
         const numValue = parseFloat(distMatch[1]);
-        
+
         // ROTATE: At step 1 (after center is set), type angle directly to skip reference point
         if (activeDrawTool === 'rotate' && transformEditState.step >= 1 && transformEditState.points.length >= 1) {
           const center = transformEditState.points[0];
@@ -3354,7 +3510,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           setCommandInput('');
           return;
         }
-        
+
         // SCALE: At step 1 (after center is set), type factor directly to skip reference point
         if (activeDrawTool === 'scale' && transformEditState.step >= 1 && transformEditState.points.length >= 1) {
           const center = transformEditState.points[0];
@@ -3365,7 +3521,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           setCommandInput('');
           return;
         }
-        
+
         // MOVE/COPY: At step 1, single distance along mouse direction
         if ((activeDrawTool === 'move' || activeDrawTool === 'copy') && transformEditState.step === 1 && transformEditState.currentPos && transformEditState.points.length >= 1) {
           const base = transformEditState.points[0];
@@ -3382,12 +3538,12 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           }
         }
       }
-      
+
       // Parse single dimension input (for distance/length during drawing)
       if (distMatch && activeDrawTool && drawState.step > 0) {
         const distance = parseFloat(distMatch[1]);
         const lastPoint = drawState.points[drawState.points.length - 1];
-        
+
         // Calculate direction from last point to current mouse position
         if (drawState.currentPos) {
           const dx = drawState.currentPos.x - lastPoint.x;
@@ -3426,9 +3582,9 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   // Handler cho Full Screen scroll
   const handleFullScreenScroll = () => {
     if (containerRef.current) {
-      containerRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
+      containerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
       });
     }
   };
@@ -3473,10 +3629,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   if (pixelsPerUnit < 0.1) gridSizeUnits = 10000;
   else if (pixelsPerUnit < 1) gridSizeUnits = 1000;
   else if (pixelsPerUnit < 5) gridSizeUnits = 500;
-  
+
   while (gridSizeUnits * pixelsPerUnit < 50 && gridSizeUnits < 10000000) {
     gridSizeUnits *= 10;
-  } 
+  }
   const gridSizePx = gridSizeUnits * pixelsPerUnit;
   const gridOffsetX = -(viewOffset.x % gridSizeUnits) * pixelsPerUnit;
   const gridOffsetY = (viewOffset.y % gridSizeUnits) * pixelsPerUnit;
@@ -3582,30 +3738,30 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   }, [axPerformanceRuntime?.dirtyRedrawEnabled, axPerformanceRuntime?.renderCacheEnabled, axPerformanceRuntime?.spatialIndexEnabled, renderSourceEntities, layers, viewOffset, pixelsPerUnit]);
 
 
-   
-  
+
+
   // === CANVAS 2D RENDERER FOR PERFORMANCE ===
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  
+
   React.useEffect(() => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
-    
+
     // Only draw unselected, non-active basic geometry (SVG handles the rest for interactions)
     const useCanvas = renderSourceEntities.length > 300; // Trigger threshold
-    
+
     if (useCanvas) {
       const activePart = parts.find(p => p.id === activePartId);
-      
+
       for (const ent of visibleCadEntities) {
         const layer = layers.find(l => l.id === ent.layerId);
         const isSelected = selectedEntities.has(ent.id);
         const isPartActive = activePart?.cadEntities?.some((ce: any) => ce.id === ent.id || ce.properties?.originalId === ent.id);
-        
+
         if (isSelected || isPartActive) continue; // Let SVG draw highlights
 
         ctx.save();
@@ -3620,7 +3776,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         } else {
           ctx.setLineDash([]);
         }
-        
+
         if (ent.type === 'line' && ent.points.length >= 2) {
           const p1 = worldToScreen(ent.points[0].x, ent.points[0].y);
           const p2 = worldToScreen(ent.points[1].x, ent.points[1].y);
@@ -3663,735 +3819,735 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   }, [visibleCadEntities, selectedEntities, activePartId, parts, viewOffset, pixelsPerUnit, width, height]);
 
   const renderCadEntities = () => {
-      // console.log('🎨 Rendering CAD Entities. Count:', cadEntities.length);
-      const visibleEntities = visibleCadEntities;
-      return (
-         <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-20">
-             <defs>
-               <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                 <feGaussianBlur stdDeviation="2.5" result="blur" />
-                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
-               </filter>
-             </defs>
-             {visibleEntities.map(ent => {
-                const isSelected = selectedEntities.has(ent.id);
-                
-                // NEW: Highlight if part is active in Sidebar
-                const activePart = parts.find(p => p.id === activePartId);
-                const isPartActive = activePart?.cadEntities?.some((ce: any) => ce.id === ent.id || ce.properties?.originalId === ent.id);
-                const layer = layers.find(l => l.id === ent.layerId);
-                
-                const strokeColor = getCadStrokeColor(ent, isSelected, Boolean(isPartActive), layer?.color);
-                const strokeWidth = String(getCadStrokeWidth(ent, isSelected, Boolean(isPartActive)));
-                const strokeDasharray = getCadStrokeDasharray(ent);
-                const opacity = (isPartActive || isSelected) ? "1" : "0.9";
-                const filter = isPartActive ? "url(#glow)" : "none";
-                const className = isPartActive ? "animate-pulse" : "";
-                
-                
-                const useCanvas = renderSourceEntities.length > 300;
-                const isBasicGeometry = ['line', 'polyline', 'rect', 'circle'].includes(ent.type);
-                if (useCanvas && isBasicGeometry && !isSelected && !isPartActive) {
-                    return null; // Canvas 2D draws this!
-                }
-                
-                if (ent.type === 'line') {
-                    return renderLineEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      strokeDasharray,
-                      worldToScreen,
-                    });
-                }
-                if (ent.type === 'rect') {
-                    return renderRectEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      strokeDasharray,
-                      worldToScreen,
-                    });
-                }
-                if (ent.type === 'circle') {
-                    return renderCircleEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      strokeDasharray,
-                      worldToScreen,
-                      pixelsPerUnit,
-                    });
-                }
-                if (ent.type === 'spline') {
-                    return renderSplineEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      strokeDasharray,
-                      worldToScreen,
-                    });
-                }
-                if (ent.type === 'polyline') {
-                    return renderPolylineEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      strokeDasharray,
-                      worldToScreen,
-                    });
-                }
-                if (ent.type === 'arc') {
-                    return renderArcEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      worldToScreen,
-                      pixelsPerUnit,
-                    });
-                }
-                if (ent.type === 'ellipse') {
-                    return renderEllipseEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      worldToScreen,
-                      pixelsPerUnit,
-                    });
-                }
-                if (ent.type === 'polygon') {
-                    return renderPolygonEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      worldToScreen,
-                      pixelsPerUnit,
-                    });
-                }
-                if (ent.type === 'slot') {
-                    return renderSlotEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      worldToScreen,
-                      pixelsPerUnit,
-                    });
-                }
-                if (ent.type === 'obround') {
-                    return renderObroundEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      strokeColor,
-                      strokeWidth,
-                      worldToScreen,
-                      pixelsPerUnit,
-                    });
-                }
-                if (ent.type === 'dimension') {
-                    return renderDimensionEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      worldToScreen,
-                      toCadAnnotationScale,
-                    });
-                }
-                if (ent.type === 'insert') {
-                    return renderInsertEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      worldToScreen,
-                    });
-                }
-                if (ent.type === 'text') {
-                    if (isDragging) return null;
-                    return renderTextEntity({
-                      entity: ent,
-                      isSelected,
-                      worldToScreen,
-                      toCadAnnotationScale,
-                    });
-                }
-                if (ent.type === 'leader') {
-                    return renderLeaderEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      worldToScreen,
-                    });
-                }
-                if (ent.type === 'hatch') {
-                    return renderHatchEntity({
-                      entity: ent,
-                      isSelected,
-                      opacity,
-                      pixelsPerUnit,
-                      worldToScreen,
-                    });
-                }
-                return null;
-            })}
-        </svg>
-     );
+    // console.log('🎨 Rendering CAD Entities. Count:', cadEntities.length);
+    const visibleEntities = visibleCadEntities;
+    return (
+      <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-20">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        {visibleEntities.map(ent => {
+          const isSelected = selectedEntities.has(ent.id);
+
+          // NEW: Highlight if part is active in Sidebar
+          const activePart = parts.find(p => p.id === activePartId);
+          const isPartActive = activePart?.cadEntities?.some((ce: any) => ce.id === ent.id || ce.properties?.originalId === ent.id);
+          const layer = layers.find(l => l.id === ent.layerId);
+
+          const strokeColor = getCadStrokeColor(ent, isSelected, Boolean(isPartActive), layer?.color);
+          const strokeWidth = String(getCadStrokeWidth(ent, isSelected, Boolean(isPartActive)));
+          const strokeDasharray = getCadStrokeDasharray(ent);
+          const opacity = (isPartActive || isSelected) ? "1" : "0.9";
+          const filter = isPartActive ? "url(#glow)" : "none";
+          const className = isPartActive ? "animate-pulse" : "";
+
+
+          const useCanvas = renderSourceEntities.length > 300;
+          const isBasicGeometry = ['line', 'polyline', 'rect', 'circle'].includes(ent.type);
+          if (useCanvas && isBasicGeometry && !isSelected && !isPartActive) {
+            return null; // Canvas 2D draws this!
+          }
+
+          if (ent.type === 'line') {
+            return renderLineEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              strokeDasharray,
+              worldToScreen,
+            });
+          }
+          if (ent.type === 'rect') {
+            return renderRectEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              strokeDasharray,
+              worldToScreen,
+            });
+          }
+          if (ent.type === 'circle') {
+            return renderCircleEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              strokeDasharray,
+              worldToScreen,
+              pixelsPerUnit,
+            });
+          }
+          if (ent.type === 'spline') {
+            return renderSplineEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              strokeDasharray,
+              worldToScreen,
+            });
+          }
+          if (ent.type === 'polyline') {
+            return renderPolylineEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              strokeDasharray,
+              worldToScreen,
+            });
+          }
+          if (ent.type === 'arc') {
+            return renderArcEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              worldToScreen,
+              pixelsPerUnit,
+            });
+          }
+          if (ent.type === 'ellipse') {
+            return renderEllipseEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              worldToScreen,
+              pixelsPerUnit,
+            });
+          }
+          if (ent.type === 'polygon') {
+            return renderPolygonEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              worldToScreen,
+              pixelsPerUnit,
+            });
+          }
+          if (ent.type === 'slot') {
+            return renderSlotEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              worldToScreen,
+              pixelsPerUnit,
+            });
+          }
+          if (ent.type === 'obround') {
+            return renderObroundEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              strokeColor,
+              strokeWidth,
+              worldToScreen,
+              pixelsPerUnit,
+            });
+          }
+          if (ent.type === 'dimension') {
+            return renderDimensionEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              worldToScreen,
+              toCadAnnotationScale,
+            });
+          }
+          if (ent.type === 'insert') {
+            return renderInsertEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              worldToScreen,
+            });
+          }
+          if (ent.type === 'text') {
+            if (isDragging) return null;
+            return renderTextEntity({
+              entity: ent,
+              isSelected,
+              worldToScreen,
+              toCadAnnotationScale,
+            });
+          }
+          if (ent.type === 'leader') {
+            return renderLeaderEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              worldToScreen,
+            });
+          }
+          if (ent.type === 'hatch') {
+            return renderHatchEntity({
+              entity: ent,
+              isSelected,
+              opacity,
+              pixelsPerUnit,
+              worldToScreen,
+            });
+          }
+          return null;
+        })}
+      </svg>
+    );
   };
 
   // --- Render Nested Items ---
   const renderSheetsAndParts = () => {
-     // Sheets use persisted x/y positions (no auto-layout yCursor)
-     return sheets.map((sheet, index) => {
-        const [sw, sh] = sheet.dimensions.split('x').map(Number);
-        const sheetWorldX = sheet.x ?? 0;
-        const sheetWorldY = sheet.y ?? 0;
-        
-        const pos = worldToScreen(sheetWorldX, sheetWorldY + sh); 
-        const wPx = sw * pixelsPerUnit;
-        const hPx = sh * pixelsPerUnit;
+    // Sheets use persisted x/y positions (no auto-layout yCursor)
+    return sheets.map((sheet, index) => {
+      const [sw, sh] = sheet.dimensions.split('x').map(Number);
+      const sheetWorldX = sheet.x ?? 0;
+      const sheetWorldY = sheet.y ?? 0;
 
-        const partsOnSheet = parts.filter(p => p.isNested && (p.sheetId === sheet.id || (!p.sheetId && index === 0)));
-        
-        const sheetNode = (
-           <div key={sheet.id} className={`absolute border-2 ${selectedSheets.has(sheet.id) ? 'border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.5)]' : 'border-white/50'} bg-[#2d3748] shadow-lg`} style={{
-                left: pos.x,
-                top: pos.y,
-                width: wPx,
-                height: hPx,
-                cursor: !activeDrawTool ? 'move' : undefined,
-              }}
-              onMouseDown={(e) => {
-                // Only start sheet drag on left-click with no active tool
-                if (e.button !== 0 || activeDrawTool) return;
-                e.stopPropagation();
-                // Select this sheet
-                setSelectedSheets(new Set([sheet.id]));
-                // Clear entity selection when selecting a sheet
-                setSelectedEntities(new Set());
-                if (!containerRef.current) return;
-                const rect = containerRef.current.getBoundingClientRect();
-                const sx = e.clientX - rect.left;
-                const sy = e.clientY - rect.top;
-                const mouseWorld = screenToWorld(sx, sy);
-                setDraggingSheet({
-                  id: sheet.id,
-                  startMouseWorld: mouseWorld,
-                  origSheetX: sheetWorldX,
-                  origSheetY: sheetWorldY,
-                });
-              }}
-           >
-             <div className="absolute -top-5 left-0 text-xs font-mono text-yellow-500 bg-black/50 px-1">
-                {sheet.material} - Sheet #{index + 1} ({sw}x{sh})
-             </div>
-             {partsOnSheet.map((p, i) => {
-               if (p.x === undefined || p.y === undefined) return null;
-               
-               const [pw, ph] = p.dimensions.split('x').map(Number);
-               const isRotated = p.rotationAngle === 90;
-               const finalW = isRotated ? ph : pw;
-               const finalH = isRotated ? pw : ph;
-               
-               const partLeft = p.x * pixelsPerUnit;
-               const partTop = hPx - ((p.y + finalH) * pixelsPerUnit);
-               
-               return (
-                 <div 
-                    key={`${p.id}-${i}`} 
-                    className={`absolute border border-black ${draggingPart?.id === p.id ? 'bg-blue-400 ring-2 ring-yellow-400' : 'bg-blue-600 hover:bg-blue-9000'} cursor-move flex items-center justify-center group`}
-                    style={{
-                        left: partLeft,
-                        top: partTop,
-                        width: finalW * pixelsPerUnit,
-                        height: finalH * pixelsPerUnit,
-                        transition: draggingPart?.id === p.id ? 'none' : 'background-color 0.1s',
-                        zIndex: draggingPart?.id === p.id ? 10 : 1,
-                    }}
-                    title={p.name}
-                    onMouseDown={(ev) => {
-                      if (ev.button !== 0 || activeDrawTool) return;
-                      ev.stopPropagation();
-                      if (!containerRef.current) return;
-                      const rect2 = containerRef.current.getBoundingClientRect();
-                      const sx2 = ev.clientX - rect2.left;
-                      const sy2 = ev.clientY - rect2.top;
-                      const mouseW = screenToWorld(sx2, sy2);
-                      setDraggingPart({
-                        id: p.id,
-                        sheetId: sheet.id,
-                        startMouseWorld: mouseW,
-                        origPartX: p.x ?? 0,
-                        origPartY: p.y ?? 0,
-                      });
-                    }}
-                 >
-                    {isRotated && <div className="absolute w-1 h-1 bg-yellow-400 rounded-full top-0.5 right-0.5"></div>}
-                    <span className="text-[8px] text-white opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap overflow-hidden px-0.5">{p.name}</span>
-                 </div>
-               );
-             })}
-           </div>
-        );
-        return sheetNode;
-     });
+      const pos = worldToScreen(sheetWorldX, sheetWorldY + sh);
+      const wPx = sw * pixelsPerUnit;
+      const hPx = sh * pixelsPerUnit;
+
+      const partsOnSheet = parts.filter(p => p.isNested && (p.sheetId === sheet.id || (!p.sheetId && index === 0)));
+
+      const sheetNode = (
+        <div key={sheet.id} className={`absolute border-2 ${selectedSheets.has(sheet.id) ? 'border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.5)]' : 'border-white/50'} bg-[#2d3748] shadow-lg`} style={{
+          left: pos.x,
+          top: pos.y,
+          width: wPx,
+          height: hPx,
+          cursor: !activeDrawTool ? 'move' : undefined,
+        }}
+          onMouseDown={(e) => {
+            // Only start sheet drag on left-click with no active tool
+            if (e.button !== 0 || activeDrawTool) return;
+            e.stopPropagation();
+            // Select this sheet
+            setSelectedSheets(new Set([sheet.id]));
+            // Clear entity selection when selecting a sheet
+            setSelectedEntities(new Set());
+            if (!containerRef.current) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            const sx = e.clientX - rect.left;
+            const sy = e.clientY - rect.top;
+            const mouseWorld = screenToWorld(sx, sy);
+            setDraggingSheet({
+              id: sheet.id,
+              startMouseWorld: mouseWorld,
+              origSheetX: sheetWorldX,
+              origSheetY: sheetWorldY,
+            });
+          }}
+        >
+          <div className="absolute -top-5 left-0 text-xs font-mono text-yellow-500 bg-black/50 px-1">
+            {sheet.material} - Sheet #{index + 1} ({sw}x{sh})
+          </div>
+          {partsOnSheet.map((p, i) => {
+            if (p.x === undefined || p.y === undefined) return null;
+
+            const [pw, ph] = p.dimensions.split('x').map(Number);
+            const isRotated = p.rotationAngle === 90;
+            const finalW = isRotated ? ph : pw;
+            const finalH = isRotated ? pw : ph;
+
+            const partLeft = p.x * pixelsPerUnit;
+            const partTop = hPx - ((p.y + finalH) * pixelsPerUnit);
+
+            return (
+              <div
+                key={`${p.id}-${i}`}
+                className={`absolute border border-black ${draggingPart?.id === p.id ? 'bg-blue-400 ring-2 ring-yellow-400' : 'bg-blue-600 hover:bg-blue-9000'} cursor-move flex items-center justify-center group`}
+                style={{
+                  left: partLeft,
+                  top: partTop,
+                  width: finalW * pixelsPerUnit,
+                  height: finalH * pixelsPerUnit,
+                  transition: draggingPart?.id === p.id ? 'none' : 'background-color 0.1s',
+                  zIndex: draggingPart?.id === p.id ? 10 : 1,
+                }}
+                title={p.name}
+                onMouseDown={(ev) => {
+                  if (ev.button !== 0 || activeDrawTool) return;
+                  ev.stopPropagation();
+                  if (!containerRef.current) return;
+                  const rect2 = containerRef.current.getBoundingClientRect();
+                  const sx2 = ev.clientX - rect2.left;
+                  const sy2 = ev.clientY - rect2.top;
+                  const mouseW = screenToWorld(sx2, sy2);
+                  setDraggingPart({
+                    id: p.id,
+                    sheetId: sheet.id,
+                    startMouseWorld: mouseW,
+                    origPartX: p.x ?? 0,
+                    origPartY: p.y ?? 0,
+                  });
+                }}
+              >
+                {isRotated && <div className="absolute w-1 h-1 bg-yellow-400 rounded-full top-0.5 right-0.5"></div>}
+                <span className="text-[8px] text-white opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap overflow-hidden px-0.5">{p.name}</span>
+              </div>
+            );
+          })}
+        </div>
+      );
+      return sheetNode;
+    });
   };
 
   // --- Render Drawing Preview ---
   const renderDrawingPreview = () => {
-     // === EDIT TOOL PREVIEW: Highlight selected entity ===
-     if (activeDrawTool && EDIT_TOOLS.includes(activeDrawTool) && editToolState.sourceEntityId) {
-       const entity = cadEntities.find(e => e.id === editToolState.sourceEntityId);
-       if (entity) {
-         if (entity.type === 'line' && entity.points.length >= 2) {
-           const s = worldToScreen(entity.points[0].x, entity.points[0].y);
-           const e2 = worldToScreen(entity.points[1].x, entity.points[1].y);
-           return (
-             <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-               <line x1={s.x} y1={s.y} x2={e2.x} y2={e2.y} stroke="#ff6600" strokeWidth="3" strokeDasharray="6 3" />
-               <circle cx={s.x} cy={s.y} r="4" fill="#ff6600" />
-               <circle cx={e2.x} cy={e2.y} r="4" fill="#ff6600" />
-             </svg>
-           );
-         } else if (entity.type === 'circle' && entity.points.length >= 1) {
-           const c = worldToScreen(entity.points[0].x, entity.points[0].y);
-           const r = (entity.properties?.radius || 50) * pixelsPerUnit;
-           return (
-             <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-               <circle cx={c.x} cy={c.y} r={r} fill="none" stroke="#ff6600" strokeWidth="3" strokeDasharray="6 3" />
-             </svg>
-           );
-         } else if (entity.type === 'rect' && entity.points.length >= 2) {
-           const s = worldToScreen(entity.points[0].x, entity.points[0].y);
-           const e2 = worldToScreen(entity.points[1].x, entity.points[1].y);
-           const x = Math.min(s.x, e2.x), y = Math.min(s.y, e2.y);
-           const w = Math.abs(e2.x - s.x), h = Math.abs(e2.y - s.y);
-           return (
-             <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-               <rect x={x} y={y} width={w} height={h} fill="none" stroke="#ff6600" strokeWidth="3" strokeDasharray="6 3" />
-             </svg>
-           );
-         }
-       }
-     }
+    // === EDIT TOOL PREVIEW: Highlight selected entity ===
+    if (activeDrawTool && EDIT_TOOLS.includes(activeDrawTool) && editToolState.sourceEntityId) {
+      const entity = cadEntities.find(e => e.id === editToolState.sourceEntityId);
+      if (entity) {
+        if (entity.type === 'line' && entity.points.length >= 2) {
+          const s = worldToScreen(entity.points[0].x, entity.points[0].y);
+          const e2 = worldToScreen(entity.points[1].x, entity.points[1].y);
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <line x1={s.x} y1={s.y} x2={e2.x} y2={e2.y} stroke="#ff6600" strokeWidth="3" strokeDasharray="6 3" />
+              <circle cx={s.x} cy={s.y} r="4" fill="#ff6600" />
+              <circle cx={e2.x} cy={e2.y} r="4" fill="#ff6600" />
+            </svg>
+          );
+        } else if (entity.type === 'circle' && entity.points.length >= 1) {
+          const c = worldToScreen(entity.points[0].x, entity.points[0].y);
+          const r = (entity.properties?.radius || 50) * pixelsPerUnit;
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <circle cx={c.x} cy={c.y} r={r} fill="none" stroke="#ff6600" strokeWidth="3" strokeDasharray="6 3" />
+            </svg>
+          );
+        } else if (entity.type === 'rect' && entity.points.length >= 2) {
+          const s = worldToScreen(entity.points[0].x, entity.points[0].y);
+          const e2 = worldToScreen(entity.points[1].x, entity.points[1].y);
+          const x = Math.min(s.x, e2.x), y = Math.min(s.y, e2.y);
+          const w = Math.abs(e2.x - s.x), h = Math.abs(e2.y - s.y);
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <rect x={x} y={y} width={w} height={h} fill="none" stroke="#ff6600" strokeWidth="3" strokeDasharray="6 3" />
+            </svg>
+          );
+        }
+      }
+    }
 
-     if (!activeDrawTool || !drawState.currentPos) return null;
-     
-      // Current mouse pos in screen coords for line end
-      const screenCurrent = worldToScreen(drawState.currentPos.x, drawState.currentPos.y);
+    if (!activeDrawTool || !drawState.currentPos) return null;
 
-      // ── Measure tool (independent of drawState.points) ──
-      if (activeDrawTool === 'measure') {
-            if (measurePoints.length === 1) {
-              // First point placed — show rubber-band line to cursor
-              const p1 = measurePoints[0];
-              const sp1 = worldToScreen(p1.x, p1.y);
-              const dx = screenCurrent.x - sp1.x;
-              const dy = screenCurrent.y - sp1.y;
-              const distance = Math.sqrt(dx * dx + dy * dy) / pixelsPerUnit;
-              return (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                  <line x1={sp1.x} y1={sp1.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                  <circle cx={sp1.x} cy={sp1.y} r="4" fill="cyan" opacity="0.6" />
-                  <circle cx={screenCurrent.x} cy={screenCurrent.y} r="4" fill="cyan" opacity="0.4" />
-                  <rect x={screenCurrent.x - 40} y={screenCurrent.y - 22} width="80" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
-                  <text x={screenCurrent.x} y={screenCurrent.y - 10} textAnchor="middle" fill="cyan" fontSize="11">{distance.toFixed(2)}</text>
-                </svg>
-              );
-            } else {
-              // No points placed yet — show cursor hint
-              return (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                  <circle cx={screenCurrent.x} cy={screenCurrent.y} r="5" fill="none" stroke="cyan" strokeWidth="1" opacity="0.6" />
-                  <text x={screenCurrent.x + 12} y={screenCurrent.y - 6} fill="cyan" fontSize="10" opacity="0.5">Click first point</text>
-                </svg>
-              );
+    // Current mouse pos in screen coords for line end
+    const screenCurrent = worldToScreen(drawState.currentPos.x, drawState.currentPos.y);
+
+    // ── Measure tool (independent of drawState.points) ──
+    if (activeDrawTool === 'measure') {
+      if (measurePoints.length === 1) {
+        // First point placed — show rubber-band line to cursor
+        const p1 = measurePoints[0];
+        const sp1 = worldToScreen(p1.x, p1.y);
+        const dx = screenCurrent.x - sp1.x;
+        const dy = screenCurrent.y - sp1.y;
+        const distance = Math.sqrt(dx * dx + dy * dy) / pixelsPerUnit;
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <line x1={sp1.x} y1={sp1.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+            <circle cx={sp1.x} cy={sp1.y} r="4" fill="cyan" opacity="0.6" />
+            <circle cx={screenCurrent.x} cy={screenCurrent.y} r="4" fill="cyan" opacity="0.4" />
+            <rect x={screenCurrent.x - 40} y={screenCurrent.y - 22} width="80" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
+            <text x={screenCurrent.x} y={screenCurrent.y - 10} textAnchor="middle" fill="cyan" fontSize="11">{distance.toFixed(2)}</text>
+          </svg>
+        );
+      } else {
+        // No points placed yet — show cursor hint
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <circle cx={screenCurrent.x} cy={screenCurrent.y} r="5" fill="none" stroke="cyan" strokeWidth="1" opacity="0.6" />
+            <text x={screenCurrent.x + 12} y={screenCurrent.y - 6} fill="cyan" fontSize="10" opacity="0.5">Click first point</text>
+          </svg>
+        );
+      }
+    }
+
+    // ── Quick Measure tool (independent of drawState.points) ──
+    if (activeDrawTool === 'measure_quick') {
+      const worldCurrent = drawState.currentPos;
+      if (worldCurrent) {
+        const threshold = 10 / pixelsPerUnit;
+        let hitEnt: CadEntity | null = null;
+        for (const ent of cadEntities) {
+          if (isPointNearEntity(worldCurrent, ent, threshold)) {
+            hitEnt = ent;
+            break;
+          }
+        }
+        if (hitEnt) {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          hitEnt.points?.forEach((p: { x: number; y: number }) => {
+            if (isFinite(p.x) && isFinite(p.y)) {
+              minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+              minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
             }
-      }
-
-      // ── Quick Measure tool (independent of drawState.points) ──
-      if (activeDrawTool === 'measure_quick') {
-            const worldCurrent = drawState.currentPos;
-            if (worldCurrent) {
-              const threshold = 10 / pixelsPerUnit;
-              let hitEnt: CadEntity | null = null;
-              for (const ent of cadEntities) {
-                if (isPointNearEntity(worldCurrent, ent, threshold)) {
-                  hitEnt = ent;
-                  break;
-                }
-              }
-              if (hitEnt) {
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                hitEnt.points?.forEach((p: { x: number; y: number }) => {
-                  if (isFinite(p.x) && isFinite(p.y)) {
-                    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-                    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
-                  }
-                });
-                if (hitEnt.type === 'circle' || hitEnt.type === 'arc') {
-                  const cx = hitEnt.properties?.centerX ?? hitEnt.points?.[0]?.x ?? 0;
-                  const cy = hitEnt.properties?.centerY ?? hitEnt.points?.[0]?.y ?? 0;
-                  const r = hitEnt.properties?.radius ?? 0;
-                  if (isFinite(cx) && isFinite(cy) && r > 0) {
-                    minX = Math.min(minX, cx - r); maxX = Math.max(maxX, cx + r);
-                    minY = Math.min(minY, cy - r); maxY = Math.max(maxY, cy + r);
-                  }
-                }
-                if (hitEnt.type === 'ellipse') {
-                  const cx = hitEnt.points?.[0]?.x ?? 0;
-                  const cy = hitEnt.points?.[0]?.y ?? 0;
-                  const rx = hitEnt.properties?.rx ?? 0;
-                  const ry = hitEnt.properties?.ry ?? 0;
-                  minX = Math.min(minX, cx - rx); maxX = Math.max(maxX, cx + rx);
-                  minY = Math.min(minY, cy - ry); maxY = Math.max(maxY, cy + ry);
-                }
-                if (isFinite(minX) && isFinite(maxX)) {
-                  const tlScreen = worldToScreen(minX, maxY);
-                  const brScreen = worldToScreen(maxX, minY);
-                  const bx = tlScreen.x;
-                  const by = tlScreen.y;
-                  const bw = brScreen.x - tlScreen.x;
-                  const bh = brScreen.y - tlScreen.y;
-                  const wVal = Math.abs(maxX - minX);
-                  const hVal = Math.abs(maxY - minY);
-                  const labelX = bx + bw / 2;
-                  const labelY = by - 8;
-                  return (
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                      <rect x={bx} y={by} width={bw} height={bh} fill="rgba(0,230,118,0.06)" stroke="#00E676" strokeWidth="2" strokeDasharray="8 4" rx="2" />
-                      {/* Width dimension line (top) */}
-                      <line x1={bx} y1={by - 3} x2={bx + bw} y2={by - 3} stroke="#00E676" strokeWidth="1" opacity="0.6" />
-                      <line x1={bx} y1={by - 6} x2={bx} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
-                      <line x1={bx + bw} y1={by - 6} x2={bx + bw} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
-                      {/* Height dimension line (right) */}
-                      <line x1={bx + bw + 3} y1={by} x2={bx + bw + 3} y2={by + bh} stroke="#00E676" strokeWidth="1" opacity="0.6" />
-                      <line x1={bx + bw} y1={by} x2={bx + bw + 6} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
-                      <line x1={bx + bw} y1={by + bh} x2={bx + bw + 6} y2={by + bh} stroke="#00E676" strokeWidth="1" opacity="0.6" />
-                      {/* Size label */}
-                      <rect x={labelX - 55} y={labelY - 14} width="110" height="18" rx="3" fill="rgba(0,0,0,0.8)" stroke="#00E676" strokeWidth="1" />
-                      <text x={labelX} y={labelY - 2} textAnchor="middle" fill="#00E676" fontSize="11" fontFamily="monospace" fontWeight="bold">
-                        {wVal.toFixed(1)} × {hVal.toFixed(1)} mm
-                      </text>
-                      {/* Height label on right side */}
-                      <rect x={bx + bw + 8} y={by + bh / 2 - 9} width="50" height="16" rx="2" fill="rgba(0,0,0,0.7)" />
-                      <text x={bx + bw + 33} y={by + bh / 2 + 3} textAnchor="middle" fill="#00E676" fontSize="9" fontFamily="monospace">
-                        H:{hVal.toFixed(1)}
-                      </text>
-                    </svg>
-                  );
-                }
-              }
-              // No entity under cursor — show hint
-              return (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                  <circle cx={screenCurrent.x} cy={screenCurrent.y} r="6" fill="none" stroke="#00E676" strokeWidth="1.5" opacity="0.5" strokeDasharray="3 3" />
-                  <text x={screenCurrent.x + 14} y={screenCurrent.y - 6} fill="#00E676" fontSize="10" opacity="0.5">Click đối tượng để đo nhanh</text>
-                </svg>
-              );
+          });
+          if (hitEnt.type === 'circle' || hitEnt.type === 'arc') {
+            const cx = hitEnt.properties?.centerX ?? hitEnt.points?.[0]?.x ?? 0;
+            const cy = hitEnt.properties?.centerY ?? hitEnt.points?.[0]?.y ?? 0;
+            const r = hitEnt.properties?.radius ?? 0;
+            if (isFinite(cx) && isFinite(cy) && r > 0) {
+              minX = Math.min(minX, cx - r); maxX = Math.max(maxX, cx + r);
+              minY = Math.min(minY, cy - r); maxY = Math.max(maxY, cy + r);
             }
-      }
-
-      // If we have a start point
-      if (drawState.points.length > 0) {
-        const startWorld = drawState.points[0];
-        const screenStart = worldToScreen(startWorld.x, startWorld.y);
-
-        if (activeDrawTool === 'line' || activeDrawTool === 'polyline' || activeDrawTool === 'spline') {
-            // Draw path from start to current
+          }
+          if (hitEnt.type === 'ellipse') {
+            const cx = hitEnt.points?.[0]?.x ?? 0;
+            const cy = hitEnt.points?.[0]?.y ?? 0;
+            const rx = hitEnt.properties?.rx ?? 0;
+            const ry = hitEnt.properties?.ry ?? 0;
+            minX = Math.min(minX, cx - rx); maxX = Math.max(maxX, cx + rx);
+            minY = Math.min(minY, cy - ry); maxY = Math.max(maxY, cy + ry);
+          }
+          if (isFinite(minX) && isFinite(maxX)) {
+            const tlScreen = worldToScreen(minX, maxY);
+            const brScreen = worldToScreen(maxX, minY);
+            const bx = tlScreen.x;
+            const by = tlScreen.y;
+            const bw = brScreen.x - tlScreen.x;
+            const bh = brScreen.y - tlScreen.y;
+            const wVal = Math.abs(maxX - minX);
+            const hVal = Math.abs(maxY - minY);
+            const labelX = bx + bw / 2;
+            const labelY = by - 8;
             return (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    {activeDrawTool === 'polyline' && drawState.points.map((pt, i) => {
-                        if (i === 0) return null;
-                        const prev = worldToScreen(drawState.points[i-1].x, drawState.points[i-1].y);
-                        const curr = worldToScreen(pt.x, pt.y);
-                        return <line key={i} x1={prev.x} y1={prev.y} x2={curr.x} y2={curr.y} stroke="cyan" strokeWidth="2" />;
-                    })}
-                    <line 
-                        x1={activeDrawTool === 'polyline' ? worldToScreen(drawState.points[drawState.points.length-1].x, drawState.points[drawState.points.length-1].y).x : screenStart.x} 
-                        y1={activeDrawTool === 'polyline' ? worldToScreen(drawState.points[drawState.points.length-1].x, drawState.points[drawState.points.length-1].y).y : screenStart.y} 
-                        x2={screenCurrent.x} 
-                        y2={screenCurrent.y} 
-                        stroke="cyan" 
-                        strokeWidth="2" 
-                        strokeDasharray="4"
-                    />
-                </svg>
+              <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                <rect x={bx} y={by} width={bw} height={bh} fill="rgba(0,230,118,0.06)" stroke="#00E676" strokeWidth="2" strokeDasharray="8 4" rx="2" />
+                {/* Width dimension line (top) */}
+                <line x1={bx} y1={by - 3} x2={bx + bw} y2={by - 3} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                <line x1={bx} y1={by - 6} x2={bx} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                <line x1={bx + bw} y1={by - 6} x2={bx + bw} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                {/* Height dimension line (right) */}
+                <line x1={bx + bw + 3} y1={by} x2={bx + bw + 3} y2={by + bh} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                <line x1={bx + bw} y1={by} x2={bx + bw + 6} y2={by} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                <line x1={bx + bw} y1={by + bh} x2={bx + bw + 6} y2={by + bh} stroke="#00E676" strokeWidth="1" opacity="0.6" />
+                {/* Size label */}
+                <rect x={labelX - 55} y={labelY - 14} width="110" height="18" rx="3" fill="rgba(0,0,0,0.8)" stroke="#00E676" strokeWidth="1" />
+                <text x={labelX} y={labelY - 2} textAnchor="middle" fill="#00E676" fontSize="11" fontFamily="monospace" fontWeight="bold">
+                  {wVal.toFixed(1)} × {hVal.toFixed(1)} mm
+                </text>
+                {/* Height label on right side */}
+                <rect x={bx + bw + 8} y={by + bh / 2 - 9} width="50" height="16" rx="2" fill="rgba(0,0,0,0.7)" />
+                <text x={bx + bw + 33} y={by + bh / 2 + 3} textAnchor="middle" fill="#00E676" fontSize="9" fontFamily="monospace">
+                  H:{hVal.toFixed(1)}
+                </text>
+              </svg>
             );
-        } else if (activeDrawTool === 'rect') {
-            const w = Math.abs(screenCurrent.x - screenStart.x);
-            const h = Math.abs(screenCurrent.y - screenStart.y);
-            const left = Math.min(screenCurrent.x, screenStart.x);
-            const top = Math.min(screenCurrent.y, screenStart.y);
-            
-            return (
-                <div 
-                    className="absolute border-2 border-cyan-400 border-dashed pointer-events-none"
-                    style={{ left, top, width: w, height: h }}
-                ></div>
-            );
-        } else if (activeDrawTool === 'circle') {
-             const dx = drawState.currentPos.x - startWorld.x;
-             const dy = drawState.currentPos.y - startWorld.y;
-             const radiusWorld = Math.sqrt(dx*dx + dy*dy);
-             const radiusPx = radiusWorld * pixelsPerUnit;
-             
-             return (
-                 <div 
-                    className="absolute border-2 border-cyan-400 border-dashed rounded-full pointer-events-none"
-                    style={{ 
-                        left: screenStart.x - radiusPx, 
-                        top: screenStart.y - radiusPx, 
-                        width: radiusPx * 2, 
-                        height: radiusPx * 2 
-                    }}
-                 ></div>
-             );
-        } else if (activeDrawTool === 'arc') {
-             // Arc preview: step 1 = line from start to current, step 2 = arc path
-             if (drawState.step === 1) {
-               // Line from start to mouse (choosing through-point)
-               return (
-                 <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                   <line x1={screenStart.x} y1={screenStart.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                   <circle cx={screenStart.x} cy={screenStart.y} r="4" fill="cyan" opacity="0.6" />
-                 </svg>
-               );
-             } else if (drawState.step === 2 && drawState.points.length >= 2) {
-               // Preview arc from start through second point to current mouse
-               const s = screenStart;
-               const m = worldToScreen(drawState.points[1].x, drawState.points[1].y);
-               const e = screenCurrent;
-               // Compute center from 3 points for preview
-               const ax = drawState.points[0].x, ay = drawState.points[0].y;
-               const bx = drawState.points[1].x, by = drawState.points[1].y;
-               const cx2 = drawState.currentPos.x, cy2 = drawState.currentPos.y;
-               const D = 2 * (ax * (by - cy2) + bx * (cy2 - ay) + cx2 * (ay - by));
-               if (Math.abs(D) > 1e-10) {
-                 const ux = ((ax*ax+ay*ay)*(by-cy2)+(bx*bx+by*by)*(cy2-ay)+(cx2*cx2+cy2*cy2)*(ay-by))/D;
-                 const uy = ((ax*ax+ay*ay)*(cx2-bx)+(bx*bx+by*by)*(ax-cx2)+(cx2*cx2+cy2*cy2)*(bx-ax))/D;
-                 const rPx = Math.sqrt((ax-ux)*(ax-ux)+(ay-uy)*(ay-uy)) * pixelsPerUnit;
-                 const cScreen = worldToScreen(ux, uy);
-                 const v1x = m.x - s.x, v1y = m.y - s.y;
-                 const v2x = e.x - s.x, v2y = e.y - s.y;
-                 const cross = v1x * v2y - v1y * v2x;
-                 const sweepFlag = cross > 0 ? 1 : 0;
-                 const startAngle = Math.atan2(s.y - cScreen.y, s.x - cScreen.x);
-                 const endAngle = Math.atan2(e.y - cScreen.y, e.x - cScreen.x);
-                 let angleDiff = endAngle - startAngle;
-                 if (sweepFlag === 1 && angleDiff < 0) angleDiff += 2 * Math.PI;
-                 if (sweepFlag === 0 && angleDiff > 0) angleDiff -= 2 * Math.PI;
-                 const largeArcFlag = Math.abs(angleDiff) > Math.PI ? 1 : 0;
-                 const d = `M ${s.x} ${s.y} A ${rPx} ${rPx} 0 ${largeArcFlag} ${sweepFlag} ${e.x} ${e.y}`;
-                 return (
-                   <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                     <path d={d} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                     <circle cx={s.x} cy={s.y} r="4" fill="cyan" opacity="0.6" />
-                     <circle cx={m.x} cy={m.y} r="4" fill="cyan" opacity="0.6" />
-                   </svg>
-                 );
-               }
-               // Fallback: just show lines
-               return (
-                 <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                   <line x1={s.x} y1={s.y} x2={m.x} y2={m.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                   <line x1={m.x} y1={m.y} x2={e.x} y2={e.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                 </svg>
-               );
-             }
-        } else if (activeDrawTool === 'ellipse') {
-             const rx = Math.abs(drawState.currentPos.x - startWorld.x) * pixelsPerUnit;
-             const ry = Math.abs(drawState.currentPos.y - startWorld.y) * pixelsPerUnit;
-             return (
-               <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                 <ellipse cx={screenStart.x} cy={screenStart.y} rx={rx} ry={ry} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-               </svg>
-             );
-        } else if (activeDrawTool === 'polygon') {
-             const dx = drawState.currentPos.x - startWorld.x;
-             const dy = drawState.currentPos.y - startWorld.y;
-             const radiusPx = Math.sqrt(dx*dx + dy*dy) * pixelsPerUnit;
-             const sides = 6;
-             const angleOffset = Math.atan2(screenCurrent.y - screenStart.y, screenCurrent.x - screenStart.x);
-             const pts: string[] = [];
-             for (let i = 0; i < sides; i++) {
-               const angle = angleOffset + (2 * Math.PI * i) / sides;
-               pts.push(`${screenStart.x + radiusPx * Math.cos(angle)},${screenStart.y + radiusPx * Math.sin(angle)}`);
-             }
-             return (
-               <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                 <polygon points={pts.join(' ')} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-               </svg>
-             );
-        } else if (activeDrawTool === 'slot') {
-             const c1 = screenStart;
-             const c2 = screenCurrent;
-             const dist = Math.sqrt(Math.pow(drawState.currentPos.x - startWorld.x, 2) + Math.pow(drawState.currentPos.y - startWorld.y, 2));
-             const wPx = dist * 0.3 * pixelsPerUnit;
-             const halfW = wPx / 2;
-             const sdx = c2.x - c1.x;
-             const sdy = c2.y - c1.y;
-             const slen = Math.sqrt(sdx*sdx + sdy*sdy);
-             if (slen > 0.001) {
-               const nx = (-sdy / slen) * halfW;
-               const ny = (sdx / slen) * halfW;
-               const d = `M ${c1.x+nx} ${c1.y+ny} L ${c2.x+nx} ${c2.y+ny} A ${halfW} ${halfW} 0 1 1 ${c2.x-nx} ${c2.y-ny} L ${c1.x-nx} ${c1.y-ny} A ${halfW} ${halfW} 0 1 1 ${c1.x+nx} ${c1.y+ny} Z`;
-               return (
-                 <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                   <path d={d} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                 </svg>
-               );
-             }
-        } else if (activeDrawTool === 'obround') {
-             const w = Math.abs(screenCurrent.x - screenStart.x);
-             const h = Math.abs(screenCurrent.y - screenStart.y);
-             const left = Math.min(screenCurrent.x, screenStart.x);
-             const top = Math.min(screenCurrent.y, screenStart.y);
-             const wWorld = Math.abs(drawState.currentPos.x - startWorld.x);
-             const hWorld = Math.abs(drawState.currentPos.y - startWorld.y);
-             const crPx = Math.min(wWorld, hWorld) / 2 * pixelsPerUnit;
-             return (
-               <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                 <rect x={left} y={top} width={w} height={h} rx={crPx} ry={crPx} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-               </svg>
-             );
-        } else if (activeDrawTool === 'dimension') {
-              // Dimension preview
-              if (drawState.step === 1) {
-                const dx = drawState.currentPos.x - startWorld.x;
-                const dy = drawState.currentPos.y - startWorld.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const midX = (screenStart.x + screenCurrent.x) / 2;
-                const midY = (screenStart.y + screenCurrent.y) / 2;
-                return (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <line x1={screenStart.x} y1={screenStart.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                    <circle cx={screenStart.x} cy={screenStart.y} r="4" fill="cyan" opacity="0.6" />
-                    <circle cx={screenCurrent.x} cy={screenCurrent.y} r="4" fill="cyan" opacity="0.4" />
-                    <rect x={midX - 30} y={midY - 22} width="60" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
-                    <text x={midX} y={midY - 10} textAnchor="middle" fill="cyan" fontSize="11">{dist.toFixed(2)}</text>
-                  </svg>
-                );
-              } else if (drawState.step === 2 && drawState.points.length >= 2) {
-                const p1 = drawState.points[0];
-                const p2 = drawState.points[1];
-                const sp1 = worldToScreen(p1.x, p1.y);
-                const sp2 = worldToScreen(p2.x, p2.y);
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const midX = (sp1.x + sp2.x) / 2;
-                const midY = (sp1.y + sp2.y) / 2;
-                const offX = screenCurrent.x - midX;
-                const offY = screenCurrent.y - midY;
-                return (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <line x1={sp1.x} y1={sp1.y} x2={sp2.x} y2={sp2.y} stroke="cyan" strokeWidth="1.5" />
-                    <line x1={sp1.x} y1={sp1.y} x2={sp1.x + offX * 0.1} y2={sp1.y + offY * 0.1} stroke="cyan" strokeWidth="1" strokeDasharray="3" />
-                    <line x1={sp2.x} y1={sp2.y} x2={sp2.x + offX * 0.1} y2={sp2.y + offY * 0.1} stroke="cyan" strokeWidth="1" strokeDasharray="3" />
-                    <line x1={sp1.x + offX * 0.08} y1={sp1.y + offY * 0.08} x2={sp2.x + offX * 0.08} y2={sp2.y + offY * 0.08} stroke="cyan" strokeWidth="1.5" strokeDasharray="4" />
-                    <rect x={screenCurrent.x - 30} y={screenCurrent.y - 22} width="60" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
-                    <text x={screenCurrent.x} y={screenCurrent.y - 10} textAnchor="middle" fill="cyan" fontSize="11">{dist.toFixed(2)}</text>
-                    <circle cx={sp1.x} cy={sp1.y} r="4" fill="cyan" opacity="0.6" />
-                    <circle cx={sp2.x} cy={sp2.y} r="4" fill="cyan" opacity="0.6" />
-                  </svg>
-                );
-               }
-          } else if (activeDrawTool === 'text') {
-              if (drawState.step === 0) {
-                return (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <rect x={screenCurrent.x - 2} y={screenCurrent.y - 16} width="4" height="18" fill="cyan" opacity="0.7">
-                      <animate attributeName="opacity" values="0.7;0.2;0.7" dur="1s" repeatCount="indefinite" />
-                    </rect>
-                    <text x={screenCurrent.x + 8} y={screenCurrent.y} fill="cyan" fontSize="11" opacity="0.6">Click to place text</text>
-                  </svg>
-                );
-              } else if (drawState.step === 1) {
-                const sp = worldToScreen(drawState.points[0].x, drawState.points[0].y);
-                return (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <rect x={sp.x - 2} y={sp.y - 16} width="4" height="18" fill="cyan" opacity="0.8">
-                      <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.8s" repeatCount="indefinite" />
-                    </rect>
-                    <text x={sp.x + 8} y={sp.y} fill="cyan" fontSize="11" opacity="0.5">Type text in command input...</text>
-                    <circle cx={sp.x} cy={sp.y} r="4" fill="cyan" opacity="0.6" />
-                  </svg>
-                );
-              }
-         } else if (activeDrawTool === 'leader') {
-              const screenPoints = drawState.points.map(p => worldToScreen(p.x, p.y));
-              const lastPt = screenPoints[screenPoints.length - 1];
-              const segments = [];
-              for (let i = 0; i < screenPoints.length; i++) {
-                segments.push(screenPoints[i].x + ',' + screenPoints[i].y);
-              }
-              const arrowPts = [];
-              if (screenPoints.length >= 1) {
-                const tipX = screenPoints[0].x;
-                const tipY = screenPoints[0].y;
-                const nextPt = screenPoints.length >= 2 ? screenPoints[1] : screenCurrent;
-                const adx = nextPt.x - tipX;
-                const ady = nextPt.y - tipY;
-                const alen = Math.sqrt(adx * adx + ady * ady);
-                if (alen > 0.001) {
-                  const ux = adx / alen, uy = ady / alen;
-                  const arrowLen = 12, arrowW = 5;
-                  arrowPts.push(tipX + ',' + tipY);
-                  arrowPts.push((tipX + ux * arrowLen + uy * arrowW) + ',' + (tipY + uy * arrowLen - ux * arrowW));
-                  arrowPts.push((tipX + ux * arrowLen - uy * arrowW) + ',' + (tipY + uy * arrowLen + ux * arrowW));
-                }
-              }
-              return (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                  {screenPoints.length >= 2 && <polyline points={segments.join(' ')} fill="none" stroke="cyan" strokeWidth="2" />}
-                  <line x1={lastPt.x} y1={lastPt.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
-                  {arrowPts.length === 3 && <polygon points={arrowPts.join(' ')} fill="cyan" opacity="0.7" />}
-                  {screenPoints.map((sp, i) => <circle key={i} cx={sp.x} cy={sp.y} r="3" fill="cyan" opacity="0.5" />)}
-                  <text x={screenCurrent.x + 12} y={screenCurrent.y - 6} fill="cyan" fontSize="10" opacity="0.5">
-                    {screenPoints.length < 2 ? 'Click points, right-click to finish' : 'Right-click to finish'}
-                  </text>
-                </svg>
-              );
-         } else if (activeDrawTool === 'hatch') {
-              const cx = screenCurrent.x;
-              const cy = screenCurrent.y;
-              return (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                  <rect x={cx - 10} y={cy - 10} width="20" height="20" fill="none" stroke="cyan" strokeWidth="1" strokeDasharray="2" opacity="0.5" />
-                  <line x1={cx - 8} y1={cy - 4} x2={cx - 2} y2={cy - 10} stroke="cyan" strokeWidth="0.8" opacity="0.6" />
-                  <line x1={cx - 4} y1={cy + 2} x2={cx + 4} y2={cy - 8} stroke="cyan" strokeWidth="0.8" opacity="0.6" />
-                  <line x1={cx} y1={cy + 8} x2={cx + 8} y2={cy - 4} stroke="cyan" strokeWidth="0.8" opacity="0.6" />
-                  <text x={cx + 14} y={cy + 4} fill="cyan" fontSize="10" opacity="0.5">Click inside a closed entity</text>
-                </svg>
-              );
-         }
+          }
+        }
+        // No entity under cursor — show hint
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <circle cx={screenCurrent.x} cy={screenCurrent.y} r="6" fill="none" stroke="#00E676" strokeWidth="1.5" opacity="0.5" strokeDasharray="3 3" />
+            <text x={screenCurrent.x + 14} y={screenCurrent.y - 6} fill="#00E676" fontSize="10" opacity="0.5">Click đối tượng để đo nhanh</text>
+          </svg>
+        );
       }
+    }
 
-     
-     // Cursor follower for start point
-     return (
-         <div 
-            className="absolute w-4 h-4 border border-cyan-400 rounded-full pointer-events-none -ml-2 -mt-2 bg-cyan-400/20"
-            style={{ left: screenCurrent.x, top: screenCurrent.y }}
-         ></div>
-     );
+    // If we have a start point
+    if (drawState.points.length > 0) {
+      const startWorld = drawState.points[0];
+      const screenStart = worldToScreen(startWorld.x, startWorld.y);
+
+      if (activeDrawTool === 'line' || activeDrawTool === 'polyline' || activeDrawTool === 'spline') {
+        // Draw path from start to current
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            {activeDrawTool === 'polyline' && drawState.points.map((pt, i) => {
+              if (i === 0) return null;
+              const prev = worldToScreen(drawState.points[i - 1].x, drawState.points[i - 1].y);
+              const curr = worldToScreen(pt.x, pt.y);
+              return <line key={i} x1={prev.x} y1={prev.y} x2={curr.x} y2={curr.y} stroke="cyan" strokeWidth="2" />;
+            })}
+            <line
+              x1={activeDrawTool === 'polyline' ? worldToScreen(drawState.points[drawState.points.length - 1].x, drawState.points[drawState.points.length - 1].y).x : screenStart.x}
+              y1={activeDrawTool === 'polyline' ? worldToScreen(drawState.points[drawState.points.length - 1].x, drawState.points[drawState.points.length - 1].y).y : screenStart.y}
+              x2={screenCurrent.x}
+              y2={screenCurrent.y}
+              stroke="cyan"
+              strokeWidth="2"
+              strokeDasharray="4"
+            />
+          </svg>
+        );
+      } else if (activeDrawTool === 'rect') {
+        const w = Math.abs(screenCurrent.x - screenStart.x);
+        const h = Math.abs(screenCurrent.y - screenStart.y);
+        const left = Math.min(screenCurrent.x, screenStart.x);
+        const top = Math.min(screenCurrent.y, screenStart.y);
+
+        return (
+          <div
+            className="absolute border-2 border-cyan-400 border-dashed pointer-events-none"
+            style={{ left, top, width: w, height: h }}
+          ></div>
+        );
+      } else if (activeDrawTool === 'circle') {
+        const dx = drawState.currentPos.x - startWorld.x;
+        const dy = drawState.currentPos.y - startWorld.y;
+        const radiusWorld = Math.sqrt(dx * dx + dy * dy);
+        const radiusPx = radiusWorld * pixelsPerUnit;
+
+        return (
+          <div
+            className="absolute border-2 border-cyan-400 border-dashed rounded-full pointer-events-none"
+            style={{
+              left: screenStart.x - radiusPx,
+              top: screenStart.y - radiusPx,
+              width: radiusPx * 2,
+              height: radiusPx * 2
+            }}
+          ></div>
+        );
+      } else if (activeDrawTool === 'arc') {
+        // Arc preview: step 1 = line from start to current, step 2 = arc path
+        if (drawState.step === 1) {
+          // Line from start to mouse (choosing through-point)
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <line x1={screenStart.x} y1={screenStart.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+              <circle cx={screenStart.x} cy={screenStart.y} r="4" fill="cyan" opacity="0.6" />
+            </svg>
+          );
+        } else if (drawState.step === 2 && drawState.points.length >= 2) {
+          // Preview arc from start through second point to current mouse
+          const s = screenStart;
+          const m = worldToScreen(drawState.points[1].x, drawState.points[1].y);
+          const e = screenCurrent;
+          // Compute center from 3 points for preview
+          const ax = drawState.points[0].x, ay = drawState.points[0].y;
+          const bx = drawState.points[1].x, by = drawState.points[1].y;
+          const cx2 = drawState.currentPos.x, cy2 = drawState.currentPos.y;
+          const D = 2 * (ax * (by - cy2) + bx * (cy2 - ay) + cx2 * (ay - by));
+          if (Math.abs(D) > 1e-10) {
+            const ux = ((ax * ax + ay * ay) * (by - cy2) + (bx * bx + by * by) * (cy2 - ay) + (cx2 * cx2 + cy2 * cy2) * (ay - by)) / D;
+            const uy = ((ax * ax + ay * ay) * (cx2 - bx) + (bx * bx + by * by) * (ax - cx2) + (cx2 * cx2 + cy2 * cy2) * (bx - ax)) / D;
+            const rPx = Math.sqrt((ax - ux) * (ax - ux) + (ay - uy) * (ay - uy)) * pixelsPerUnit;
+            const cScreen = worldToScreen(ux, uy);
+            const v1x = m.x - s.x, v1y = m.y - s.y;
+            const v2x = e.x - s.x, v2y = e.y - s.y;
+            const cross = v1x * v2y - v1y * v2x;
+            const sweepFlag = cross > 0 ? 1 : 0;
+            const startAngle = Math.atan2(s.y - cScreen.y, s.x - cScreen.x);
+            const endAngle = Math.atan2(e.y - cScreen.y, e.x - cScreen.x);
+            let angleDiff = endAngle - startAngle;
+            if (sweepFlag === 1 && angleDiff < 0) angleDiff += 2 * Math.PI;
+            if (sweepFlag === 0 && angleDiff > 0) angleDiff -= 2 * Math.PI;
+            const largeArcFlag = Math.abs(angleDiff) > Math.PI ? 1 : 0;
+            const d = `M ${s.x} ${s.y} A ${rPx} ${rPx} 0 ${largeArcFlag} ${sweepFlag} ${e.x} ${e.y}`;
+            return (
+              <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                <path d={d} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+                <circle cx={s.x} cy={s.y} r="4" fill="cyan" opacity="0.6" />
+                <circle cx={m.x} cy={m.y} r="4" fill="cyan" opacity="0.6" />
+              </svg>
+            );
+          }
+          // Fallback: just show lines
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <line x1={s.x} y1={s.y} x2={m.x} y2={m.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+              <line x1={m.x} y1={m.y} x2={e.x} y2={e.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+            </svg>
+          );
+        }
+      } else if (activeDrawTool === 'ellipse') {
+        const rx = Math.abs(drawState.currentPos.x - startWorld.x) * pixelsPerUnit;
+        const ry = Math.abs(drawState.currentPos.y - startWorld.y) * pixelsPerUnit;
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <ellipse cx={screenStart.x} cy={screenStart.y} rx={rx} ry={ry} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+          </svg>
+        );
+      } else if (activeDrawTool === 'polygon') {
+        const dx = drawState.currentPos.x - startWorld.x;
+        const dy = drawState.currentPos.y - startWorld.y;
+        const radiusPx = Math.sqrt(dx * dx + dy * dy) * pixelsPerUnit;
+        const sides = 6;
+        const angleOffset = Math.atan2(screenCurrent.y - screenStart.y, screenCurrent.x - screenStart.x);
+        const pts: string[] = [];
+        for (let i = 0; i < sides; i++) {
+          const angle = angleOffset + (2 * Math.PI * i) / sides;
+          pts.push(`${screenStart.x + radiusPx * Math.cos(angle)},${screenStart.y + radiusPx * Math.sin(angle)}`);
+        }
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <polygon points={pts.join(' ')} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+          </svg>
+        );
+      } else if (activeDrawTool === 'slot') {
+        const c1 = screenStart;
+        const c2 = screenCurrent;
+        const dist = Math.sqrt(Math.pow(drawState.currentPos.x - startWorld.x, 2) + Math.pow(drawState.currentPos.y - startWorld.y, 2));
+        const wPx = dist * 0.3 * pixelsPerUnit;
+        const halfW = wPx / 2;
+        const sdx = c2.x - c1.x;
+        const sdy = c2.y - c1.y;
+        const slen = Math.sqrt(sdx * sdx + sdy * sdy);
+        if (slen > 0.001) {
+          const nx = (-sdy / slen) * halfW;
+          const ny = (sdx / slen) * halfW;
+          const d = `M ${c1.x + nx} ${c1.y + ny} L ${c2.x + nx} ${c2.y + ny} A ${halfW} ${halfW} 0 1 1 ${c2.x - nx} ${c2.y - ny} L ${c1.x - nx} ${c1.y - ny} A ${halfW} ${halfW} 0 1 1 ${c1.x + nx} ${c1.y + ny} Z`;
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <path d={d} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+            </svg>
+          );
+        }
+      } else if (activeDrawTool === 'obround') {
+        const w = Math.abs(screenCurrent.x - screenStart.x);
+        const h = Math.abs(screenCurrent.y - screenStart.y);
+        const left = Math.min(screenCurrent.x, screenStart.x);
+        const top = Math.min(screenCurrent.y, screenStart.y);
+        const wWorld = Math.abs(drawState.currentPos.x - startWorld.x);
+        const hWorld = Math.abs(drawState.currentPos.y - startWorld.y);
+        const crPx = Math.min(wWorld, hWorld) / 2 * pixelsPerUnit;
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <rect x={left} y={top} width={w} height={h} rx={crPx} ry={crPx} fill="none" stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+          </svg>
+        );
+      } else if (activeDrawTool === 'dimension') {
+        // Dimension preview
+        if (drawState.step === 1) {
+          const dx = drawState.currentPos.x - startWorld.x;
+          const dy = drawState.currentPos.y - startWorld.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const midX = (screenStart.x + screenCurrent.x) / 2;
+          const midY = (screenStart.y + screenCurrent.y) / 2;
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <line x1={screenStart.x} y1={screenStart.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+              <circle cx={screenStart.x} cy={screenStart.y} r="4" fill="cyan" opacity="0.6" />
+              <circle cx={screenCurrent.x} cy={screenCurrent.y} r="4" fill="cyan" opacity="0.4" />
+              <rect x={midX - 30} y={midY - 22} width="60" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
+              <text x={midX} y={midY - 10} textAnchor="middle" fill="cyan" fontSize="11">{dist.toFixed(2)}</text>
+            </svg>
+          );
+        } else if (drawState.step === 2 && drawState.points.length >= 2) {
+          const p1 = drawState.points[0];
+          const p2 = drawState.points[1];
+          const sp1 = worldToScreen(p1.x, p1.y);
+          const sp2 = worldToScreen(p2.x, p2.y);
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const midX = (sp1.x + sp2.x) / 2;
+          const midY = (sp1.y + sp2.y) / 2;
+          const offX = screenCurrent.x - midX;
+          const offY = screenCurrent.y - midY;
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <line x1={sp1.x} y1={sp1.y} x2={sp2.x} y2={sp2.y} stroke="cyan" strokeWidth="1.5" />
+              <line x1={sp1.x} y1={sp1.y} x2={sp1.x + offX * 0.1} y2={sp1.y + offY * 0.1} stroke="cyan" strokeWidth="1" strokeDasharray="3" />
+              <line x1={sp2.x} y1={sp2.y} x2={sp2.x + offX * 0.1} y2={sp2.y + offY * 0.1} stroke="cyan" strokeWidth="1" strokeDasharray="3" />
+              <line x1={sp1.x + offX * 0.08} y1={sp1.y + offY * 0.08} x2={sp2.x + offX * 0.08} y2={sp2.y + offY * 0.08} stroke="cyan" strokeWidth="1.5" strokeDasharray="4" />
+              <rect x={screenCurrent.x - 30} y={screenCurrent.y - 22} width="60" height="18" rx="3" fill="rgba(0,0,0,0.7)" />
+              <text x={screenCurrent.x} y={screenCurrent.y - 10} textAnchor="middle" fill="cyan" fontSize="11">{dist.toFixed(2)}</text>
+              <circle cx={sp1.x} cy={sp1.y} r="4" fill="cyan" opacity="0.6" />
+              <circle cx={sp2.x} cy={sp2.y} r="4" fill="cyan" opacity="0.6" />
+            </svg>
+          );
+        }
+      } else if (activeDrawTool === 'text') {
+        if (drawState.step === 0) {
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <rect x={screenCurrent.x - 2} y={screenCurrent.y - 16} width="4" height="18" fill="cyan" opacity="0.7">
+                <animate attributeName="opacity" values="0.7;0.2;0.7" dur="1s" repeatCount="indefinite" />
+              </rect>
+              <text x={screenCurrent.x + 8} y={screenCurrent.y} fill="cyan" fontSize="11" opacity="0.6">Click to place text</text>
+            </svg>
+          );
+        } else if (drawState.step === 1) {
+          const sp = worldToScreen(drawState.points[0].x, drawState.points[0].y);
+          return (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <rect x={sp.x - 2} y={sp.y - 16} width="4" height="18" fill="cyan" opacity="0.8">
+                <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.8s" repeatCount="indefinite" />
+              </rect>
+              <text x={sp.x + 8} y={sp.y} fill="cyan" fontSize="11" opacity="0.5">Type text in command input...</text>
+              <circle cx={sp.x} cy={sp.y} r="4" fill="cyan" opacity="0.6" />
+            </svg>
+          );
+        }
+      } else if (activeDrawTool === 'leader') {
+        const screenPoints = drawState.points.map(p => worldToScreen(p.x, p.y));
+        const lastPt = screenPoints[screenPoints.length - 1];
+        const segments = [];
+        for (let i = 0; i < screenPoints.length; i++) {
+          segments.push(screenPoints[i].x + ',' + screenPoints[i].y);
+        }
+        const arrowPts = [];
+        if (screenPoints.length >= 1) {
+          const tipX = screenPoints[0].x;
+          const tipY = screenPoints[0].y;
+          const nextPt = screenPoints.length >= 2 ? screenPoints[1] : screenCurrent;
+          const adx = nextPt.x - tipX;
+          const ady = nextPt.y - tipY;
+          const alen = Math.sqrt(adx * adx + ady * ady);
+          if (alen > 0.001) {
+            const ux = adx / alen, uy = ady / alen;
+            const arrowLen = 12, arrowW = 5;
+            arrowPts.push(tipX + ',' + tipY);
+            arrowPts.push((tipX + ux * arrowLen + uy * arrowW) + ',' + (tipY + uy * arrowLen - ux * arrowW));
+            arrowPts.push((tipX + ux * arrowLen - uy * arrowW) + ',' + (tipY + uy * arrowLen + ux * arrowW));
+          }
+        }
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            {screenPoints.length >= 2 && <polyline points={segments.join(' ')} fill="none" stroke="cyan" strokeWidth="2" />}
+            <line x1={lastPt.x} y1={lastPt.y} x2={screenCurrent.x} y2={screenCurrent.y} stroke="cyan" strokeWidth="2" strokeDasharray="4" />
+            {arrowPts.length === 3 && <polygon points={arrowPts.join(' ')} fill="cyan" opacity="0.7" />}
+            {screenPoints.map((sp, i) => <circle key={i} cx={sp.x} cy={sp.y} r="3" fill="cyan" opacity="0.5" />)}
+            <text x={screenCurrent.x + 12} y={screenCurrent.y - 6} fill="cyan" fontSize="10" opacity="0.5">
+              {screenPoints.length < 2 ? 'Click points, right-click to finish' : 'Right-click to finish'}
+            </text>
+          </svg>
+        );
+      } else if (activeDrawTool === 'hatch') {
+        const cx = screenCurrent.x;
+        const cy = screenCurrent.y;
+        return (
+          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+            <rect x={cx - 10} y={cy - 10} width="20" height="20" fill="none" stroke="cyan" strokeWidth="1" strokeDasharray="2" opacity="0.5" />
+            <line x1={cx - 8} y1={cy - 4} x2={cx - 2} y2={cy - 10} stroke="cyan" strokeWidth="0.8" opacity="0.6" />
+            <line x1={cx - 4} y1={cy + 2} x2={cx + 4} y2={cy - 8} stroke="cyan" strokeWidth="0.8" opacity="0.6" />
+            <line x1={cx} y1={cy + 8} x2={cx + 8} y2={cy - 4} stroke="cyan" strokeWidth="0.8" opacity="0.6" />
+            <text x={cx + 14} y={cy + 4} fill="cyan" fontSize="10" opacity="0.5">Click inside a closed entity</text>
+          </svg>
+        );
+      }
+    }
+
+
+    // Cursor follower for start point
+    return (
+      <div
+        className="absolute w-4 h-4 border border-cyan-400 rounded-full pointer-events-none -ml-2 -mt-2 bg-cyan-400/20"
+        style={{ left: screenCurrent.x, top: screenCurrent.y }}
+      ></div>
+    );
   };
 
   // ============ TRANSFORM EDIT PREVIEW (Ghost entities for Move, Copy, Mirror, Rotate, Scale) ============
@@ -4432,7 +4588,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       }
       if (ent.type === 'rect' && ent.points.length >= 2) {
         const a = w2s(ent.points[0].x, ent.points[0].y), b = w2s(ent.points[1].x, ent.points[1].y);
-        return <rect key={i} x={Math.min(a.x,b.x)} y={Math.min(a.y,b.y)} width={Math.abs(b.x-a.x)} height={Math.abs(b.y-a.y)} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
+        return <rect key={i} x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
       }
       if (ent.type === 'circle' && ent.points.length >= 1 && ent.properties?.radius) {
         const c = w2s(ent.points[0].x, ent.points[0].y);
@@ -4440,7 +4596,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       }
       if (ent.type === 'ellipse' && ent.points.length >= 1 && ent.properties?.rx) {
         const c = w2s(ent.points[0].x, ent.points[0].y);
-        return <ellipse key={i} cx={c.x} cy={c.y} rx={ent.properties.rx*pixelsPerUnit} ry={(ent.properties.ry||ent.properties.rx)*pixelsPerUnit} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
+        return <ellipse key={i} cx={c.x} cy={c.y} rx={ent.properties.rx * pixelsPerUnit} ry={(ent.properties.ry || ent.properties.rx) * pixelsPerUnit} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
       }
       if ((ent.type === 'polyline' || ent.type === 'spline') && ent.points.length >= 2) {
         const ps = ent.points.map(p => { const s = w2s(p.x, p.y); return `${s.x},${s.y}`; }).join(' ');
@@ -4448,29 +4604,29 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       }
       if (ent.type === 'polygon' && ent.points.length >= 2 && ent.properties?.sides) {
         const ct = w2s(ent.points[0].x, ent.points[0].y), vt = w2s(ent.points[1].x, ent.points[1].y);
-        const rr = Math.sqrt(Math.pow(vt.x-ct.x,2)+Math.pow(vt.y-ct.y,2));
-        const ao = Math.atan2(vt.y-ct.y, vt.x-ct.x);
+        const rr = Math.sqrt(Math.pow(vt.x - ct.x, 2) + Math.pow(vt.y - ct.y, 2));
+        const ao = Math.atan2(vt.y - ct.y, vt.x - ct.x);
         const pp: string[] = [];
-        for (let j = 0; j < ent.properties.sides; j++) { const ag = ao+(2*Math.PI*j)/ent.properties.sides; pp.push(`${ct.x+rr*Math.cos(ag)},${ct.y+rr*Math.sin(ag)}`); }
+        for (let j = 0; j < ent.properties.sides; j++) { const ag = ao + (2 * Math.PI * j) / ent.properties.sides; pp.push(`${ct.x + rr * Math.cos(ag)},${ct.y + rr * Math.sin(ag)}`); }
         return <polygon key={i} points={pp.join(' ')} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
       }
       if (ent.type === 'arc' && ent.points.length >= 3 && ent.properties?.radius) {
         const as = w2s(ent.points[0].x, ent.points[0].y), ae = w2s(ent.points[2].x, ent.points[2].y);
-        const ar = ent.properties.radius*pixelsPerUnit;
+        const ar = ent.properties.radius * pixelsPerUnit;
         return <path key={i} d={`M ${as.x} ${as.y} A ${ar} ${ar} 0 0 1 ${ae.x} ${ae.y}`} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
       }
       if (ent.type === 'slot' && ent.points.length >= 2 && ent.properties?.width) {
         const s1 = w2s(ent.points[0].x, ent.points[0].y), s2 = w2s(ent.points[1].x, ent.points[1].y);
-        const hw = ent.properties.width*pixelsPerUnit/2;
-        const dx = s2.x-s1.x, dy = s2.y-s1.y, ln = Math.sqrt(dx*dx+dy*dy);
-        if (ln > 0.001) { const nx=(-dy/ln)*hw, ny=(dx/ln)*hw; return <path key={i} d={`M ${s1.x+nx} ${s1.y+ny} L ${s2.x+nx} ${s2.y+ny} A ${hw} ${hw} 0 1 1 ${s2.x-nx} ${s2.y-ny} L ${s1.x-nx} ${s1.y-ny} A ${hw} ${hw} 0 1 1 ${s1.x+nx} ${s1.y+ny} Z`} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />; }
+        const hw = ent.properties.width * pixelsPerUnit / 2;
+        const dx = s2.x - s1.x, dy = s2.y - s1.y, ln = Math.sqrt(dx * dx + dy * dy);
+        if (ln > 0.001) { const nx = (-dy / ln) * hw, ny = (dx / ln) * hw; return <path key={i} d={`M ${s1.x + nx} ${s1.y + ny} L ${s2.x + nx} ${s2.y + ny} A ${hw} ${hw} 0 1 1 ${s2.x - nx} ${s2.y - ny} L ${s1.x - nx} ${s1.y - ny} A ${hw} ${hw} 0 1 1 ${s1.x + nx} ${s1.y + ny} Z`} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />; }
       }
       if (ent.type === 'obround' && ent.points.length >= 2 && ent.properties?.cornerRadius) {
         const a = w2s(ent.points[0].x, ent.points[0].y), b = w2s(ent.points[1].x, ent.points[1].y);
-        const cr = ent.properties.cornerRadius*pixelsPerUnit;
-        return <rect key={i} x={Math.min(a.x,b.x)} y={Math.min(a.y,b.y)} width={Math.abs(b.x-a.x)} height={Math.abs(b.y-a.y)} rx={cr} ry={cr} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
+        const cr = ent.properties.cornerRadius * pixelsPerUnit;
+        return <rect key={i} x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} rx={cr} ry={cr} fill="none" stroke={sc} strokeWidth="1.5" strokeDasharray="6 3" />;
       }
-      return (<g key={i}>{ent.points.map((p,pi) => { const s = w2s(p.x,p.y); return <circle key={pi} cx={s.x} cy={s.y} r={3} fill={sc} opacity={0.6} />; })}</g>);
+      return (<g key={i}>{ent.points.map((p, pi) => { const s = w2s(p.x, p.y); return <circle key={pi} cx={s.x} cy={s.y} r={3} fill={sc} opacity={0.6} />; })}</g>);
     };
 
     const gColor = activeDrawTool === 'copy' ? '#00ffff' : '#ffff00';
@@ -4481,7 +4637,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         {gEnts.map((ge, gi) => ghostSvg(ge, gi, gColor))}
         {(activeDrawTool === 'move' || activeDrawTool === 'copy') && tPts.length >= 1 && (() => {
           const bp = worldToScreen(tPts[0].x, tPts[0].y);
-          return (<g><circle cx={bp.x} cy={bp.y} r={6} fill="none" stroke="#ff6600" strokeWidth="2" /><line x1={bp.x-8} y1={bp.y} x2={bp.x+8} y2={bp.y} stroke="#ff6600" strokeWidth="1.5" /><line x1={bp.x} y1={bp.y-8} x2={bp.x} y2={bp.y+8} stroke="#ff6600" strokeWidth="1.5" /></g>);
+          return (<g><circle cx={bp.x} cy={bp.y} r={6} fill="none" stroke="#ff6600" strokeWidth="2" /><line x1={bp.x - 8} y1={bp.y} x2={bp.x + 8} y2={bp.y} stroke="#ff6600" strokeWidth="1.5" /><line x1={bp.x} y1={bp.y - 8} x2={bp.x} y2={bp.y + 8} stroke="#ff6600" strokeWidth="1.5" /></g>);
         })()}
         {activeDrawTool === 'mirror' && tPts.length >= 1 && (() => {
           const m1 = worldToScreen(tPts[0].x, tPts[0].y), m2 = worldToScreen(cPos.x, cPos.y);
@@ -4489,13 +4645,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         })()}
         {activeDrawTool === 'rotate' && tPts.length >= 1 && (() => {
           const rc = worldToScreen(tPts[0].x, tPts[0].y);
-          const el: React.ReactNode[] = [<circle key="rc" cx={rc.x} cy={rc.y} r={5} fill="none" stroke="#00ff88" strokeWidth="2" />, <line key="rx" x1={rc.x-8} y1={rc.y} x2={rc.x+8} y2={rc.y} stroke="#00ff88" strokeWidth="1" />, <line key="ry" x1={rc.x} y1={rc.y-8} x2={rc.x} y2={rc.y+8} stroke="#00ff88" strokeWidth="1" />];
+          const el: React.ReactNode[] = [<circle key="rc" cx={rc.x} cy={rc.y} r={5} fill="none" stroke="#00ff88" strokeWidth="2" />, <line key="rx" x1={rc.x - 8} y1={rc.y} x2={rc.x + 8} y2={rc.y} stroke="#00ff88" strokeWidth="1" />, <line key="ry" x1={rc.x} y1={rc.y - 8} x2={rc.x} y2={rc.y + 8} stroke="#00ff88" strokeWidth="1" />];
           if (tPts.length >= 2) { const rr = worldToScreen(tPts[1].x, tPts[1].y); el.push(<line key="rl" x1={rc.x} y1={rc.y} x2={rr.x} y2={rr.y} stroke="#00ff88" strokeWidth="1" strokeDasharray="4 2" />); const rt = worldToScreen(cPos.x, cPos.y); el.push(<line key="tl" x1={rc.x} y1={rc.y} x2={rt.x} y2={rt.y} stroke="#ffff00" strokeWidth="1" strokeDasharray="4 2" />); }
           return <g>{el}</g>;
         })()}
         {activeDrawTool === 'scale' && tPts.length >= 1 && (() => {
           const sc = worldToScreen(tPts[0].x, tPts[0].y);
-          const el: React.ReactNode[] = [<circle key="sc" cx={sc.x} cy={sc.y} r={5} fill="none" stroke="#ff8800" strokeWidth="2" />, <line key="sx" x1={sc.x-8} y1={sc.y} x2={sc.x+8} y2={sc.y} stroke="#ff8800" strokeWidth="1" />, <line key="sy" x1={sc.x} y1={sc.y-8} x2={sc.x} y2={sc.y+8} stroke="#ff8800" strokeWidth="1" />];
+          const el: React.ReactNode[] = [<circle key="sc" cx={sc.x} cy={sc.y} r={5} fill="none" stroke="#ff8800" strokeWidth="2" />, <line key="sx" x1={sc.x - 8} y1={sc.y} x2={sc.x + 8} y2={sc.y} stroke="#ff8800" strokeWidth="1" />, <line key="sy" x1={sc.x} y1={sc.y - 8} x2={sc.x} y2={sc.y + 8} stroke="#ff8800" strokeWidth="1" />];
           if (tPts.length >= 2) { const sr = worldToScreen(tPts[1].x, tPts[1].y); el.push(<line key="rl" x1={sc.x} y1={sc.y} x2={sr.x} y2={sr.y} stroke="#ff8800" strokeWidth="1" strokeDasharray="4 2" />); const st = worldToScreen(cPos.x, cPos.y); el.push(<line key="tl" x1={sc.x} y1={sc.y} x2={st.x} y2={st.y} stroke="#ffff00" strokeWidth="1" strokeDasharray="4 2" />); }
           return <g>{el}</g>;
         })()}
@@ -4504,8 +4660,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
   };
 
   return (
-    <main
-
+    <div
       ref={containerRef}
       onMouseMove={handleMouseMoveInternal}
       onMouseDown={handleMouseDown}
@@ -4518,100 +4673,99 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       onDrop={handleDrop}
       onContextMenu={(e) => {
         if (activeDrawTool) {
-             // Cancel transform edit on right-click
-             if (TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
-                console.log('❌ Right-click: Cancelling transform edit:', activeDrawTool);
-                setTransformEditState({ step: 0, points: [], currentPos: null });
-                if (onCancelDraw) onCancelDraw();
-                e.preventDefault();
-                return;
-             }
-             // Finish polyline on right click - Save as CadEntity
-              if ((activeDrawTool === 'polyline' || activeDrawTool === 'spline') && drawState.points.length > 1) {
-                   setCadEntitiesWithUndo(prev => [...prev, {
-                     id: crypto.randomUUID(),
-                     type: activeDrawTool,
-                     points: drawState.points,
-                     layerId: activeLayerId
-                   }], `Draw ${activeDrawTool}`, 'draw');
-                  setDrawState({ step: 0, points: [], currentPos: null });
-              }
-             // Finish leader on right click — saves with empty text (user can type text in command input before right-clicking)
-              if (activeDrawTool === 'leader' && drawState.points.length >= 2) {
-                   setCadEntitiesWithUndo(prev => [...prev, {
-                     id: crypto.randomUUID(),
-                     type: 'leader',
-                     points: drawState.points,
-                     properties: { text: '' },
-                     layerId: activeLayerId
-                   }], 'Draw leader', 'draw');
-                  setDrawState({ step: 0, points: [], currentPos: null });
-              }
-             // Delete on right-click (delete tool or pending delete mode)
-             if (activeDrawTool === 'delete' || pendingDeleteMode) {
-                if (selectedEntities.size > 0) {
-                  console.log('🗑️ Right-click delete: Deleting selected entities:', selectedEntities.size);
-                  const ids = Array.from(selectedEntities);
-                  setCadEntitiesWithUndo(
-                    prev => prev.filter(ent => !selectedEntities.has(ent.id)),
-                    `Delete ${ids.length} entit${ids.length === 1 ? 'y' : 'ies'}`,
-                    'delete',
-                    ids
-                  );
-                  // Keep selection (user may want to undo/inspect)
-                  setPendingDeleteMode(false);
-                  onCancelDraw?.();
-                  e.preventDefault();
-                  return;
-                } else if (pendingDeleteMode) {
-                  // User right-clicked with no selection while in pending delete mode → cancel
-                  setPendingDeleteMode(false);
-                  onCancelDraw?.();
-                  e.preventDefault();
-                  return;
-                }
-             }
-             // Lag reduce on right-click (lag_reduce tool)
-             if (activeDrawTool === 'lag_reduce') {
-                e.preventDefault();
-                if (selectedEntities.size > 0) {
-                  console.log('⚡ Lag reduce triggered:', selectedEntities.size, 'entities');
-                  console.log('Bắt đầu giảm lag cho', selectedEntities.size, 'đối tượng...');
-                  onOptimizeEntities?.(selectedEntities);
-                  setSelectedEntities(new Set()); // Clear selection after optimization
-                  showToast(`Bắt đầu giảm lag cho ${selectedEntities.size} đối tượng...`);
-                } else {
-                  showToast('Vui lòng chọn đối tượng cần giảm lag');
-                }
-                return;
-             }
-             if (onCancelDraw) onCancelDraw();
-             e.preventDefault();
+          // Cancel transform edit on right-click
+          if (TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) {
+            console.log('❌ Right-click: Cancelling transform edit:', activeDrawTool);
+            setTransformEditState({ step: 0, points: [], currentPos: null });
+            if (onCancelDraw) onCancelDraw();
+            e.preventDefault();
+            return;
+          }
+          // Finish polyline on right click - Save as CadEntity
+          if ((activeDrawTool === 'polyline' || activeDrawTool === 'spline') && drawState.points.length > 1) {
+            setCadEntitiesWithUndo(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: activeDrawTool,
+              points: drawState.points,
+              layerId: activeLayerId
+            }], `Draw ${activeDrawTool}`, 'draw');
+            setDrawState({ step: 0, points: [], currentPos: null });
+          }
+          // Finish leader on right click — saves with empty text (user can type text in command input before right-clicking)
+          if (activeDrawTool === 'leader' && drawState.points.length >= 2) {
+            setCadEntitiesWithUndo(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'leader',
+              points: drawState.points,
+              properties: { text: '' },
+              layerId: activeLayerId
+            }], 'Draw leader', 'draw');
+            setDrawState({ step: 0, points: [], currentPos: null });
+          }
+          // Delete on right-click (delete tool or pending delete mode)
+          if (activeDrawTool === 'delete' || pendingDeleteMode) {
+            if (selectedEntities.size > 0) {
+              console.log('🗑️ Right-click delete: Deleting selected entities:', selectedEntities.size);
+              const ids = Array.from(selectedEntities);
+              setCadEntitiesWithUndo(
+                prev => prev.filter(ent => !selectedEntities.has(ent.id)),
+                `Delete ${ids.length} entit${ids.length === 1 ? 'y' : 'ies'}`,
+                'delete',
+                ids
+              );
+              // Keep selection (user may want to undo/inspect)
+              setPendingDeleteMode(false);
+              onCancelDraw?.();
+              e.preventDefault();
+              return;
+            } else if (pendingDeleteMode) {
+              // User right-clicked with no selection while in pending delete mode → cancel
+              setPendingDeleteMode(false);
+              onCancelDraw?.();
+              e.preventDefault();
+              return;
+            }
+          }
+          // Lag reduce on right-click (lag_reduce tool)
+          if (activeDrawTool === 'lag_reduce') {
+            e.preventDefault();
+            if (selectedEntities.size > 0) {
+              console.log('⚡ Lag reduce triggered:', selectedEntities.size, 'entities');
+              console.log('Bắt đầu giảm lag cho', selectedEntities.size, 'đối tượng...');
+              onOptimizeEntities?.(selectedEntities);
+              setSelectedEntities(new Set()); // Clear selection after optimization
+              showToast(`Bắt đầu giảm lag cho ${selectedEntities.size} đối tượng...`);
+            } else {
+              showToast('Vui lòng chọn đối tượng cần giảm lag');
+            }
+            return;
+          }
+          if (onCancelDraw) onCancelDraw();
+          e.preventDefault();
         } else if (onContextMenu) {
           e.preventDefault();
           onContextMenu(e);
         }
       }}
-      className={`flex-1 min-h-0 relative bg-gradient-to-b from-canvas-top to-canvas-bottom overflow-x-hidden overflow-y-auto touch-none ${
-        showCrosshair ? 'cursor-none' : 
+      className={`flex-1 min-h-0 relative bg-gradient-to-b from-canvas-top to-canvas-bottom overflow-x-hidden overflow-y-auto touch-none ${showCrosshair ? 'cursor-none' :
         activeDrawTool === 'move' ? 'cursor-move' :
-        activeDrawTool === 'copy' ? 'cursor-copy' :
-        activeDrawTool === 'scale' ? 'cursor-nwse-resize' :
-        (activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) ? 'cursor-pointer' :
-        (activeDrawTool && EDIT_TOOLS.includes(activeDrawTool)) ? 'cursor-pointer' :
-        activeDrawTool ? 'cursor-crosshair' : 
-        isDragging ? 'cursor-grabbing' : 
-        (isSelecting || isSelectingSheet) ? 'cursor-copy' : 
-        isManualNesting ? 'cursor-default' : 'cursor-default'
-      }`}
+          activeDrawTool === 'copy' ? 'cursor-copy' :
+            activeDrawTool === 'scale' ? 'cursor-nwse-resize' :
+              (activeDrawTool && TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)) ? 'cursor-pointer' :
+                (activeDrawTool && EDIT_TOOLS.includes(activeDrawTool)) ? 'cursor-pointer' :
+                  activeDrawTool ? 'cursor-crosshair' :
+                    isDragging ? 'cursor-grabbing' :
+                      (isSelecting || isSelectingSheet) ? 'cursor-copy' :
+                        isManualNesting ? 'cursor-default' : 'cursor-default'
+        }`}
     >
       {/* Layer Panel (Task 18) */}
       {showLayerPanel && (
         <div className="absolute right-4 top-4 z-[100]">
-          <LayerPanel 
+          <LayerPanel
             layers={layers}
             activeLayerId={activeLayerId}
-            onLayerChange={onLayerChange || (() => {})}
+            onLayerChange={onLayerChange || (() => { })}
             entities={cadEntities}
             onEntitiesUpdate={setCadEntities}
           />
@@ -4620,10 +4774,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       {/* Grid Pattern */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-10" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern 
-            id="grid" 
-            width={gridSizePx} 
-            height={gridSizePx} 
+          <pattern
+            id="grid"
+            width={gridSizePx}
+            height={gridSizePx}
             patternUnits="userSpaceOnUse"
             patternTransform={`translate(${gridOffsetX}, ${gridOffsetY})`}
           >
@@ -4652,13 +4806,13 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
             const y = Math.min(p1.y, p2.y);
             const w = Math.abs(p2.x - p1.x);
             const h = Math.abs(p2.y - p1.y);
-            
+
             // If in ADD_PART mode, use special color (cyan/green)
             // Otherwise use normal selection colors
             const isCrossing = p2.x < p1.x;
-            
+
             let strokeColor, fillColor, strokeDasharray;
-            
+
             if (isSelecting) {
               // ADD_PART MODE: Cyan color to indicate "creating part"
               strokeColor = "#00ffff";
@@ -4670,17 +4824,17 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
               fillColor = isCrossing ? "rgba(0, 255, 0, 0.1)" : "rgba(0, 153, 255, 0.1)";
               strokeDasharray = isCrossing ? "5,5" : "none";
             }
-            
+
             return (
               <g>
-                <rect 
-                  x={x} 
-                  y={y} 
-                  width={w} 
-                  height={h} 
+                <rect
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={h}
                   fill={fillColor}
-                  stroke={strokeColor} 
-                  strokeWidth={isSelecting ? "3" : "2"} 
+                  stroke={strokeColor}
+                  strokeWidth={isSelecting ? "3" : "2"}
                   strokeDasharray={strokeDasharray}
                   opacity="0.8"
                 />
@@ -4707,7 +4861,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       {/* Drawing Preview Overlay */}
       {activeDrawTool && (
         <div className="absolute inset-0 pointer-events-none z-30">
-            {renderDrawingPreview()}
+          {renderDrawingPreview()}
         </div>
       )}
 
@@ -4730,14 +4884,14 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
       </div>
       <div className="absolute bottom-1 left-0 w-full h-8 pointer-events-none overflow-hidden">
         {xTicks.map(val => {
-           const screenPos = worldToScreen(val, 0);
-           if (screenPos.x < -50 || screenPos.x > width + 50) return null;
-           return (
-             <div key={val} className="absolute bottom-0 flex flex-col items-center text-white/70 font-mono text-[10px]" style={{ left: screenPos.x, transform: 'translateX(-50%)' }}>
-                <div className="h-1.5 w-px bg-slate-700/70 mb-0.5"></div>
-                <span>{val}</span>
-             </div>
-           );
+          const screenPos = worldToScreen(val, 0);
+          if (screenPos.x < -50 || screenPos.x > width + 50) return null;
+          return (
+            <div key={val} className="absolute bottom-0 flex flex-col items-center text-white/70 font-mono text-[10px]" style={{ left: screenPos.x, transform: 'translateX(-50%)' }}>
+              <div className="h-1.5 w-px bg-slate-700/70 mb-0.5"></div>
+              <span>{val}</span>
+            </div>
+          );
         })}
       </div>
 
@@ -4745,38 +4899,38 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
           CROSSHAIR + COORDINATE DISPLAY + COMMAND INPUT (AutoCAD 2022 Style)
           ═══════════════════════════════════════════════════════════════════ */}
       {showCrosshair && isMouseInWorkspace && (
-        <svg 
+        <svg
           className="absolute inset-0 w-full h-full pointer-events-none z-20"
           style={{ overflow: 'visible' }}
         >
           {/* Horizontal Crosshair Line */}
           <line
-            x1={crosshairSize === 100 ? 0 : mouseScreenPos.x - (width * crosshairSize / 200)}
+            x1={crosshairSize === 100 ? -width : mouseScreenPos.x - (width * crosshairSize / 200)}
             y1={mouseScreenPos.y}
-            x2={crosshairSize === 100 ? width : mouseScreenPos.x + (width * crosshairSize / 200)}
+            x2={crosshairSize === 100 ? width * 2 : mouseScreenPos.x + (width * crosshairSize / 200)}
             y2={mouseScreenPos.y}
-            stroke="#00ff00"
+            stroke="#ffffff"
             strokeWidth="1"
             opacity="0.8"
           />
           {/* Vertical Crosshair Line */}
           <line
             x1={mouseScreenPos.x}
-            y1={crosshairSize === 100 ? 0 : mouseScreenPos.y - (height * crosshairSize / 200)}
+            y1={crosshairSize === 100 ? -height : mouseScreenPos.y - (height * crosshairSize / 200)}
             x2={mouseScreenPos.x}
-            y2={crosshairSize === 100 ? height : mouseScreenPos.y + (height * crosshairSize / 200)}
-            stroke="#00ff00"
+            y2={crosshairSize === 100 ? height * 2 : mouseScreenPos.y + (height * crosshairSize / 200)}
+            stroke="#ffffff"
             strokeWidth="1"
             opacity="0.8"
           />
           {/* Center Pickbox (Small square at cursor) */}
           <rect
-            x={mouseScreenPos.x - 5}
-            y={mouseScreenPos.y - 5}
-            width={10}
-            height={10}
+            x={mouseScreenPos.x - 4}
+            y={mouseScreenPos.y - 4}
+            width={8}
+            height={8}
             fill="none"
-            stroke="#00ff00"
+            stroke="#ffffff"
             strokeWidth="1"
           />
         </svg>
@@ -4834,10 +4988,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
       {/* Coordinate Display Tooltip (follows cursor) */}
       {isMouseInWorkspace && (
-        <div 
+        <div
           className="absolute pointer-events-none z-30 font-mono text-[11px] bg-slate-900/90 border border-cyan-500/50 px-2 py-1 rounded shadow-lg"
-          style={{ 
-            left: mouseScreenPos.x + 20, 
+          style={{
+            left: mouseScreenPos.x + 20,
             top: mouseScreenPos.y + 20,
             transform: mouseScreenPos.x > width - 150 ? 'translateX(-100%)' : 'none'
           }}
@@ -4856,7 +5010,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
             const distance = Math.sqrt(dx * dx + dy * dy);
             const angleRad = Math.atan2(dy, dx);
             const angleDeg = (angleRad * 180 / Math.PI + 360) % 360;
-            
+
             return (
               <div className="flex flex-col gap-0.5 mt-0.5 border-t border-slate-600 pt-0.5">
                 <div className="flex items-center gap-2 text-yellow-400">
@@ -4879,10 +5033,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
 
       {/* Command Input Box (Dynamic Input - AutoCAD Style) */}
       {showCommandInput && activeDrawTool && isMouseInWorkspace && (
-        <div 
+        <div
           className="absolute z-40 pointer-events-auto"
-          style={{ 
-            left: mouseScreenPos.x + 20, 
+          style={{
+            left: mouseScreenPos.x + 20,
             top: mouseScreenPos.y + 60,
             transform: mouseScreenPos.x > width - 200 ? 'translateX(-100%)' : 'none'
           }}
@@ -4894,20 +5048,20 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
               </span>
               <span className="text-white/60 text-[10px]">
                 {EDIT_TOOLS.includes(activeDrawTool)
-                  ? (activeDrawTool === 'offset' 
-                      ? (editToolState.step === 0 ? '- Type offset distance:' : editToolState.step === 1 ? '- Select entity:' : '- Click side to offset:')
-                      : activeDrawTool === 'trim'
+                  ? (activeDrawTool === 'offset'
+                    ? (editToolState.step === 0 ? '- Type offset distance:' : editToolState.step === 1 ? '- Select entity:' : '- Click side to offset:')
+                    : activeDrawTool === 'trim'
                       ? (editToolState.step === 0 ? '- Select cutting edge:' : '- Click line to trim:')
                       : activeDrawTool === 'extend'
-                      ? (editToolState.step === 0 ? '- Select boundary edge:' : '- Click line to extend:')
-                      : activeDrawTool === 'fillet'
-                      ? (editToolState.step === 0 ? '- Type fillet radius:' : '- Click corner (2 lines):')
-                      : activeDrawTool === 'chamfer'
-                      ? (editToolState.step === 0 ? '- Type chamfer distance:' : '- Click corner (2 lines):')
-                      : '')
-                  : drawState.step === 0 
-                    ? '- Specify first point:' 
-                    : activeDrawTool === 'rect' 
+                        ? (editToolState.step === 0 ? '- Select boundary edge:' : '- Click line to extend:')
+                        : activeDrawTool === 'fillet'
+                          ? (editToolState.step === 0 ? '- Type fillet radius:' : '- Click corner (2 lines):')
+                          : activeDrawTool === 'chamfer'
+                            ? (editToolState.step === 0 ? '- Type chamfer distance:' : '- Click corner (2 lines):')
+                            : '')
+                  : drawState.step === 0
+                    ? '- Specify first point:'
+                    : activeDrawTool === 'rect'
                       ? '- Width,Height or point:'
                       : '- Specify next point:'}
               </span>
@@ -4923,10 +5077,10 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
                   EDIT_TOOLS.includes(activeDrawTool) && editToolState.step === 0
                     ? (activeDrawTool === 'offset' ? "10 (distance)" : activeDrawTool === 'fillet' ? "5 (radius)" : "10 (distance)")
                     : EDIT_TOOLS.includes(activeDrawTool)
-                    ? "Click on entity"
-                    : activeDrawTool === 'rect' && drawState.step > 0
-                    ? "1220,2440 (W,H)"
-                    : "x,y | @dx,dy | L<A"
+                      ? "Click on entity"
+                      : activeDrawTool === 'rect' && drawState.step > 0
+                        ? "1220,2440 (W,H)"
+                        : "x,y | @dx,dy | L<A"
                 }
                 className="w-36 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-[11px] text-white font-mono focus:outline-none focus:border-cyan-400 placeholder:text-slate-500"
                 autoComplete="off"
@@ -4944,7 +5098,7 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
               </button>
             </div>
             <div className="px-2 py-0.5 text-[9px] text-slate-500 border-t border-slate-700">
-              {activeDrawTool === 'rect' && drawState.step > 0 
+              {activeDrawTool === 'rect' && drawState.step > 0
                 ? 'Enter Width,Height (e.g., 1220,2440)'
                 : 'x,y | @dx,dy | length | length<angle'}
             </div>
@@ -4952,1315 +5106,35 @@ setEditToolState({ step: 0, distance: 0, sourceEntityId: null, targetEntityId: n
         </div>
       )}
 
+      <div className="acad-model-tabs">
+        <button className="acad-model-tab active">
+          Model
+        </button>
+        <button className="acad-model-tab">
+          Layout1
+        </button>
+        <button className="acad-model-tab">
+          Layout2
+        </button>
+      </div>
 
-      {/* Selection Mode Overlay Hint (Part) */}
-      {isSelecting && (
-        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-1 rounded shadow-lg z-40 text-xs font-bold pointer-events-none">
-          Select Objects to Add as Part. Right-Click when finished.
-        </div>
-      )}
-
-      {/* Drawing Mode Hint */}
-      {activeDrawTool && (
-        <div className={`absolute top-8 left-1/2 transform -translate-x-1/2 ${
-          TRANSFORM_EDIT_TOOLS.includes(activeDrawTool)
-            ? 'bg-yellow-100 border-yellow-400 text-yellow-900'
-            : 'bg-cyan-100 border-cyan-400 text-cyan-900'
-        } border px-4 py-1 rounded shadow-lg z-40 text-xs font-bold pointer-events-none flex flex-col items-center`}>
-            <span>TOOL: {activeDrawTool.toUpperCase()}{TRANSFORM_EDIT_TOOLS.includes(activeDrawTool) ? ` [${selectedEntities.size} selected]` : ''}</span>
-            <span className="text-[10px] font-normal">
-              {TRANSFORM_EDIT_TOOLS.includes(activeDrawTool) ? (
-                activeDrawTool === 'move' ? (transformEditState.step === 0 ? 'Click base point' : 'Click destination or type @dx,dy (e.g. @100,0)') :
-                activeDrawTool === 'copy' ? (transformEditState.step === 0 ? 'Click base point' : 'Click destination or type @dx,dy. Right-Click to finish.') :
-                activeDrawTool === 'mirror' ? (transformEditState.step === 0 ? 'Click first point of mirror line' : 'Click second point of mirror line') :
-                activeDrawTool === 'rotate' ? (transformEditState.step === 0 ? 'Click rotation center' : transformEditState.step === 1 ? 'Click reference angle point or type angle (e.g. 45)' : 'Click target angle point or type angle') :
-                activeDrawTool === 'scale' ? (transformEditState.step === 0 ? 'Click scale center' : transformEditState.step === 1 ? 'Click reference distance point or type factor (e.g. 2)' : 'Click target distance point or type factor') :
-                'Left Click to place points. Right Click to Cancel/Finish.'
-              ) : 'Left Click to place points. Right Click to Cancel/Finish.'}
-            </span>
-        </div>
-      )}
-
-      {/* Toast / Error Message (AutoCAD-style notification) */}
-      {toastMessage && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-red-900/90 border border-red-500 text-red-100 px-4 py-2 rounded shadow-lg z-50 text-xs font-bold pointer-events-auto flex items-center gap-2 animate-pulse">
-          <span className="material-icons text-sm">warning</span>
-          {toastMessage}
-          <button onClick={() => setToastMessage(null)} className="ml-2 text-red-300 hover:text-white">
-            <span className="material-icons text-sm">close</span>
-          </button>
-        </div>
-      )}
-
-      {isDragOver && (
-        <div className="absolute inset-0 z-[60] bg-blue-500/20 border-2 border-dashed border-blue-400 flex items-center justify-center pointer-events-none">
-          <div className="bg-slate-900/90 border border-blue-400 rounded-lg px-6 py-4 text-blue-200 text-sm font-bold flex items-center gap-3 shadow-xl">
-            <span className="material-icons text-2xl">upload_file</span>
-            Drop .dxf, .svg or .dwg files to import
+      <div className="acad-ucs">
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] font-bold text-[#00FF00] mb-0.5 leading-none">Y</span>
+          <div className="w-px h-12 bg-[#00FF00] relative">
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-b-[6px] border-transparent border-b-[#00FF00]"></div>
           </div>
         </div>
-      )}
-
-      {/* Import Loading Overlay (Task 5) */}
-      <AnimatePresence>
-        {isImporting && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[60] bg-slate-900/80 flex items-center justify-center pointer-events-none"
-          >
-            <div className="bg-slate-800/95 border border-blue-500/50 rounded-xl px-8 py-5 shadow-2xl min-w-[300px]">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase text-blue-400 mb-2">
-                <span>{importStatusText}</span>
-                <span>{importProgress}%</span>
-              </div>
-              <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                <motion.div
-                  animate={{ width: `${importProgress}%` }}
-                  className="h-full bg-gradient-to-r from-blue-600 to-indigo-500"
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Measure Tool Result Display */}
-      {measureResult && (
-        <div className="absolute top-8 right-8 bg-slate-800 border-2 border-cyan-500 shadow-lg rounded-md p-4 z-40 pointer-events-auto">
-          <div className="text-cyan-300 text-sm font-bold mb-2 flex items-center gap-2">
-            <span className="material-icons-outlined text-[16px]">straighten</span>
-            Measurement Result
+        <div className="flex items-center -mt-[1px]">
+          <div className="w-[5px] h-[5px] bg-[#FFFFFF] z-10 -ml-[2px] outline outline-1 outline-[#212121]"></div>
+          <div className="h-px w-12 bg-[#FF0000] relative -ml-[2px]">
+            <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-b-[3px] border-l-[6px] border-transparent border-l-[#FF0000]"></div>
           </div>
-          <div className="bg-slate-900/50 rounded p-3 space-y-2 border border-cyan-400/30">
-            <div className="text-xs text-cyan-200">
-              <span className="font-mono font-bold text-lg text-cyan-300">{measureResult.distance.toFixed(2)}</span> <span className="text-cyan-400">mm</span>
-            </div>
-            <div className="text-[10px] text-slate-400">
-              <div>P1: ({measureResult.p1.x.toFixed(1)}, {measureResult.p1.y.toFixed(1)})</div>
-              <div>P2: ({measureResult.p2.x.toFixed(1)}, {measureResult.p2.y.toFixed(1)})</div>
-            </div>
-          </div>
-          <div className="mt-3 text-[10px] text-slate-500 border-t border-slate-600 pt-2">
-            Auto-clears in 4 seconds
-          </div>
+          <span className="text-[10px] font-bold text-[#FF0000] ml-1 leading-none">X</span>
         </div>
-      )}
-
-      {/* Manual Nesting Toolbar (Absolute Positioned) */}
-
-      {/* Manual Nesting Toolbar (Absolute Positioned) */}
-      {isManualNesting && (
-        <div className="absolute top-2 right-2 w-[240px] bg-slate-800 shadow-modal border border-blue-400 flex flex-col z-50 rounded-sm pointer-events-auto select-none">
-           {/* Header */}
-           <div className="h-6 bg-gradient-to-r from-blue-600 to-blue-500 flex justify-between items-center px-2 cursor-move">
-             <span className="font-bold text-white text-[11px] flex items-center gap-1">
-               <span className="material-icons-outlined text-[12px]">pan_tool</span>
-               Manual Nesting Controls
-             </span>
-             <button onClick={onCloseManualNest} className="text-white hover:text-red-200">
-               <span className="material-icons-outlined text-[12px]">close</span>
-             </button>
-           </div>
-           
-           {/* Content */}
-           <div className="p-2 grid grid-cols-4 gap-1 bg-slate-900">
-              <ManualNestBtn icon="open_with" label="Move" />
-              <ManualNestBtn icon="rotate_90_degrees_ccw" label="Rotate" />
-              <ManualNestBtn icon="flip" label="Mirror" />
-              <ManualNestBtn icon="grid_on" label="Grid" />
-              <div className="col-span-4 h-px bg-slate-700 my-1"></div>
-              <div className="col-span-4 grid grid-cols-3 gap-1">
-                 <div className="col-start-2"><ManualNestBtn icon="keyboard_arrow_up" label="" small /></div>
-                 <div className="col-start-1"><ManualNestBtn icon="keyboard_arrow_left" label="" small /></div>
-                 <div className="col-start-2"><ManualNestBtn icon="keyboard_arrow_down" label="" small /></div>
-                 <div className="col-start-3 row-start-2"><ManualNestBtn icon="keyboard_arrow_right" label="" small /></div>
-              </div>
-              <div className="col-span-4 mt-2 space-y-1">
-                 <label className="flex items-center space-x-2 text-[10px] text-white">
-                   <input type="checkbox" defaultChecked className="w-3 h-3 text-blue-600 rounded-sm border-slate-500" />
-                   <span>Collision Check</span>
-                 </label>
-                 <label className="flex items-center space-x-2 text-[10px] text-white">
-                   <input type="checkbox" className="w-3 h-3 text-blue-600 rounded-sm border-slate-500" />
-                   <span>Snap to Grid</span>
-                 </label>
-              </div>
-              <div className="col-span-4 mt-2 p-1 bg-yellow-900/20 border border-yellow-800 rounded text-[9px] text-white">
-                 Select a part from the sidebar or click a nested part to manipulate.
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* Nesting Info Modal (Centered) */}
-      {showNestingInfo && (
-        <div className="absolute inset-0 flex items-center justify-center z-[80] pointer-events-auto bg-black/20 backdrop-blur-[1px]">
-          <div className="w-[400px] bg-slate-900 shadow-modal border-2 border-slate-600 flex flex-col font-sans text-xs">
-             <div className="h-7 bg-gradient-to-r from-slate-700 to-slate-600 flex justify-between items-center px-2 select-none border-b border-slate-500">
-                <span className="font-bold text-white flex items-center gap-2">
-                   <span className="material-icons-outlined text-white">info</span>
-                   Nesting Information
-                </span>
-                <button onClick={onCloseNestingInfo} className="hover:text-red-500 text-white">
-                  <span className="material-icons-outlined text-sm">close</span>
-                </button>
-             </div>
-             <div className="p-4 bg-slate-900 space-y-4">
-                <div className="border border-slate-600 bg-slate-800">
-                   <table className="w-full text-left">
-                     <tbody className="divide-y divide-slate-700">
-                       <InfoRow label="Nest List" value={activeNestList || '-'} />
-                       <InfoRow label="Total Parts" value={parts.length.toString()} />
-                       <InfoRow label="Total Sheets" value={sheets.length.toString()} />
-                       <InfoRow label="Nested Parts" value={`${parts.filter(p=>p.isNested).length} / ${parts.length}`} />
-                       <InfoRow label="Utilization" value={parts.filter(p=>p.isNested).length > 0 ? "82.4 %" : "0%"} highlight />
-                       <InfoRow label="Cut Length" value="124.5 m" />
-                       <InfoRow label="Est. Machining Time" value="00:45:20" />
-                     </tbody>
-                   </table>
-                </div>
-                <div className="flex justify-end">
-                   <button onClick={onCloseNestingInfo} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white shadow-sm hover:bg-slate-600 text-white">
-                     Close
-                   </button>
-                </div>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Close Button Overlay */}
-      <button className="absolute bottom-0 right-0 bg-slate-700 text-black p-0.5 hover:bg-red-500 hover:text-white transition-colors z-20 rounded-sm">
-        <span className="material-symbols-outlined text-xs block">close</span>
-      </button>
-
-      {/* Nesting Modal (Main Modal) */}
-      {showModal && (
-        <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="w-[840px] h-[550px] bg-slate-800 shadow-modal border-2 border-blue-700 flex flex-col pointer-events-auto text-xs text-white font-sans cursor-default">
-            
-            {/* Modal Header */}
-            <div className="h-7 bg-gradient-to-r from-slate-700 to-slate-600 flex justify-between items-center px-2 select-none border-b border-slate-500">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-[#7ab708] text-white flex items-center justify-center text-[9px] font-bold border border-white">AX</div>
-                <span className="font-normal text-white">{activeNestList || 'New Nest List'}</span>
-              </div>
-              <div className="flex space-x-1">
-                <button className="w-6 h-4 flex items-center justify-center text-white hover:bg-slate-500 rounded-sm">
-                  <span className="material-symbols-outlined text-[10px]">minimize</span>
-                </button>
-                <button className="w-6 h-4 flex items-center justify-center text-white hover:bg-slate-500 rounded-sm">
-                  <span className="material-symbols-outlined text-[10px]">crop_square</span>
-                </button>
-                <button onClick={onCloseModal} className="w-6 h-4 flex items-center justify-center text-white hover:bg-red-600 rounded-sm">
-                  <span className="material-symbols-outlined text-[12px]">close</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Toolbar */}
-            <div className="bg-slate-800 p-1 flex space-x-0.5 border-b border-slate-600">
-              <ModalToolBtn icon="folder_open" label="Add Part<br/>From File" iconColor="text-yellow-600" />
-              <ModalToolBtn 
-                icon="post_add" 
-                label="Add Part<br/>From Drawing" 
-                iconColor="text-red-600" 
-                onClick={onAddPartFromDrawing}
-              />
-              <button className="flex flex-col items-center p-1 bg-[#ffde7d] border border-[#e5cd7a] rounded-[2px] min-w-[50px] shadow-sm">
-                <span className="material-symbols-outlined text-red-600 text-2xl drop-shadow-sm">help_outline</span>
-                <span className="text-[9px] text-center leading-tight mt-0.5" dangerouslySetInnerHTML={{ __html: 'Show / Hide<br/>Part Parameters' }}></span>
-              </button>
-              <div className="w-px bg-slate-600 mx-1 h-10 self-center"></div>
-              <ModalToolBtn 
-                  icon="storage" 
-                  label="Add Sheet<br/>From Database" 
-                  iconColor="text-yellow-500"
-                  onClick={handleOpenStockModal}
-              />
-              <ModalToolBtn 
-                icon="note_add" 
-                label="Add Sheet<br/>From Drawing" 
-                iconColor="text-yellow-600" 
-                onClick={onAddSheetFromDrawing}
-              />
-              <div className="w-px bg-slate-600 mx-1 h-10 self-center"></div>
-              <ModalToolBtn icon="build" label="Settings" iconColor="text-white" onClick={onOpenSettings} />
-              <ModalToolBtn icon="snippet_folder" label="Load<br/>Settings" iconColor="text-yellow-600" />
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 p-2 flex flex-col space-y-2 overflow-hidden bg-slate-800 border-t border-slate-600">
-              {/* Parts Table */}
-              <div className="flex-1 border border-slate-600 bg-slate-800 overflow-auto relative">
-                <table className="w-full text-left border-collapse retro-table">
-                  <thead>
-                    <tr>
-                      <th className="w-24">Name</th>
-                      <th className="w-24">Dimensions</th>
-                      <th className="w-16">Required</th>
-                      <th className="w-16">Priority</th>
-                      <th className="w-16">Mirror</th>
-                      <th className="w-16">Rotation</th>
-                      <th className="w-16">Small Part</th>
-                      <th className="w-20">Kit Number</th>
-                      <th>Nested</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-white">
-                    {parts.map((part) => (
-                      <tr key={part.id} className="hover:bg-slate-700 group">
-                        <td className="p-0">
-                          <input 
-                            type="text" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={part.name}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { name: e.target.value })}
-                          />
-                        </td>
-                        <td className="p-0">
-                          <input 
-                            type="text" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={part.dimensions}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { dimensions: e.target.value })}
-                          />
-                        </td>
-                        <td className="p-0">
-                          <input 
-                            type="number" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={part.required}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { required: parseInt(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="p-0">
-                          <select 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none cursor-pointer appearance-none" 
-                            style={{ backgroundImage: 'none' }}
-                            value={part.priority}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { priority: parseInt(e.target.value) })}
-                          >
-                            <option value={1} className="bg-slate-800 text-white">1</option>
-                            <option value={2} className="bg-slate-800 text-white">2</option>
-                            <option value={3} className="bg-slate-800 text-white">3</option>
-                            <option value={4} className="bg-slate-800 text-white">4</option>
-                            <option value={5} className="bg-slate-800 text-white">5</option>
-                          </select>
-                        </td>
-                        <td className="p-0 text-center">
-                          <input 
-                            type="checkbox" 
-                            className="cursor-pointer" 
-                            checked={part.mirrored}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { mirrored: e.target.checked })}
-                          />
-                        </td>
-                        <td className="p-0">
-                          <select 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none cursor-pointer appearance-none"
-                            style={{ backgroundImage: 'none' }}
-                            value={part.rotation}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { rotation: e.target.value })}
-                          >
-                            <option value="None" className="bg-slate-800 text-white">None</option>
-                            <option value="90" className="bg-slate-800 text-white">90°</option>
-                            <option value="180" className="bg-slate-800 text-white">180°</option>
-                            <option value="Any Angle" className="bg-slate-800 text-white">Any</option>
-                          </select>
-                        </td>
-                        <td className="p-0 text-center">
-                          <input 
-                            type="checkbox" 
-                            className="cursor-pointer" 
-                            checked={part.smallPart}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { smallPart: e.target.checked })}
-                          />
-                        </td>
-                        <td className="p-0">
-                           <input 
-                            type="text" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={part.kitNumber || ''}
-                            onChange={(e) => onUpdatePart && onUpdatePart(part.id, { kitNumber: e.target.value })}
-                          />
-                        </td>
-                        <td className="p-0">
-                          <input 
-                            type="number" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={part.isNested ? 1 : 0}
-                            readOnly
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                    {Array.from({ length: Math.max(0, 9 - parts.length) }).map((_, i) => (
-                      <tr key={`empty-${i}`}><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="absolute bottom-4 left-4 right-4 h-px bg-slate-600"></div>
-              </div>
-
-              {/* Middle Controls */}
-              <div className="flex space-x-2 py-0.5 items-center">
-                <ControlButton icon="arrow_upward" />
-                <ControlButton icon="arrow_downward" />
-                <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                <ControlButton icon="rotate_left" />
-                <ControlButton icon="rotate_right" />
-              </div>
-
-              {/* Sheets Table */}
-              <div className="h-32 border border-slate-600 bg-slate-800 overflow-auto relative">
-                <table className="w-full text-left border-collapse retro-table">
-                  <thead>
-                    <tr>
-                      <th className="w-48">Material Name</th>
-                      <th className="w-32">Dimensions</th>
-                      <th className="w-24">Thickness</th>
-                      <th>Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-white">
-                    {sheets.map((sheet) => (
-                      <tr key={sheet.id} className="hover:bg-slate-700">
-                        <td className="p-0">
-                          <input 
-                            type="text" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={sheet.material}
-                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { material: e.target.value })}
-                          />
-                        </td>
-                        <td className="p-0">
-                          <input 
-                            type="text" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={sheet.dimensions}
-                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { dimensions: e.target.value })}
-                          />
-                        </td>
-                        <td className="p-0">
-                           <input 
-                            type="number" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={sheet.thickness}
-                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { thickness: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="p-0">
-                           <input 
-                            type="number" 
-                            className="w-full bg-transparent text-white px-1 py-1 focus:bg-slate-600 outline-none" 
-                            value={sheet.quantity}
-                            onChange={(e) => onUpdateSheet && onUpdateSheet(sheet.id, { quantity: parseInt(e.target.value) || 1 })}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                    {Array.from({ length: Math.max(0, 4 - sheets.length) }).map((_, i) => (
-                      <tr key={i}><td>&nbsp;</td><td></td><td></td><td></td></tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="absolute bottom-4 left-4 right-4 h-px bg-slate-600"></div>
-              </div>
-
-              {/* Footer Buttons */}
-              <div className="flex justify-end pt-2 space-x-3">
-                <button 
-                  onClick={() => {
-                    console.log('🔴 Nest button clicked');
-                    console.log('onStartNesting function:', typeof onStartNesting, onStartNesting ? 'defined' : 'UNDEFINED');
-                    if (onStartNesting) {
-                      console.log('Calling onStartNesting...');
-                      onStartNesting();
-                    } else {
-                      console.error('ERROR: onStartNesting is undefined!');
-                    }
-                  }}
-                  className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white shadow-sm hover:bg-green-800 active:translate-y-px text-sm text-black font-bold"
-
-                >
-                  Nest
-                </button>
-                <button onClick={onCloseModal} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white shadow-sm hover:bg-slate-600 active:translate-y-px text-sm text-black">Close</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stock Database Selection Modal */}
-      {showStockModal && (
-        <div className="absolute inset-0 flex items-center justify-center z-[80] bg-black/40 backdrop-blur-[1px]">
-           <div className="bg-slate-800 w-[600px] shadow-modal border-2 border-yellow-600 flex flex-col font-sans text-xs">
-                <div className="h-7 bg-gradient-to-r from-slate-700 to-slate-600 flex justify-between items-center px-2 select-none border-b border-slate-500">
-                   <span className="font-bold text-white flex items-center gap-2">Stock Sheet Database</span>
-                   <button onClick={() => setShowStockModal(false)}><span className="material-symbols-outlined text-sm">close</span></button>
-                </div>
-                <div className="p-2 h-64 overflow-auto bg-slate-900 border-b border-slate-500">
-                  <table className="w-full text-left border-collapse retro-table">
-                    <thead><tr><th>Material</th><th>Width</th><th>Height</th><th>Thick</th><th>Avail</th></tr></thead>
-                    <tbody className="text-white bg-slate-800">
-                      {stockSheets.map(stock => (
-                        <tr key={stock.id} className={`cursor-pointer hover:bg-slate-700 ${selectedStockId === stock.id ? 'bg-blue-900' : ''}`} onClick={() => setSelectedStockId(stock.id)}>
-                          <td>{stock.material}</td><td>{stock.width}</td><td>{stock.height}</td><td>{stock.thickness}</td><td>{stock.available}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex justify-end space-x-2 px-3 py-2 bg-slate-800">
-                   <button onClick={handleAddFromStock} className="px-4 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white shadow-sm">Add to List</button>
-                   <button onClick={() => setShowStockModal(false)} className="px-4 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white shadow-sm">Cancel</button>
-                </div>
-           </div>
-        </div>
-      )}
-      
-      {/* Define Sheet Parameters Modal */}
-      {showSheetParamsModal && (
-        <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <style>
-            {`
-              @keyframes textFlash {
-                0%, 100% { color: #ffffff; }
-                50% { color: #3b82f6; }
-              }
-              .animate-text-flash {
-                animation: textFlash 0.5s infinite;
-              }
-            `}
-          </style>
-          <div className="w-[520px] bg-black shadow-modal rounded-lg flex flex-col pointer-events-auto text-xs font-sans border border-gray-700 animate-text-flash">
-            <div className="flex justify-between items-center px-3 py-2 border-b border-gray-800 select-none">
-              <span className="font-medium text-[13px] animate-text-flash">Define Sheet Parameters</span>
-              <button onClick={onCloseSheetParams} className="text-white hover:text-white rounded-sm">
-                <span className="material-symbols-outlined text-[16px] animate-text-flash">close</span>
-              </button>
-            </div>
-            
-            <div className="p-4 flex gap-4">
-              {/* Left: Preview */}
-              <div className="w-[180px] flex flex-col">
-                <div className="text-center mb-1 text-white text-[11px] font-semibold animate-text-flash">Sheet Preview</div>
-                <div className="flex-1 border-2 border-gray-600 bg-gray-900 p-1 rounded" style={{ minHeight: '180px' }}>
-                  {selectedSheetGeometry && selectedSheetGeometry.length > 0 ? (
-                    <VectorPreview 
-                      geometry={cadEntitiesToGeometry(selectedSheetGeometry)}
-                      width={176}
-                      height={176}
-                      className="w-full h-full"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-xs">
-                      No Geometry
-                    </div>
-                  )}
-                </div>
-                {/* Dimensions Display */}
-                <div className="mt-2 text-center">
-                  <div className="text-[10px] text-white">Dimensions (mm)</div>
-                  <div className="text-blue-400 font-bold text-sm animate-text-flash">
-                    {formSheetWidth} × {formSheetHeight}
-                  </div>
-                  <div className="text-[10px] text-white">
-                    Area: {((formSheetWidth * formSheetHeight) / 1000000).toFixed(2)} m²
-                  </div>
-                </div>
-              </div>
-              
-              {/* Right: Parameters */}
-              <div className="flex-1 space-y-4">
-              <div className="flex flex-col space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[11px] animate-text-flash">How Many of these Sheets (0 = No Limit)</label>
-                  <div className="flex items-center border border-gray-600 rounded overflow-hidden w-16 h-6">
-                    <input 
-                        className="w-full h-full border-none p-1 text-right text-[11px] focus:ring-0 bg-black text-blue-500 selection:bg-blue-900 animate-text-flash" 
-                        type="text" 
-                        value={formSheetQty}
-                        onChange={(e) => setFormSheetQty(Number(e.target.value) || 0)}
-                    />
-                    <div className="flex flex-col border-l border-gray-600 bg-gray-900">
-                      <button 
-                        onClick={() => setFormSheetQty(prev => prev + 1)}
-                        className="h-3 w-4 flex items-center justify-center hover:bg-gray-800 border-b border-gray-600 text-white"
-                      >
-                        <span className="material-symbols-outlined text-[8px] leading-none animate-text-flash">arrow_drop_up</span>
-                      </button>
-                      <button 
-                        onClick={() => setFormSheetQty(prev => Math.max(0, prev - 1))}
-                        className="h-3 w-4 flex items-center justify-center hover:bg-gray-800 text-white"
-                      >
-                        <span className="material-symbols-outlined text-[8px] leading-none animate-text-flash">arrow_drop_down</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[11px] animate-text-flash">Sheet Thickness</label>
-                  <input 
-                    className="w-16 h-6 border border-gray-600 rounded p-1 text-right text-[11px] focus:ring-1 focus:ring-blue-500 outline-none bg-black animate-text-flash" 
-                    type="number" 
-                    value={formSheetThickness}
-                    onChange={(e) => setFormSheetThickness(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col space-y-1">
-                <label className="text-[11px] animate-text-flash">Sheet Material</label>
-                <div className="relative">
-                  <select 
-                    className="w-full h-7 border border-gray-600 rounded py-0 pl-2 pr-6 text-[11px] focus:ring-1 focus:ring-blue-500 outline-none bg-black animate-text-flash appearance-none"
-                    value={formSheetMaterial}
-                    onChange={(e) => setFormSheetMaterial(e.target.value)}
-                  >
-                    <option value="MDF">MDF</option>
-                    <option value="Mild Steel">Mild Steel</option>
-                    <option value="Stainless Steel">Stainless Steel</option>
-                    <option value="Aluminum">Aluminum</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                    <span className="material-symbols-outlined text-[14px] text-white animate-text-flash">expand_more</span>
-                  </div>
-                </div>
-              </div>
-              </div>
-              {/* End Right Parameters */}
-            </div>
-            {/* End flex container */}
-
-            <div className="flex justify-center space-x-3 pb-4 pt-2 px-4">
-              <button 
-                onClick={handleSheetParamsOK}
-                className="px-6 py-1 bg-black border border-blue-500 animate-text-flash rounded-[2px] hover:bg-gray-900 active:bg-gray-800 text-[11px] min-w-[70px]"
-              >
-                OK
-              </button>
-              <button 
-                onClick={onCloseSheetParams}
-                className="px-6 py-1 bg-black border border-gray-600 animate-text-flash rounded-[2px] hover:bg-gray-900 active:bg-gray-800 text-[11px] min-w-[70px]"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Part Parameters Modal - REDONE based on user request */}
-      {showPartParamsModal && (
-        <div className="absolute inset-0 flex items-center justify-center z-[70] bg-black/20 backdrop-blur-[1px]">
-             <div className="bg-panel-light rounded shadow-2xl w-[600px] border border-gray-500 flex flex-col font-sans text-xs pointer-events-auto select-none">
-                <div className="flex justify-between items-center px-3 py-2">
-                    <h3 className="font-normal text-white">Define Part Parameters</h3>
-                    <button onClick={onClosePartParams} className="text-white hover:text-red-500">
-                        <span className="material-icons-outlined text-sm">close</span>
-                    </button>
-                </div>
-                <div className="flex p-4 gap-6">
-                    <div className="flex-1 space-y-3">
-                        <div className="grid grid-cols-[110px_1fr] items-center gap-2">
-                            <label className="text-right text-white font-semibold">Name of Part</label>
-                            <input 
-                                className="w-full h-7 px-2 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded text-xs font-medium text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                type="text" 
-                                value={formPartName} 
-                                onChange={(e)=>setFormPartName(e.target.value)}
-                            />
-                        </div>
-                        <div className="grid grid-cols-[110px_1fr] items-start gap-2 pt-1">
-                            <label className="text-right text-white mt-1 font-semibold">Number Required</label>
-                            <div className="space-y-1">
-                                <div className="flex items-center">
-                                    <input 
-                                        className="w-3 h-3 text-blue-600 border-slate-500 focus:ring-blue-500" 
-                                        id="maxPoss" 
-                                        name="numReq" 
-                                        type="radio"
-                                        checked={formReqType === 'max'}
-                                        onChange={() => setFormReqType('max')}
-                                    />
-                                    <label className="ml-2 text-white font-medium" htmlFor="maxPoss">Maximum possible</label>
-                                </div>
-                                <div className="flex items-center">
-                                    <input 
-                                        className="w-3 h-3 text-blue-600 border-slate-500 focus:ring-blue-500" 
-                                        id="fixedNum" 
-                                        name="numReq" 
-                                        type="radio"
-                                        checked={formReqType === 'fixed'}
-                                        onChange={() => setFormReqType('fixed')}
-                                    />
-                                    <input 
-                                        className="ml-2 w-24 h-6 px-2 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded text-xs font-medium text-white" 
-                                        type="text" 
-                                        value={formNumReq} 
-                                        onChange={(e)=>setFormNumReq(Number(e.target.value))}
-                                        disabled={formReqType !== 'fixed'}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <fieldset className="border border-slate-600 rounded p-2 mt-2">
-                            <legend className="px-1 text-white text-[10px] font-semibold">Rotations to try</legend>
-                            <div className="grid grid-cols-[90px_1fr] items-center gap-2">
-                                <label className="text-right text-white font-medium">Rotation Angle</label>
-                                <select 
-                                    className="w-full h-7 px-2 py-0 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded text-xs bg-slate-700 font-medium text-white"
-                                    value={formRotation}
-                                    onChange={(e)=>setFormRotation(e.target.value)}
-                                >
-                                    <option>Any Angle</option>
-                                    <option>90 Degrees</option>
-                                    <option>180 Degrees</option>
-                                </select>
-                            </div>
-                        </fieldset>
-                        <div className="pl-[118px] space-y-1">
-                            <div className="flex items-center">
-                                <input 
-                                    className="w-3 h-3 text-blue-600 border-slate-500 rounded focus:ring-blue-500" 
-                                    id="mirrored" 
-                                    type="checkbox"
-                                    checked={formMirrored}
-                                    onChange={(e)=>setFormMirrored(e.target.checked)}
-                                />
-                                <label className="ml-2 text-white font-medium" htmlFor="mirrored">Try Mirrored Shape</label>
-                            </div>
-                            <div className="flex items-center">
-                                <input 
-                                    className="w-3 h-3 text-blue-600 border-slate-500 rounded focus:ring-blue-500" 
-                                    id="smallPart" 
-                                    type="checkbox"
-                                    checked={formSmallPart}
-                                    onChange={(e)=>setFormSmallPart(e.target.checked)}
-                                />
-                                <label className="ml-2 text-white font-medium" htmlFor="smallPart">Define as Small Part</label>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-[110px_1fr] items-center gap-2 pt-2">
-                            <label className="text-right text-white font-semibold">Priority (1=Highest)</label>
-                            <input 
-                                className="w-24 h-7 px-2 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded text-xs font-medium text-white" 
-                                type="text" 
-                                value={formPriority} 
-                                onChange={(e)=>setFormPriority(Number(e.target.value))}
-                            />
-                        </div>
-                        <div className="grid grid-cols-[110px_1fr] items-center gap-2">
-                            <label className="text-right text-white font-semibold">Kit Number</label>
-                            <input 
-                                className="w-24 h-7 px-2 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded text-xs font-medium text-white" 
-                                type="text"
-                                value={formKitNum}
-                                onChange={(e)=>setFormKitNum(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    
-                    {/* Preview Panel */}
-                    <div className="w-[220px] flex flex-col gap-2">
-                        <div className="text-center text-sm text-white font-semibold">
-                            Preview 
-                            <span className="text-[10px] text-yellow-400 ml-2">
-                                ({selectedPartGeometry?.length || 0} entities)
-                            </span>
-                        </div>
-                        
-                        {/* Canvas Preview */}
-                        <div className="relative w-full h-[220px] border-2 border-gray-700 bg-gray-900 rounded overflow-hidden">
-                            {selectedPartGeometry && selectedPartGeometry.length > 0 ? (
-                                <VectorPreview 
-                                    geometry={cadEntitiesToGeometry(selectedPartGeometry)}
-                                    width={216}
-                                    height={216}
-                                    className="w-full h-full"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-xs gap-2">
-                                    <div>No Preview</div>
-                                    <div className="text-[10px] text-red-400">
-                                        Debug: {selectedPartGeometry === null ? 'NULL' : `Empty (${selectedPartGeometry?.length})`}
-                                    </div>
-                                    <div className="text-[10px] text-white">
-                                        Check console for details
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        {/* Dimensions Info */}
-                        <div className="bg-gray-800 rounded p-2 space-y-1">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-white">Width:</span>
-                                <span className="text-sm text-blue-400 font-bold">{formPartWidth || 0} mm</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-white">Height:</span>
-                                <span className="text-sm text-blue-400 font-bold">{formPartHeight || 0} mm</span>
-                            </div>
-                            <div className="flex justify-between items-center pt-1 border-t border-gray-700">
-                                <span className="text-[10px] text-white">Area:</span>
-                                <span className="text-xs text-green-400 font-semibold">
-                                    {(((formPartWidth || 0) * (formPartHeight || 0)) / 1000000).toFixed(4)} m²
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex justify-end space-x-2 px-4 py-3 pb-4">
-                    <button onClick={handleParamsOK} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded shadow-sm hover:bg-slate-600 text-white font-medium">OK</button>
-                    <button onClick={onClosePartParams} className="px-6 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded shadow-sm hover:bg-slate-600 text-white font-medium">Cancel</button>
-                </div>
-             </div>
-        </div>
-      )}
-      
-      {/* Settings Modal (Corrected UI) */}
-      {showSettingsModal && (
-         <div className="absolute inset-0 flex items-center justify-center z-[60] pointer-events-none">
-             <div className="w-[600px] h-auto shadow-modal border flex flex-col pointer-events-auto text-[11px] font-sans rounded-sm select-none cursor-default bg-slate-800 border-slate-500 text-white">
-                {/* Header */}
-                <div className="h-8 flex justify-between items-center px-2 select-none border-b bg-slate-700 border-slate-600">
-                   <div className="flex items-center space-x-2">
-                      <span className="material-symbols-outlined text-white text-sm">build</span>
-                      <span className="font-normal text-white text-xs">Settings</span>
-                   </div>
-                   <button onClick={onCloseSettings} className="w-6 h-5 flex items-center justify-center hover:bg-red-500 hover:text-white rounded-sm transition-colors">
-                     <span className="material-symbols-outlined text-sm">close</span>
-                   </button>
-                </div>
-
-                 {/* Tabs */}
-                 <div className="px-2 pt-2 border-b flex space-x-0.5 bg-slate-700 border-slate-500">
-                    <div onClick={() => setSettingsTab('general')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'general' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>General</div>
-                    <div onClick={() => setSettingsTab('engine')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'engine' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>Options</div>
-                    
-                    <div onClick={() => setSettingsTab('extensions')} className={`px-4 py-1 cursor-pointer border-t border-l border-r ${settingsTab === 'extensions' ? 'bg-slate-800 border-slate-500 text-white font-semibold relative top-px z-10' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>Extensions</div>
-                 </div>
-
-                {/* Content Area */}
-                <div className="p-3 min-h-[300px] bg-slate-800">
-                  {settingsTab === 'general' && (
-                     <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-3">
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Settings</legend>
-                            <div className="flex space-x-1 mb-2 mt-0.5">
-                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
-                                <span className="material-symbols-outlined text-yellow-600 text-base">note_add</span>
-                              </button>
-                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
-                                <span className="material-symbols-outlined text-yellow-600 text-base">folder_open</span>
-                              </button>
-                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
-                                <span className="material-symbols-outlined text-white text-base">save</span>
-                              </button>
-                              <button className="p-1 hover:bg-slate-600 border border-transparent hover:border-slate-500 rounded-sm">
-                                <span className="material-symbols-outlined text-red-600 text-base">delete</span>
-                              </button>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="block text-white">Default NestList Settings File:</label>
-                              <input className="w-full h-6 border border-slate-500 bg-slate-300 text-black text-right px-1 text-xs focus:ring-0 focus:border-blue-400" disabled type="text"/>
-                            </div>
-                          </fieldset>
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Export / Import</legend>
-                            <div className="flex space-x-1 mt-2">
-                              <button onClick={handleExportSettings} className="flex-1 p-2 border shadow-sm rounded-[2px] text-xs font-medium flex items-center justify-center space-x-1 bg-slate-700 border-slate-500 text-white hover:bg-slate-600">
-                                <span className="material-symbols-outlined text-sm">file_download</span>
-                                <span>Export Settings</span>
-                              </button>
-                              <button onClick={handleImportSettings} className="flex-1 p-2 border shadow-sm rounded-[2px] text-xs font-medium flex items-center justify-center space-x-1 bg-slate-700 border-slate-500 text-white hover:bg-slate-600">
-                                <span className="material-symbols-outlined text-sm">file_upload</span>
-                                <span>Import Settings</span>
-                              </button>
-                            </div>
-                          </fieldset>
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Nesting Method</legend>
-                            <select 
-                               className="w-full h-7 border border-slate-500 text-xs py-0 pl-1 pr-6 focus:ring-0 focus:border-blue-400 mt-1"
-                               value={appSettings.nestingMethod}
-                               onChange={(e) => handleSettingChange('nestingMethod', e.target.value)}
-                            >
-                              <option value="Rectangular">Rectangular</option>
-                              <option value="TrueShape">TrueShape</option>
-                              <option value="Original">Original</option>
-                              <option value="VeroNester">Vero Nester</option>
-                            </select>
-                          </fieldset>
-                         <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                           <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Items to be Nested</legend>
-                           <div className="flex flex-col space-y-1.5 mt-1">
-                             <label className="flex items-center space-x-2 cursor-pointer">
-                               <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Toolpaths'} onChange={() => handleSettingChange('itemType', 'Toolpaths')} />
-                               <span>Toolpaths</span>
-                             </label>
-                             <label className="flex items-center space-x-2 cursor-pointer">
-                               <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Geometries'} onChange={() => handleSettingChange('itemType', 'Geometries')} />
-                               <span className="font-medium">Geometries</span>
-                             </label>
-                             <label className="flex items-center space-x-2 cursor-pointer">
-                               <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" name="nested_items" type="radio" checked={appSettings.itemType === 'Both'} onChange={() => handleSettingChange('itemType', 'Both')} />
-                               <span>Toolpaths and Enclosed Geometries</span>
-                             </label>
-                           </div>
-                         </fieldset>
-                       </div>
-                       <div className="space-y-4">
-                         <div className="w-full aspect-[4/3] bg-slate-700 border border-gray-200 relative p-2">
-                           {/* SVG Preview for General Tab */}
-                           {renderGeneralSVG(appSettings.nestingMethod)}
-                         </div>
-                         <fieldset className="border border-slate-500 p-2 rounded-sm bg-slate-700/50 relative pt-3">
-                           <legend className="absolute -top-2 left-2 px-1 text-white font-semibold bg-slate-800 text-[10px]">Nest List Name</legend>
-                           <input className="w-full h-7 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white px-2 text-xs focus:ring-0 focus:border-blue-400" type="text" defaultValue={activeNestList || "New Nest List 1"} />
-                         </fieldset>
-                       </div>
-                       
-
-                     </div>
-                  )}
-
-                   {settingsTab === 'engine' && (
-                     <div className="flex space-x-4">
-                       <div className="w-1/2 h-[360px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                          {/* Pack Direction 3x3 Grid */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Pack Direction</legend>
-                            <div className="grid grid-cols-3 gap-2 mt-2">
-                              {[
-                                { value: 'TL', label: 'TL' },
-                                { value: 'T', label: 'T' },
-                                { value: 'TR', label: 'TR' },
-                                { value: 'L', label: 'L' },
-                                { value: 'Custom', label: 'Custom' },
-                                { value: 'R', label: 'R' },
-                                { value: 'BL', label: 'BL' },
-                                { value: 'B', label: 'B' },
-                                { value: 'BR', label: 'BR' }
-                              ].map(btn => (
-                                <button
-                                  key={btn.value}
-                                  onClick={() => {
-                                    handleSettingChange('packTo', btn.value);
-                                    setActiveEnginePreview('packTo');
-                                  }}
-                                  className={`py-1 px-2 text-xs font-semibold border rounded transition-all ${
-                                    appSettings.packTo === btn.value
-                                      ? 'bg-blue-600 border-blue-700 text-white'
-                                      : 'bg-slate-700 border-slate-500 text-white hover:bg-gray-50'
-                                  }`}
-                                >
-                                  {btn.label}
-                                </button>
-                              ))}
-                            </div>
-                          </fieldset>
-
-                          {/* Custom Angle (visible when Custom is selected) */}
-                          {appSettings.packTo === 'Custom' && (
-                            <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                              <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Custom Angle (°)</legend>
-                              <div className="flex items-center gap-2 mt-1">
-                                <input 
-                                  type="number" 
-                                  value={appSettings.customAngle}
-                                  onChange={(e) => handleSettingChange('customAngle', Number(e.target.value))}
-                                  className="flex-1 h-7 border border-slate-500 text-right px-2 text-xs focus:ring-0 focus:border-blue-400 bg-slate-200 text-black font-bold focus:bg-white"
-                                />
-                                
-                              </div>
-                            </fieldset>
-                          )}
-
-                          {/* Gap Fields */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50" onFocusCapture={() => setActiveEnginePreview('gaps')} onClickCapture={() => setActiveEnginePreview('gaps')}>
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Gap Settings</legend>
-                            <div className="space-y-2 mt-2">
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Min Gap Between Paths</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.minGapPath} onChange={(e) => handleGapChange('minGapPath', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Sheet Edge Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.sheetEdgeGap} onChange={(e) => handleGapChange('sheetEdgeGap', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Lead In Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.leadInGap} onChange={(e) => handleGapChange('leadInGap', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Time Per Sheet</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.timePerSheet} onChange={(e) => handleGapChange('timePerSheet', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Total Comp Time</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.gaps.totalCompTime} onChange={(e) => handleGapChange('totalCompTime', Number(e.target.value))} />
-                              </div>
-                            </div>
-                          </fieldset>
-                          {/* Second half moved under first half */}
-                          {/* Search Resolution */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Search Resolution</legend>
-                            <div className="flex items-center justify-between mt-2">
-                              <label className="text-gray-200">Search Resolution (1-100)</label>
-                              <input 
-                                type="number" 
-                                min="1" 
-                                max="100" 
-                                value={appSettings.searchResolution}
-                                onChange={(e) => handleSettingChange('searchResolution', Number(e.target.value))}
-                                className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white text-xs focus:ring-0 focus:border-blue-400"
-                              />
-                            </div>
-                          </fieldset>
-
-                          {/* Evenly Spaced Parts */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Options</legend>
-                            <label className="flex items-center space-x-2 cursor-pointer mt-1">
-                              <input 
-                                type="checkbox" 
-                                checked={appSettings.evenlySpacedParts}
-                                onChange={(e) => handleSettingChange('evenlySpacedParts', e.target.checked)}
-                                className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5"
-                              />
-                              <span className="text-white text-xs">Evenly Spaced Parts</span>
-                            </label>
-                          </fieldset>
-                       </div>
-                       
-                       {/* SVG Preview Right Column */}
-                       <div className="w-1/2 flex flex-col justify-start items-center gap-4 p-4 h-[300px]">
-                          <AnimatePresence mode="wait">
-                            {activeEnginePreview === 'packTo' && (
-                              <motion.div
-                                key="packTo"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                                className="w-full h-full flex flex-col items-center justify-between"
-                              >
-                                <div className="w-full flex-1 relative overflow-hidden shadow-inner mb-3 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
-                                  {renderEngineSVG(appSettings.packTo, appSettings.customAngle)}
-                                </div>
-                                <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
-                                  {appSettings.packTo === 'TL' ? 'Xếp lên góc trên trái' :
-                                   appSettings.packTo === 'BL' ? 'Xếp xuống góc dưới trái' :
-                                   appSettings.packTo === 'Custom' ? 'Xếp theo góc tùy chỉnh (0-360 độ)' :
-                                   'Hướng xếp tối ưu tự động'}
-                                </div>
-                              </motion.div>
-                            )}
-
-                            {activeEnginePreview === 'gaps' && (
-                              <motion.div
-                                key="gaps"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                                className="w-full h-full flex flex-col items-center justify-between"
-                              >
-                                <div className="w-full flex-1 relative overflow-hidden shadow-inner mb-3 flex items-center justify-center bg-slate-700 border-slate-500 border rounded-lg">
-                                  {renderGapSVG(appSettings.gaps)}
-                                </div>
-                                <div className="text-sm font-medium text-slate-300 text-center px-2 bg-slate-800/80 py-1.5 rounded-full border border-slate-600/50 min-w-[200px]">
-                                  Mô phỏng khoảng cách (Gaps)
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                       </div>
-                     </div>
-                  )}
-
-                   {settingsTab === 'rectengine' && (
-                     <div className="flex space-x-4">
-                       <div className="w-1/2 h-[360px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                          {/* Optimize For */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Optimize For</legend>
-                            <div className="flex flex-col space-y-1 mt-1">
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.optimizeFor === 'Cuts'} onChange={() => handleRectEngineChange('optimizeFor', 'Cuts')} />
-                                <span className="text-xs text-white">Cuts</span>
-                              </label>
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.optimizeFor === 'Space'} onChange={() => handleRectEngineChange('optimizeFor', 'Space')} />
-                                <span className="text-xs text-white">Space</span>
-                              </label>
-                            </div>
-                          </fieldset>
-
-                          {/* Cut Direction */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Cut Direction</legend>
-                            <div className="flex flex-col space-y-1 mt-1">
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'X'} onChange={() => handleRectEngineChange('cutDirection', 'X')} />
-                                <span className="text-xs text-white">X</span>
-                              </label>
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'Y'} onChange={() => handleRectEngineChange('cutDirection', 'Y')} />
-                                <span className="text-xs text-white">Y</span>
-                              </label>
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.cutDirection === 'Auto'} onChange={() => handleRectEngineChange('cutDirection', 'Auto')} />
-                                <span className="text-xs text-white">Auto</span>
-                              </label>
-                            </div>
-                          </fieldset>
-
-                          {/* Number Inputs */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Dimensions</legend>
-                            <div className="space-y-2 mt-1">
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Cut Width</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.rectEngine.cutWidth} onChange={(e) => handleRectEngineChange('cutWidth', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Min Part Gap</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.rectEngine.minPartGap} onChange={(e) => handleRectEngineChange('minPartGap', Number(e.target.value))} />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <label className="text-gray-200">Gap at Sheet Edge</label>
-                                <input className="w-12 h-6 text-right px-1 border border-slate-500 text-xs text-black font-bold bg-slate-200 focus:bg-white focus:ring-0 focus:border-blue-400" type="number" value={appSettings.rectEngine.gapAtSheetEdge} onChange={(e) => handleRectEngineChange('gapAtSheetEdge', Number(e.target.value))} />
-                              </div>
-                            </div>
-                          </fieldset>
-                          {/* Second half moved under first half */}
-                          {/* NC Code */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">NC Code</legend>
-                            <div className="flex flex-col space-y-1 mt-1">
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.ncCode === 'Subroutines'} onChange={() => handleRectEngineChange('ncCode', 'Subroutines')} />
-                                <span className="text-xs text-white">Subroutines</span>
-                              </label>
-                              <label className="flex items-center space-x-2 cursor-pointer">
-                                <input className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5" type="radio" checked={appSettings.rectEngine.ncCode === 'Linear'} onChange={() => handleRectEngineChange('ncCode', 'Linear')} />
-                                <span className="text-xs text-white">Linear</span>
-                              </label>
-                            </div>
-                          </fieldset>
-
-                          {/* Optimise Level */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Optimise Level (1-10)</legend>
-                            <div className="flex items-center justify-between mt-2">
-                              <label className="text-gray-200">Level</label>
-                              <input 
-                                type="number" 
-                                min="1" 
-                                max="10" 
-                                value={appSettings.rectEngine.optimiseLevel}
-                                onChange={(e) => handleRectEngineChange('optimiseLevel', Number(e.target.value))}
-                                className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white text-xs focus:ring-0 focus:border-blue-400"
-                              />
-                            </div>
-                          </fieldset>
-
-                          {/* Sheet/Nest Balance */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Sheet/Nest Balance (1-10)</legend>
-                            <div className="flex items-center justify-between mt-2">
-                              <label className="text-gray-200">Balance</label>
-                              <input 
-                                type="number" 
-                                min="1" 
-                                max="10" 
-                                value={appSettings.rectEngine.sheetNestBalance}
-                                onChange={(e) => handleRectEngineChange('sheetNestBalance', Number(e.target.value))}
-                                className="w-12 h-6 text-right px-1 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white text-xs focus:ring-0 focus:border-blue-400"
-                              />
-                            </div>
-                          </fieldset>
-
-                          {/* Select Best Sheet */}
-                          <fieldset className="border p-2 rounded-sm border-slate-500 bg-slate-700/50">
-                            <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Options</legend>
-                            <label className="flex items-center space-x-2 cursor-pointer mt-1">
-                              <input 
-                                type="checkbox" 
-                                checked={appSettings.rectEngine.selectBestSheet}
-                                onChange={(e) => handleRectEngineChange('selectBestSheet', e.target.checked)}
-                                className="text-blue-600 border-slate-500 focus:ring-0 w-3.5 h-3.5"
-                              />
-                              <span className="text-white text-xs">Select Best Sheet</span>
-                            </label>
-                          </fieldset>
-                        </div>
-                      </div>
-                   )}
-
-                  {settingsTab === 'extensions' && (
-                     <div className="flex space-x-4 h-[300px]">
-                       <div className="w-1/2 flex flex-col h-full">
-                         <fieldset className="border p-2 rounded-sm flex flex-col h-full border-slate-500 bg-slate-700/50">
-                           <legend className="px-1 ml-1 font-semibold rounded text-white bg-slate-800">Special Functions</legend>
-                           <div className="bg-slate-700 border border-slate-500 text-white overflow-y-scroll flex-1 p-1">
-                             <div className="flex flex-col space-y-0.5">
-                              {['Assisted Nest', 'Bridged Nesting', 'Cut Small Parts First', 'Cut Whole Part Together', 'Drill then Cut Inner Paths First', 'Group Each Part Separately', 'Leave Edge Gap Uncut', 'Merge Like Part Quantities', 'Minimise Sheet Patterns', 'Minimise Tool Changes', 'Nest Small Parts First', 'Onion Skin Small Parts', 'Order By Part', 'Part Quantity Multiplier'].map((label, idx) => {
-                                const isEnabled = appSettings.extensions.enabledExtensions.includes(label);
-                                return (
-                                  <label key={idx} className={`flex items-center space-x-2 cursor-pointer hover:bg-blue-900 px-1 py-0.5 ${isEnabled ? 'bg-blue-800' : ''}`}>
-                                    <input 
-                                      className="text-blue-600 border-slate-500 rounded-sm focus:ring-0 w-3.5 h-3.5" 
-                                      type="checkbox" 
-                                      checked={isEnabled}
-                                      onChange={() => {
-                                        const current = appSettings.extensions.enabledExtensions;
-                                        const updated = isEnabled
-                                          ? current.filter(e => e !== label)
-                                          : [...current, label];
-                                        handleExtensionsChange('enabledExtensions', updated);
-                                      }}
-                                    />
-                                    <span>{label}</span>
-                                  </label>
-                                );
-                              })}
-                             </div>
-                           </div>
-                         </fieldset>
-                         <div className="mt-2 flex justify-center">
-                           <button className="px-8 py-1 bg-slate-700 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white shadow-sm hover:bg-slate-600 active:translate-y-px rounded-[2px]">Configure</button>
-                         </div>
-                       </div>
-                       <div className="w-1/2 flex items-start justify-center pt-2">
-                         <div className="bg-slate-700 p-4 shadow-sm border border-slate-600">
-                           <svg height="180" viewBox="0 0 250 180" width="250" xmlns="http://www.w3.org/2000/svg">
-                             <rect fill="none" height="179" stroke="#FFFF00" strokeWidth="2" width="249" x="0.5" y="0.5"></rect>
-                             <path d="M10,10 L70,10 L70,30 L130,30 L130,130 L70,130 L70,170 L10,170 Z" fill="none" stroke="#00FF00" strokeWidth="2"></path>
-                             <circle cx="20" cy="20" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <path d="M75,10 L170,10 L170,125 L135,125 L135,35 L75,35 Z" fill="none" stroke="#00FF00" strokeWidth="2"></path>
-                             <circle cx="85" cy="20" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="158" cy="20" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="80" cy="45" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="158" cy="115" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <path d="M55,135 L65,135 L65,175 L130,175 L130,135 L170,135 L170,175 L180,175 L180,178 L55,178 Z" fill="none" stroke="#00FF00" strokeWidth="2"></path>
-                             <circle cx="125" cy="165" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <path d="M175,10 L245,10 L245,50 L210,50 L210,135 L245,135 L245,175 L175,175 L175,10 Z" fill="none" stroke="#00FF00" strokeWidth="2"></path>
-                             <circle cx="185" cy="25" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="230" cy="25" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="230" cy="65" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="185" cy="130" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="230" cy="160" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                             <circle cx="158" cy="160" fill="none" r="3" stroke="#00FF00" strokeWidth="2"></circle>
-                           </svg>
-                         </div>
-                       </div>
-                     </div>
-                  )}
-                </div>
-                
-                {/* Footer */}
-                <div className="px-3 py-2 bg-slate-800 flex justify-end space-x-2">
-                   <button onClick={handleSaveSettings} className="px-6 py-1 border shadow-sm active:translate-y-px rounded-[2px] min-w-[70px] bg-slate-700 border-slate-500 text-white hover:bg-slate-600">OK</button>
-                   <button onClick={onCloseSettings} className="px-6 py-1 border shadow-sm active:translate-y-px rounded-[2px] min-w-[70px] bg-slate-700 border-slate-500 text-white hover:bg-slate-600">Cancel</button>
-                </div>
-             </div>
-         </div>
-       )}
-
-      {/* Hidden file input for settings import */}
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept=".json" 
-        onChange={handleFileSelected} 
-        hidden 
-      />
-
-      {/* Hidden file input for DXF/DWG/SVG import */}
-      <input 
-        ref={dxfImportRef} 
-        type="file" 
-        accept=".dxf,.dwg,.svg" 
-        onChange={handleDXFFileSelected} 
-        hidden 
-      />
-
-      <input 
-        ref={dwgImportRef} 
-        type="file" 
-        accept=".dwg" 
-        onChange={handleDXFFileSelected} 
-        hidden 
-      />
-
-      {/* Hidden file input for DXF→Part direct import */}
-      <input
-        ref={dxfAsPartImportRef}
-        type="file"
-        accept=".dxf,.dwg,.svg"
-        onChange={handleDXFAsPartFileSelected}
-        hidden
-      />
-
-      {/* Fireworks Overlay */}
-      <AnimatePresence>
-        {showFireworksOverlay && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[9999]"
-          >
-            <FireworksOverlay onClose={() => setShowFireworksOverlay(false)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-     </main>
-   );
- };
-
-const TabButton: React.FC<{ label: string; active: boolean; onClick: () => void }> = ({ label, active, onClick }) => (
-  <div onClick={onClick} className={`px-4 py-1 cursor-pointer border-t border-l border-r border-b ${active ? 'bg-slate-800 border-slate-500 border-b-transparent text-white relative top-px z-10 font-semibold' : 'bg-slate-700 border-transparent text-white hover:bg-slate-600'}`}>{label}</div>
-);
-
-const ModalToolBtn: React.FC<{ icon: string; label: string; iconColor: string; onClick?: () => void }> = ({ icon, label, iconColor, onClick }) => (
-  <button onClick={onClick} className={`flex flex-col items-center p-1 hover:bg-[#ffe8a6] hover:border-[#e5cd7a] border border-transparent rounded-[2px] min-w-[50px] group ${onClick ? 'cursor-pointer' : 'cursor-default'}`}>
-    <span className={`material-symbols-outlined ${iconColor} text-2xl drop-shadow-sm`}>{icon}</span>
-    <span className="text-[9px] text-center leading-tight mt-0.5 text-white" dangerouslySetInnerHTML={{ __html: label }}></span>
-  </button>
-);
-
-const ControlButton: React.FC<{ icon: string }> = ({ icon }) => (
-  <button className="p-1 bg-slate-800 border border-slate-500 bg-slate-200 text-black font-bold focus:bg-white rounded hover:bg-slate-600 active:bg-gray-300 shadow-sm"><span className="material-symbols-outlined text-lg text-white">{icon}</span></button>
-);
-
-const ManualNestBtn: React.FC<{ icon: string; label: string; small?: boolean }> = ({ icon, label, small }) => (
-   <button className={`flex flex-col items-center justify-center p-1 border border-slate-600 bg-slate-700 hover:bg-slate-600 rounded-sm active:translate-y-px shadow-sm ${small ? 'h-8' : 'h-12'}`}>
-      <span className={`material-symbols-outlined text-white ${small ? 'text-sm' : 'text-xl'}`}>{icon}</span>
-      {!small && <span className="text-[9px] text-white mt-0.5">{label}</span>}
-   </button>
-);
-
-const InfoRow: React.FC<{ label: string; value: string; highlight?: boolean }> = ({ label, value, highlight }) => (
-  <tr>
-    <td className="py-2 px-3 text-white text-xs font-medium border-b border-slate-700">{label}:</td>
-    <td className={`py-2 px-3 text-right text-xs border-b border-slate-700 ${highlight ? 'font-bold text-green-600' : 'text-white'}`}>{value}</td>
-  </tr>
-);
+      </div>
+    </div>
+  );
+};
 
 export default Workspace;

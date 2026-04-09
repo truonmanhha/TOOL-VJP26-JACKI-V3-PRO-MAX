@@ -17,8 +17,11 @@ interface FooterProps {
   selectionCount?: number;
   activeLayer?: string;
   onExport?: (format: 'dxf' | 'svg' | 'pdf') => void;
-  
+
   // AutoCAD Dynamic Input / Status integration
+  commandPrompt?: string;
+  commandOptions?: string[];
+  onCommandOptionClick?: (opt: string) => void;
   commandInput?: string;
   onCommandInputChange?: (val: string) => void;
   onCommandInputKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -29,7 +32,7 @@ interface FooterProps {
   onCloseAllOverlays?: () => void;
 }
 
-const Footer: React.FC<FooterProps> = ({ 
+const Footer: React.FC<FooterProps> = ({
   x, y, zoom = 1,
   snapEnabled, onToggleSnap, activeSnaps, onToggleSnapMode,
   orthoEnabled, onToggleOrtho,
@@ -38,6 +41,9 @@ const Footer: React.FC<FooterProps> = ({
   selectionCount = 0,
   activeLayer = 'Layer 0',
   onExport,
+  commandPrompt,
+  commandOptions,
+  onCommandOptionClick,
   commandInput = '',
   onCommandInputChange,
   onCommandInputKeyDown,
@@ -103,7 +109,7 @@ const Footer: React.FC<FooterProps> = ({
 
   return (
     <footer className="bg-slate-900/95 border-t border-slate-700 flex items-center justify-between px-2 h-7 flex-none z-50 select-none font-mono text-[11px]" onWheel={e => e.preventDefault()}>
-      
+
       {/* LEFT: Coordinates + Zoom + Selection Info */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5 text-white/80">
@@ -112,9 +118,9 @@ const Footer: React.FC<FooterProps> = ({
           <span className="text-cyan-400 font-bold ml-1">Y:</span>
           <span className="w-16 text-green-400">{y.toFixed(2)}</span>
         </div>
-        
+
         <div className="h-4 w-px bg-slate-700"></div>
-        
+
         <div className="flex items-center gap-1 text-white/60">
           <span>Zoom:</span>
           <span className="text-yellow-400">{Math.round(zoom * 100)}%</span>
@@ -132,15 +138,35 @@ const Footer: React.FC<FooterProps> = ({
       <div className="flex-1 max-w-2xl mx-4 h-full flex items-center justify-center">
         <div className="flex-1 h-[22px] flex items-center bg-black/40 border border-slate-700 px-2 rounded-sm overflow-hidden focus-within:border-cyan-500/50 transition-colors">
           <div className="text-white/40 mr-2 flex-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 8 16" fill="currentColor">
-              <polygon points="3.293 12.707 1.879 11.293 5.172 8 1.879 4.707 3.293 3.293 8 8 3.293 12.707"></polygon>
-            </svg>
+            <span className="material-icons-outlined text-[14px]">chevron_right</span>
           </div>
+          
+          {/* Command Prompt & Options (AutoCAD Layout) */}
+          {(commandPrompt || (commandOptions && commandOptions.length > 0)) && (
+            <div className="flex items-center gap-1 mr-2 text-slate-300 whitespace-nowrap">
+              {commandPrompt && <span>{commandPrompt}</span>}
+              {commandOptions && commandOptions.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onCommandOptionClick?.(opt)}
+                  className="font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer transition-colors"
+                >
+                  [{opt}]
+                </button>
+              ))}
+              <span className="text-slate-400">:</span>
+            </div>
+          )}
+
           <input
             ref={commandInputRef}
             type="text"
             className="w-full h-full bg-transparent text-white font-mono text-[11px] outline-none placeholder-slate-600"
-            placeholder={activeTool ? `ACTIVE: ${activeTool.toUpperCase()}` : "Type command..."}
+            placeholder={
+              !commandPrompt && !activeTool 
+                ? "Type command..." 
+                : (!commandPrompt && activeTool ? `ACTIVE: ${activeTool.toUpperCase()}` : "")
+            }
             value={commandInput}
             onChange={(e) => onCommandInputChange?.(e.target.value)}
             onKeyDown={onCommandInputKeyDown}
@@ -152,15 +178,14 @@ const Footer: React.FC<FooterProps> = ({
 
       {/* RIGHT: Status Indicators & Tools */}
       <div className="flex items-center gap-2">
-        
+
         {/* Undo/Redo Mini */}
         <div className="flex items-center bg-slate-800/50 border border-slate-700 rounded-sm overflow-hidden h-[22px]">
           <button
             onClick={() => undoManager.canUndo() && undoManager.undo()}
             disabled={!undoState.canUndo}
-            className={`w-6 h-full flex items-center justify-center transition-colors ${
-              undoState.canUndo ? 'text-blue-400 hover:bg-slate-700' : 'text-slate-700'
-            }`}
+            className={`w-6 h-full flex items-center justify-center transition-colors ${undoState.canUndo ? 'text-blue-400 hover:bg-slate-700' : 'text-slate-700'
+              }`}
             title="Undo (Ctrl+Z)"
           >
             <span className="material-icons-outlined text-[14px]">undo</span>
@@ -168,9 +193,8 @@ const Footer: React.FC<FooterProps> = ({
           <button
             onClick={() => undoManager.canRedo() && undoManager.redo()}
             disabled={!undoState.canRedo}
-            className={`w-6 h-full flex items-center justify-center border-l border-slate-700 transition-colors ${
-              undoState.canRedo ? 'text-blue-400 hover:bg-slate-700' : 'text-slate-700'
-            }`}
+            className={`w-6 h-full flex items-center justify-center border-l border-slate-700 transition-colors ${undoState.canRedo ? 'text-blue-400 hover:bg-slate-700' : 'text-slate-700'
+              }`}
             title="Redo (Ctrl+Y)"
           >
             <span className="material-icons-outlined text-[14px]">redo</span>
@@ -182,11 +206,10 @@ const Footer: React.FC<FooterProps> = ({
         {/* Feature Toggles */}
         <div className="flex items-center gap-1">
           {/* ORTHO */}
-          <button 
+          <button
             onClick={onToggleOrtho}
-            className={`px-1.5 h-[22px] rounded-sm border font-bold transition-colors ${
-              orthoEnabled ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300'
-            }`}
+            className={`px-1.5 h-[22px] rounded-sm border font-bold transition-colors ${orthoEnabled ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300'
+              }`}
             title="Ortho Mode (F8)"
           >
             ORTHO
@@ -194,26 +217,24 @@ const Footer: React.FC<FooterProps> = ({
 
           {/* SNAP */}
           <div className="flex items-center bg-slate-800 h-[22px] relative" ref={snapPanelRef}>
-            <button 
+            <button
               onClick={onToggleSnap}
-              className={`px-1.5 h-full font-bold transition-colors border border-slate-700 rounded-l-sm ${
-                snapEnabled ? 'bg-blue-600 border-blue-500 text-white' : 'text-slate-500 hover:text-slate-300'
-              }`}
+              className={`px-1.5 h-full font-bold transition-colors border border-slate-700 rounded-l-sm ${snapEnabled ? 'bg-blue-600 border-blue-500 text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}
               title="Object Snap (F3)"
             >
               SNAP
             </button>
             <button
               onClick={() => setShowSnapPanel(!showSnapPanel)}
-              className={`w-4 h-full flex items-center justify-center border-y border-r border-slate-700 rounded-r-sm transition-colors ${
-                showSnapPanel ? 'bg-cyan-900/40 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
-              }`}
+              className={`w-4 h-full flex items-center justify-center border-y border-r border-slate-700 rounded-r-sm transition-colors ${showSnapPanel ? 'bg-cyan-900/40 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
+                }`}
             >
               <span className="material-icons-outlined text-[14px]">
                 {showSnapPanel ? 'expand_less' : 'expand_more'}
               </span>
             </button>
-            
+
             {showSnapPanel && (
               <div className="absolute bottom-full right-0 mb-1 bg-slate-900 border border-slate-700 rounded shadow-2xl py-1 min-w-[180px] z-[100]">
                 <div className="px-3 py-1 text-[10px] text-cyan-400 border-b border-slate-800 mb-1 font-bold uppercase tracking-wider">Object Snap Settings</div>
@@ -246,7 +267,7 @@ const Footer: React.FC<FooterProps> = ({
           <div className="flex items-center gap-1.5 text-white/50">
             <span className="material-icons-outlined text-[14px]">straighten</span>
             <input
-              type="number" className="w-10 h-[18px] bg-slate-800 border border-slate-700 rounded text-center text-emerald-400 font-bold text-[10px] outline-none focus:border-emerald-500" 
+              type="number" className="w-10 h-[18px] bg-slate-800 border border-slate-700 rounded text-center text-emerald-400 font-bold text-[10px] outline-none focus:border-emerald-500"
               min={10} max={100} value={crosshairSize}
               onChange={e => onCrosshairSizeChange?.(Number(e.target.value))}
             />
@@ -263,12 +284,12 @@ const Footer: React.FC<FooterProps> = ({
             <span className="material-icons text-[12px]">download</span>
             EXPORT
           </button>
-          
+
           {showExportMenu && onExport && (
             <div className="absolute bottom-full mb-1 right-8 bg-slate-900 border border-slate-700 rounded shadow-2xl py-1 min-w-[120px] z-[100]">
               {(['dxf', 'svg', 'pdf'] as const).map(fmt => (
                 <button key={fmt} onClick={() => { onExport(fmt); setShowExportMenu(false); }} className="w-full px-3 py-1.5 text-left text-slate-300 hover:bg-slate-800 flex items-center gap-2">
-                  <span className="material-icons text-[14px] text-slate-500">{{dxf:'description', svg:'image', pdf:'picture_as_pdf'}[fmt]}</span>
+                  <span className="material-icons text-[14px] text-slate-500">{{ dxf: 'description', svg: 'image', pdf: 'picture_as_pdf' }[fmt]}</span>
                   <span className="uppercase text-[10px]">Export {fmt}</span>
                 </button>
               ))}
